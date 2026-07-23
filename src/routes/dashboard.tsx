@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Spinner } from "@/components/Spinner";
@@ -63,9 +63,10 @@ function Dashboard() {
             <Logo size={36} />
             <span className="font-semibold text-foreground">AnatomyAce</span>
           </div>
-          <button onClick={onLogout} className="btn-outline" style={{ minHeight: 40 }}>
-            Log out
-          </button>
+          <div className="flex items-center gap-2">
+            <Link to="/profile" className="btn-outline" style={{ minHeight: 40 }}>Profile</Link>
+            <button onClick={onLogout} className="btn-outline" style={{ minHeight: 40 }}>Log out</button>
+          </div>
         </div>
       </header>
       <section className="mx-auto max-w-4xl px-4 py-16 text-center">
