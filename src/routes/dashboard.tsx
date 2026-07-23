@@ -1,8 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Spinner } from "@/components/Spinner";
 import { Logo } from "@/components/Logo";
+import { Spinner } from "@/components/Spinner";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -17,11 +18,58 @@ export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
 });
 
+type UserStats = {
+  user_id: string;
+  daily_goal: number;
+  cards_studied_today: number;
+  cards_studied_total: number;
+  cards_studied_this_week: number;
+  current_streak: number;
+  longest_streak: number;
+  last_study_date: string | null;
+  last_topic_studied: string | null;
+};
+
+type TopicRow = {
+  topic_name: string;
+  accuracy_percentage: number;
+  cards_due_count: number;
+};
+
+type ActivityRow = { study_date: string; cards_studied: number };
+
+type SessionUser = { id: string; email: string | null; fullName: string | null; photo: string | null };
+
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+function initials(name: string | null, email: string | null) {
+  const src = (name || email || "?").trim();
+  const parts = src.split(/\s+/);
+  const letters = parts.length >= 2 ? parts[0][0] + parts[1][0] : src.slice(0, 2);
+  return letters.toUpperCase();
+}
+
+function accColor(acc: number) {
+  if (acc >= 80) return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300";
+  if (acc >= 65) return "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300";
+  return "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300";
+}
+
+function Skeleton({ className = "" }: { className?: string }) {
+  return <div className={`animate-pulse rounded-2xl bg-muted ${className}`} />;
+}
+
 function Dashboard() {
   const navigate = useNavigate();
-  const [state, setState] = useState<
-    { status: "loading" } | { status: "ready"; email: string | null; fullName: string | null }
-  >({ status: "loading" });
+  const qc = useQueryClient();
+  const [user, setUser] = useState<SessionUser | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [goalOpen, setGoalOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -32,22 +80,69 @@ function Dashboard() {
         navigate({ to: "/login" });
         return;
       }
-      const meta = (data.user.user_metadata ?? {}) as { full_name?: string; name?: string };
-      setState({
-        status: "ready",
+      const meta = (data.user.user_metadata ?? {}) as { full_name?: string; name?: string; avatar_url?: string };
+      setUser({
+        id: data.user.id,
         email: data.user.email ?? null,
         fullName: meta.full_name ?? meta.name ?? null,
+        photo: meta.avatar_url ?? null,
       });
+      setAuthChecked(true);
     })();
     return () => { active = false; };
   }, [navigate]);
+
+  const dashboardQuery = useQuery({
+    enabled: !!user,
+    queryKey: ["dashboard", user?.id],
+    queryFn: async () => {
+      const uid = user!.id;
+      // ensure stats row
+      const { data: statsRow } = await supabase
+        .from("user_stats").select("*").eq("user_id", uid).maybeSingle();
+      let stats = statsRow as UserStats | null;
+      if (!stats) {
+        const { data: inserted, error } = await supabase
+          .from("user_stats").insert({ user_id: uid }).select("*").single();
+        if (error) throw error;
+        stats = inserted as UserStats;
+      }
+
+      const since = new Date();
+      since.setDate(since.getDate() - 6);
+      const sinceStr = since.toISOString().slice(0, 10);
+
+      const [topicsRes, activityRes, profileRes] = await Promise.all([
+        supabase.from("topic_performance").select("topic_name,accuracy_percentage,cards_due_count").eq("user_id", uid),
+        supabase.from("study_activity").select("study_date,cards_studied").eq("user_id", uid).gte("study_date", sinceStr).order("study_date"),
+        supabase.from("users").select("profile_photo_url,full_name").eq("id", uid).maybeSingle(),
+      ]);
+      if (topicsRes.error) throw topicsRes.error;
+      if (activityRes.error) throw activityRes.error;
+
+      return {
+        stats,
+        topics: (topicsRes.data ?? []) as TopicRow[],
+        activity: (activityRes.data ?? []) as ActivityRow[],
+        profile: profileRes.data as { profile_photo_url: string | null; full_name: string | null } | null,
+      };
+    },
+  });
+
+  const updateGoal = useMutation({
+    mutationFn: async (goal: number) => {
+      const { error } = await supabase.from("user_stats").update({ daily_goal: goal }).eq("user_id", user!.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["dashboard", user?.id] }),
+  });
 
   async function onLogout() {
     await supabase.auth.signOut();
     navigate({ to: "/", replace: true });
   }
 
-  if (state.status === "loading") {
+  if (!authChecked) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-background">
         <Spinner className="h-6 w-6 text-primary" />
@@ -55,32 +150,283 @@ function Dashboard() {
     );
   }
 
+  const data = dashboardQuery.data;
+  const stats = data?.stats;
+  const photo = data?.profile?.profile_photo_url ?? user?.photo ?? null;
+  const displayName = data?.profile?.full_name ?? user?.fullName ?? null;
+
+  const weakTopics = useMemo(() =>
+    [...(data?.topics ?? [])].sort((a, b) => a.accuracy_percentage - b.accuracy_percentage).slice(0, 3),
+  [data?.topics]);
+  const strongTopics = useMemo(() =>
+    [...(data?.topics ?? [])].sort((a, b) => b.accuracy_percentage - a.accuracy_percentage).slice(0, 3),
+  [data?.topics]);
+
+  const cardsDue = useMemo(
+    () => (data?.topics ?? []).reduce((s, t) => s + t.cards_due_count, 0),
+    [data?.topics],
+  );
+
+  const weekly = useMemo(() => {
+    const map = new Map((data?.activity ?? []).map((a) => [a.study_date, a.cards_studied]));
+    const out: { label: string; date: string; count: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      out.push({
+        label: d.toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2),
+        date: key,
+        count: map.get(key) ?? 0,
+      });
+    }
+    return out;
+  }, [data?.activity]);
+  const weeklyMax = Math.max(1, ...weekly.map((w) => w.count));
+
   return (
     <main className="min-h-screen bg-background">
-      <header className="border-b border-border">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
-          <div className="flex items-center gap-3">
-            <Logo size={36} />
+      <header className="border-b border-border sticky top-0 bg-background/85 backdrop-blur z-10">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+          <Link to="/dashboard" className="flex items-center gap-3">
+            <Logo size={32} />
             <span className="font-semibold text-foreground">AnatomyAce</span>
-          </div>
+          </Link>
           <div className="flex items-center gap-2">
-            <Link to="/profile" className="btn-outline" style={{ minHeight: 40 }}>Profile</Link>
+            <Link to="/profile" className="flex items-center gap-2 rounded-full border border-border pl-2 pr-3 py-1 hover:bg-muted transition" aria-label="Open profile">
+              {photo ? (
+                <img src={photo} alt="Your profile" className="h-8 w-8 rounded-full object-cover" />
+              ) : (
+                <span aria-hidden className="h-8 w-8 rounded-full bg-primary text-primary-foreground grid place-items-center text-sm font-semibold">
+                  {initials(displayName, user?.email ?? null)}
+                </span>
+              )}
+              <span className="hidden sm:inline text-sm text-foreground">Profile</span>
+            </Link>
             <button onClick={onLogout} className="btn-outline" style={{ minHeight: 40 }}>Log out</button>
           </div>
         </div>
       </header>
-      <section className="mx-auto max-w-4xl px-4 py-16 text-center">
-        <p className="text-sm text-muted-foreground">
-          Welcome{state.fullName ? `, ${state.fullName}` : ""}!
-        </p>
-        <h1 className="mt-2 text-3xl sm:text-4xl font-bold text-foreground">Dashboard Coming Soon</h1>
-        <p className="mt-3 text-muted-foreground">
-          Your flashcards, decks, and progress will live here.
-        </p>
-        {state.email && (
-          <p className="mt-6 text-xs text-muted-foreground">Signed in as {state.email}</p>
+
+      <section className="mx-auto max-w-6xl px-4 py-8 sm:py-10">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+          {greeting()}{displayName ? `, ${displayName.split(" ")[0]}` : ""} 👋
+        </h1>
+        <p className="mt-1 text-muted-foreground">Here's your study snapshot for today.</p>
+
+        {dashboardQuery.isError && (
+          <div className="mt-6 card-surface p-6 text-center">
+            <p className="text-foreground font-medium">Couldn't load your dashboard.</p>
+            <button onClick={() => dashboardQuery.refetch()} className="btn-primary mt-4">Tap to retry</button>
+          </div>
+        )}
+
+        {dashboardQuery.isLoading && (
+          <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-40" />)}
+          </div>
+        )}
+
+        {stats && data && (
+          <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Today's Goal */}
+            <button
+              onClick={() => setGoalOpen(true)}
+              className="card-surface p-5 text-left hover:brightness-[1.02] transition"
+              aria-label="Edit today's goal"
+            >
+              <div className="flex items-center justify-between">
+                <h2 className="font-semibold text-foreground">Today's Goal</h2>
+                <span className="text-xs text-muted-foreground">Tap to edit</span>
+              </div>
+              <div className="mt-4 flex items-center gap-4">
+                <ProgressRing value={stats.cards_studied_today} max={stats.daily_goal} />
+                <div>
+                  <p className="text-2xl font-bold text-foreground">
+                    {stats.cards_studied_today} <span className="text-muted-foreground text-base font-medium">/ {stats.daily_goal}</span>
+                  </p>
+                  <p className="text-sm text-muted-foreground">cards today</p>
+                </div>
+              </div>
+            </button>
+
+            {/* Cards Due */}
+            <div className="card-surface p-5 flex flex-col">
+              <h2 className="font-semibold text-foreground">Cards Due</h2>
+              <p className="mt-4 text-4xl font-bold text-foreground">{cardsDue}</p>
+              <p className="text-sm text-muted-foreground">ready for review</p>
+              <Link to="/review" className="btn-primary mt-4 self-start">Start Review</Link>
+            </div>
+
+            {/* Streak */}
+            <div className="card-surface p-5">
+              <h2 className="font-semibold text-foreground">Study Streak</h2>
+              <div className="mt-4 flex items-baseline gap-2">
+                <span aria-hidden className="text-3xl">🔥</span>
+                <p className="text-4xl font-bold text-foreground">{stats.current_streak}</p>
+                <span className="text-muted-foreground">days</span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">Longest: {stats.longest_streak} days</p>
+            </div>
+
+            {/* Cards Studied */}
+            <div className="card-surface p-5">
+              <h2 className="font-semibold text-foreground">Cards Studied</h2>
+              <p className="mt-4 text-4xl font-bold text-foreground">{stats.cards_studied_total}</p>
+              <p className="text-sm text-muted-foreground">all-time</p>
+              <p className="mt-3 text-sm text-foreground">
+                <span className="font-semibold">{stats.cards_studied_this_week}</span>{" "}
+                <span className="text-muted-foreground">this week</span>
+              </p>
+            </div>
+
+            {/* Weak / Strong */}
+            <div className="card-surface p-5 sm:col-span-2">
+              {data.topics.length === 0 ? (
+                <div className="text-center py-6">
+                  <p className="font-semibold text-foreground">Ready to start your first study session?</p>
+                  <p className="text-sm text-muted-foreground mt-1">Your weak and strong topics will appear here.</p>
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <TopicList title="Weak Topics" topics={weakTopics} emptyText="No weak spots — nice!" />
+                  <TopicList title="Strong Topics" topics={strongTopics} emptyText="Study more to see strengths." />
+                </div>
+              )}
+            </div>
+
+            {/* Continue Studying */}
+            <div className="card-surface p-5">
+              <h2 className="font-semibold text-foreground">Continue Studying</h2>
+              {stats.last_topic_studied ? (
+                <>
+                  <p className="mt-3 text-foreground">{stats.last_topic_studied}</p>
+                  <p className="text-sm text-muted-foreground">Pick up where you left off.</p>
+                  <Link to="/review" className="btn-primary mt-4 self-start">Resume</Link>
+                </>
+              ) : (
+                <p className="mt-3 text-sm text-muted-foreground">Start a session to see your last topic here.</p>
+              )}
+            </div>
+
+            {/* Weekly chart */}
+            <div className="card-surface p-5 sm:col-span-2 lg:col-span-3">
+              <div className="flex items-center justify-between">
+                <h2 className="font-semibold text-foreground">Progress Overview</h2>
+                <span className="text-xs text-muted-foreground">Last 7 days</span>
+              </div>
+              <div className="mt-6 flex items-end justify-between gap-2 h-40">
+                {weekly.map((w) => {
+                  const pct = (w.count / weeklyMax) * 100;
+                  const isToday = w.date === new Date().toISOString().slice(0, 10);
+                  return (
+                    <div key={w.date} className="flex-1 flex flex-col items-center gap-2">
+                      <span className="text-xs text-foreground font-medium">{w.count}</span>
+                      <div className="w-full flex-1 flex items-end">
+                        <div
+                          className={`w-full rounded-t-lg transition-all ${isToday ? "bg-primary" : "bg-accent/60"}`}
+                          style={{ height: `${Math.max(pct, 4)}%` }}
+                          aria-label={`${w.count} cards on ${w.date}`}
+                        />
+                      </div>
+                      <span className="text-xs text-muted-foreground">{w.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         )}
       </section>
+
+      {goalOpen && stats && (
+        <GoalDialog
+          initial={stats.daily_goal}
+          pending={updateGoal.isPending}
+          onClose={() => setGoalOpen(false)}
+          onSave={async (n) => {
+            await updateGoal.mutateAsync(n);
+            setGoalOpen(false);
+          }}
+        />
+      )}
     </main>
+  );
+}
+
+function TopicList({ title, topics, emptyText }: { title: string; topics: TopicRow[]; emptyText: string }) {
+  return (
+    <div>
+      <h3 className="font-semibold text-foreground text-sm">{title}</h3>
+      {topics.length === 0 ? (
+        <p className="mt-3 text-sm text-muted-foreground">{emptyText}</p>
+      ) : (
+        <ul className="mt-3 space-y-2">
+          {topics.map((t) => (
+            <li key={t.topic_name} className="flex items-center justify-between rounded-xl bg-muted/60 px-3 py-2">
+              <span className="text-sm text-foreground">{t.topic_name}</span>
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${accColor(t.accuracy_percentage)}`}>
+                {t.accuracy_percentage}%
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function ProgressRing({ value, max }: { value: number; max: number }) {
+  const size = 72;
+  const stroke = 8;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const pct = Math.min(1, max > 0 ? value / max : 0);
+  const offset = c * (1 - pct);
+  return (
+    <svg width={size} height={size} className="-rotate-90" aria-hidden>
+      <circle cx={size / 2} cy={size / 2} r={r} stroke="var(--color-muted)" strokeWidth={stroke} fill="none" />
+      <circle
+        cx={size / 2} cy={size / 2} r={r}
+        stroke="var(--color-primary)" strokeWidth={stroke} fill="none"
+        strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset}
+      />
+    </svg>
+  );
+}
+
+function GoalDialog({
+  initial, pending, onClose, onSave,
+}: { initial: number; pending: boolean; onClose: () => void; onSave: (n: number) => void }) {
+  const [val, setVal] = useState(String(initial));
+  const n = Number(val);
+  const valid = Number.isFinite(n) && n >= 1 && n <= 500;
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Edit daily goal"
+      className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4"
+      onClick={onClose}
+    >
+      <div className="card-surface p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-semibold text-foreground">Daily Goal</h3>
+        <p className="text-sm text-muted-foreground mt-1">How many cards do you want to study per day?</p>
+        <input
+          autoFocus
+          type="number" min={1} max={500}
+          value={val} onChange={(e) => setVal(e.target.value)}
+          className="input-field mt-4"
+          aria-label="Daily card goal"
+        />
+        <div className="mt-6 flex justify-end gap-2">
+          <button onClick={onClose} className="btn-outline" style={{ minHeight: 44 }}>Cancel</button>
+          <button
+            onClick={() => valid && onSave(n)}
+            disabled={!valid || pending}
+            className="btn-primary" style={{ minHeight: 44 }}
+          >
+            {pending ? <Spinner className="h-4 w-4" /> : "Save"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
