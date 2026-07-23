@@ -14,6 +14,102 @@ export type Database = {
   }
   public: {
     Tables: {
+      study_activity: {
+        Row: {
+          cards_studied: number
+          created_at: string
+          id: string
+          study_date: string
+          user_id: string
+        }
+        Insert: {
+          cards_studied?: number
+          created_at?: string
+          id?: string
+          study_date: string
+          user_id: string
+        }
+        Update: {
+          cards_studied?: number
+          created_at?: string
+          id?: string
+          study_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      topic_performance: {
+        Row: {
+          accuracy_percentage: number
+          cards_due_count: number
+          created_at: string
+          id: string
+          topic_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accuracy_percentage?: number
+          cards_due_count?: number
+          created_at?: string
+          id?: string
+          topic_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accuracy_percentage?: number
+          cards_due_count?: number
+          created_at?: string
+          id?: string
+          topic_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_stats: {
+        Row: {
+          cards_studied_this_week: number
+          cards_studied_today: number
+          cards_studied_total: number
+          created_at: string
+          current_streak: number
+          daily_goal: number
+          last_study_date: string | null
+          last_topic_studied: string | null
+          longest_streak: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cards_studied_this_week?: number
+          cards_studied_today?: number
+          cards_studied_total?: number
+          created_at?: string
+          current_streak?: number
+          daily_goal?: number
+          last_study_date?: string | null
+          last_topic_studied?: string | null
+          longest_streak?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cards_studied_this_week?: number
+          cards_studied_today?: number
+          cards_studied_total?: number
+          created_at?: string
+          current_streak?: number
+          daily_goal?: number
+          last_study_date?: string | null
+          last_topic_studied?: string | null
+          longest_streak?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           auth_provider: string
