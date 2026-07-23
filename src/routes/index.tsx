@@ -1,24 +1,39 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Logo } from "@/components/Logo";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
-  component: Index,
+  head: () => ({
+    meta: [
+      { title: "AnatomyAce — Master Anatomy, One Card at a Time" },
+      { name: "description", content: "Flashcards designed for first-year MBBS students to master anatomy faster." },
+      { property: "og:title", content: "AnatomyAce" },
+      { property: "og:description", content: "Master Anatomy, One Card at a Time." },
+    ],
+  }),
+  component: Welcome,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function Welcome() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12 bg-background">
+      <div className="w-full max-w-md text-center">
+        <div className="flex justify-center">
+          <Logo size={72} />
+        </div>
+        <h1 className="mt-6 text-4xl sm:text-5xl font-bold tracking-tight text-foreground">
+          AnatomyAce
+        </h1>
+        <p className="mt-3 text-lg text-muted-foreground">
+          Master Anatomy, One Card at a Time
+        </p>
+        <div className="mt-10 flex flex-col gap-3">
+          <Link to="/signup" className="btn-primary w-full">Sign Up</Link>
+          <Link to="/login" className="btn-outline w-full">Log In</Link>
+        </div>
+        <p className="mt-8 text-xs text-muted-foreground">
+          Built for first-year MBBS students.
+        </p>
+      </div>
+    </main>
   );
 }
