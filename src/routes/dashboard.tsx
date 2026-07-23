@@ -142,14 +142,6 @@ function Dashboard() {
     navigate({ to: "/", replace: true });
   }
 
-  if (!authChecked) {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-background">
-        <Spinner className="h-6 w-6 text-primary" />
-      </main>
-    );
-  }
-
   const data = dashboardQuery.data;
   const stats = data?.stats;
   const photo = data?.profile?.profile_photo_url ?? user?.photo ?? null;
@@ -183,6 +175,15 @@ function Dashboard() {
     return out;
   }, [data?.activity]);
   const weeklyMax = Math.max(1, ...weekly.map((w) => w.count));
+
+  if (!authChecked) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-background">
+        <Spinner className="h-6 w-6 text-primary" />
+      </main>
+    );
+  }
+
 
   return (
     <main className="min-h-screen bg-background">
