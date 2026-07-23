@@ -31,7 +31,7 @@ function Welcome() {
           <Link to="/login" className="btn-outline w-full">Log In</Link>
         </div>
         <p className="mt-8 text-xs text-muted-foreground">
-          Built for first-year MBBS students.
+          Built for MBBS students.
         </p>
       </div>
     </main>
