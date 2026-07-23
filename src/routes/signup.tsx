@@ -85,7 +85,7 @@ function SignupPage() {
       // If email confirmation is disabled, session exists; else route to dashboard anyway (they can sign in later)
       setTimeout(() => {
         if (data.session) navigate({ to: "/dashboard" });
-        else navigate({ to: "/login" });
+        else navigate({ to: "/verify-email", search: { email: parsed.data.email } });
       }, 900);
     } catch (err) {
       setSubmitError(friendlyAuthError(err));

@@ -62,7 +62,14 @@ function LoginPage() {
     setLoading(true);
     try {
       const { error, data } = await supabase.auth.signInWithPassword(parsed.data);
-      if (error) throw error;
+      if (error) {
+        const msg = (error.message || "").toLowerCase();
+        if (msg.includes("email not confirmed") || msg.includes("not confirmed")) {
+          navigate({ to: "/verify-email", search: { email: parsed.data.email } });
+          return;
+        }
+        throw error;
+      }
       // Update last_login_at (best-effort)
       if (data.user) {
         void supabase.from("users").update({ last_login_at: new Date().toISOString() }).eq("id", data.user.id);
