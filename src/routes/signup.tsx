@@ -4,7 +4,7 @@ import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { friendlyAuthError } from "@/lib/auth-errors";
 import { Spinner } from "@/components/Spinner";
-import { GoogleButton } from "@/components/GoogleButton";
+
 import { Logo } from "@/components/Logo";
 
 export const Route = createFileRoute("/signup")({
