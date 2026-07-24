@@ -128,13 +128,6 @@ function LoginPage() {
             {loading ? "Logging in…" : "Log In"}
           </button>
 
-          <div className="flex items-center gap-3 py-1">
-            <div className="h-px flex-1 bg-border" />
-            <span className="text-xs uppercase tracking-wider text-muted-foreground">or</span>
-            <div className="h-px flex-1 bg-border" />
-          </div>
-          <GoogleButton onError={setSubmitError} />
-
           <p className="mt-2 text-center text-sm text-muted-foreground">
             Don't have an account?{" "}
             <Link to="/signup" className="font-semibold text-primary hover:underline">Sign Up</Link>
