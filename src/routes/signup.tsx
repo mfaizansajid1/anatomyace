@@ -4,7 +4,7 @@ import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { friendlyAuthError } from "@/lib/auth-errors";
 import { Spinner } from "@/components/Spinner";
-import { GoogleButton } from "@/components/GoogleButton";
+
 import { Logo } from "@/components/Logo";
 
 export const Route = createFileRoute("/signup")({
@@ -141,9 +141,6 @@ function SignupPage() {
               {loading ? "Creating account…" : "Sign Up"}
             </button>
 
-            <Divider />
-            <GoogleButton onError={setSubmitError} />
-
             <p className="mt-2 text-center text-sm text-muted-foreground">
               Already have an account?{" "}
               <Link to="/login" className="font-semibold text-primary hover:underline">Log In</Link>
@@ -185,12 +182,3 @@ function Field({
   );
 }
 
-function Divider() {
-  return (
-    <div className="flex items-center gap-3 py-1">
-      <div className="h-px flex-1 bg-border" />
-      <span className="text-xs uppercase tracking-wider text-muted-foreground">or</span>
-      <div className="h-px flex-1 bg-border" />
-    </div>
-  );
-}
