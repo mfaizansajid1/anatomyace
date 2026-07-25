@@ -14,6 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
+      flashcards: {
+        Row: {
+          answer: string
+          clinical_correlation: string | null
+          created_at: string
+          difficulty: string
+          explanation: string | null
+          high_yield_point: string | null
+          id: string
+          image_url: string | null
+          is_published: boolean
+          mnemonic: string | null
+          question: string
+          reference: string | null
+          subtopic_id: string
+          tags: string[] | null
+          topic_id: string
+          updated_at: string
+        }
+        Insert: {
+          answer: string
+          clinical_correlation?: string | null
+          created_at?: string
+          difficulty?: string
+          explanation?: string | null
+          high_yield_point?: string | null
+          id?: string
+          image_url?: string | null
+          is_published?: boolean
+          mnemonic?: string | null
+          question: string
+          reference?: string | null
+          subtopic_id: string
+          tags?: string[] | null
+          topic_id: string
+          updated_at?: string
+        }
+        Update: {
+          answer?: string
+          clinical_correlation?: string | null
+          created_at?: string
+          difficulty?: string
+          explanation?: string | null
+          high_yield_point?: string | null
+          id?: string
+          image_url?: string | null
+          is_published?: boolean
+          mnemonic?: string | null
+          question?: string
+          reference?: string | null
+          subtopic_id?: string
+          tags?: string[] | null
+          topic_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flashcards_subtopic_id_fkey"
+            columns: ["subtopic_id"]
+            isOneToOne: false
+            referencedRelation: "subtopics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flashcards_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       study_activity: {
         Row: {
           cards_studied: number
@@ -37,6 +109,41 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      subtopics: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          name: string
+          topic_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          name: string
+          topic_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          name?: string
+          topic_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subtopics_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       topic_performance: {
         Row: {
@@ -64,6 +171,54 @@ export type Database = {
           id?: string
           topic_name?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      topics: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          name: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          name: string
+          subject?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          name?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
         Relationships: []
@@ -145,10 +300,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -275,6 +437,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
