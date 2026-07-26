@@ -147,7 +147,7 @@ function StudyPage() {
 
       <section className="mx-auto max-w-3xl px-4 py-8">
         {!started && (
-          <div className="card p-6 space-y-5">
+          <div className="card-surface p-6 space-y-5">
             <div>
               <h1 className="text-2xl font-bold text-foreground">Start a study session</h1>
               <p className="text-sm text-muted-foreground mt-1">Pick a topic and subtopic to begin.</p>
@@ -156,7 +156,7 @@ function StudyPage() {
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">Topic</label>
               <select
-                className="input w-full"
+                className="input-field w-full"
                 value={topicId}
                 onChange={(e) => {
                   setTopicId(e.target.value);
@@ -173,7 +173,7 @@ function StudyPage() {
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">Subtopic</label>
               <select
-                className="input w-full"
+                className="input-field w-full"
                 value={subtopicId}
                 onChange={(e) => setSubtopicId(e.target.value)}
                 disabled={!topicId || subtopicsQ.isLoading}
@@ -194,15 +194,15 @@ function StudyPage() {
         )}
 
         {started && cardsQ.isLoading && (
-          <div className="card p-10 flex justify-center">
+          <div className="card-surface p-10 flex justify-center">
             <Spinner />
           </div>
         )}
 
         {started && !cardsQ.isLoading && cards.length === 0 && (
-          <div className="card p-8 text-center space-y-4">
+          <div className="card-surface p-8 text-center space-y-4">
             <h2 className="text-xl font-semibold text-foreground">No flashcards here yet — check back soon.</h2>
-            <button className="btn-secondary" onClick={restart}>Pick another subtopic</button>
+            <button className="btn-outline" onClick={restart}>Pick another subtopic</button>
           </div>
         )}
 
@@ -213,7 +213,7 @@ function StudyPage() {
               <span className="capitalize">Difficulty: {current.difficulty}</span>
             </div>
 
-            <div className="card p-6 space-y-5">
+            <div className="card-surface p-6 space-y-5">
               <div>
                 <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Question</div>
                 <div className="text-lg text-foreground whitespace-pre-wrap">{current.question}</div>
@@ -237,10 +237,10 @@ function StudyPage() {
                   <ExtraSection label="Reference" value={current.reference} />
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
-                    <button className="btn-secondary" onClick={next}>Again</button>
-                    <button className="btn-secondary" onClick={next}>Hard</button>
-                    <button className="btn-secondary" onClick={next}>Good</button>
-                    <button className="btn-secondary" onClick={next}>Easy</button>
+                    <button className="btn-outline" onClick={next}>Again</button>
+                    <button className="btn-outline" onClick={next}>Hard</button>
+                    <button className="btn-outline" onClick={next}>Good</button>
+                    <button className="btn-outline" onClick={next}>Easy</button>
                   </div>
                 </>
               )}
@@ -249,11 +249,11 @@ function StudyPage() {
         )}
 
         {started && !cardsQ.isLoading && cards.length > 0 && !current && (
-          <div className="card p-8 text-center space-y-4">
+          <div className="card-surface p-8 text-center space-y-4">
             <h2 className="text-2xl font-bold text-foreground">Session Complete 🎉</h2>
             <p className="text-muted-foreground">You reviewed {reviewed} card{reviewed === 1 ? "" : "s"}.</p>
             <div className="flex gap-2 justify-center">
-              <button className="btn-secondary" onClick={restart}>Study another subtopic</button>
+              <button className="btn-outline" onClick={restart}>Study another subtopic</button>
               <Link to="/dashboard" className="btn-primary">Back to Dashboard</Link>
             </div>
           </div>
