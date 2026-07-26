@@ -10,7 +10,7 @@ export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
       { title: "Admin — AnatomyAce" },
-      { name: "description", content: "Manage topics, subtopics, and flashcards." },
+      { name: "description", content: "Manage topics, categories, subtopics, and flashcards." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -18,7 +18,8 @@ export const Route = createFileRoute("/admin")({
 });
 
 type Topic = { id: string; name: string; subject: string; display_order: number };
-type Subtopic = { id: string; topic_id: string; name: string; display_order: number };
+type Category = { id: string; topic_id: string; name: string; display_order: number };
+type Subtopic = { id: string; topic_id: string; category_id: string; name: string; display_order: number };
 type Flashcard = {
   id: string;
   topic_id: string;
@@ -82,6 +83,7 @@ function AdminPage() {
 function AdminShell() {
   const qc = useQueryClient();
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubtopic, setSelectedSubtopic] = useState<string | null>(null);
 
   const topicsQ = useQuery({
@@ -93,14 +95,28 @@ function AdminShell() {
     },
   });
 
-  const subtopicsQ = useQuery({
+  const categoriesQ = useQuery({
     enabled: !!selectedTopic,
-    queryKey: ["admin", "subtopics", selectedTopic],
+    queryKey: ["admin", "categories", selectedTopic],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .eq("topic_id", selectedTopic!)
+        .order("display_order");
+      if (error) throw error;
+      return data as Category[];
+    },
+  });
+
+  const subtopicsQ = useQuery({
+    enabled: !!selectedCategory,
+    queryKey: ["admin", "subtopics", selectedCategory],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("subtopics")
         .select("*")
-        .eq("topic_id", selectedTopic!)
+        .eq("category_id", selectedCategory!)
         .order("display_order");
       if (error) throw error;
       return data as Subtopic[];
@@ -121,11 +137,12 @@ function AdminShell() {
     },
   });
 
-  const invalidate = (k: "topics" | "subtopics" | "flashcards") => {
-    if (k === "topics") qc.invalidateQueries({ queryKey: ["admin", "topics"] });
-    if (k === "subtopics") qc.invalidateQueries({ queryKey: ["admin", "subtopics"] });
-    if (k === "flashcards") qc.invalidateQueries({ queryKey: ["admin", "flashcards"] });
+  const invalidate = (k: "topics" | "categories" | "subtopics" | "flashcards") => {
+    qc.invalidateQueries({ queryKey: ["admin", k] });
   };
+
+  const currentTopic = topicsQ.data?.find((t) => t.id === selectedTopic) ?? null;
+  const currentCategory = categoriesQ.data?.find((c) => c.id === selectedCategory) ?? null;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -141,13 +158,13 @@ function AdminShell() {
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-6xl grid-cols-1 gap-4 px-4 py-6 md:grid-cols-[240px_1fr]">
+      <main className="mx-auto grid max-w-6xl grid-cols-1 gap-4 px-4 py-6 md:grid-cols-[220px_1fr]">
         <aside className="rounded-2xl border border-border bg-card p-3">
           <TopicSidebar
             topics={topicsQ.data ?? []}
             loading={topicsQ.isLoading}
             selectedId={selectedTopic}
-            onSelect={(id) => { setSelectedTopic(id); setSelectedSubtopic(null); }}
+            onSelect={(id) => { setSelectedTopic(id); setSelectedCategory(null); setSelectedSubtopic(null); }}
             onChanged={() => invalidate("topics")}
           />
         </aside>
@@ -155,21 +172,33 @@ function AdminShell() {
         <section className="space-y-4">
           {!selectedTopic ? (
             <div className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground">
-              Select a topic from the left to manage its subtopics and flashcards.
+              Select a topic from the left to manage its categories, subtopics, and flashcards.
             </div>
           ) : (
             <>
-              <SubtopicPanel
-                topic={topicsQ.data?.find((t) => t.id === selectedTopic) ?? null}
-                subtopics={subtopicsQ.data ?? []}
-                loading={subtopicsQ.isLoading}
-                selectedId={selectedSubtopic}
-                onSelect={setSelectedSubtopic}
-                onChanged={() => invalidate("subtopics")}
+              <CategoryPanel
+                topic={currentTopic}
+                categories={categoriesQ.data ?? []}
+                loading={categoriesQ.isLoading}
+                selectedId={selectedCategory}
+                onSelect={(id) => { setSelectedCategory(id); setSelectedSubtopic(null); }}
+                onChanged={() => invalidate("categories")}
               />
-              {selectedSubtopic && (
+              {selectedCategory && (
+                <SubtopicPanel
+                  topic={currentTopic}
+                  category={currentCategory}
+                  subtopics={subtopicsQ.data ?? []}
+                  loading={subtopicsQ.isLoading}
+                  selectedId={selectedSubtopic}
+                  onSelect={setSelectedSubtopic}
+                  onChanged={() => invalidate("subtopics")}
+                />
+              )}
+              {selectedSubtopic && selectedCategory && (
                 <FlashcardPanel
                   topicId={selectedTopic}
+                  categoryId={selectedCategory}
                   subtopicId={selectedSubtopic}
                   topics={topicsQ.data ?? []}
                   flashcards={flashcardsQ.data ?? []}
@@ -180,7 +209,6 @@ function AdminShell() {
             </>
           )}
           <CsvImportPanel
-            topics={topicsQ.data ?? []}
             onDone={() => { invalidate("flashcards"); }}
           />
         </section>
@@ -229,7 +257,7 @@ function TopicSidebar({
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      if (!confirm("Delete this topic? All its subtopics and flashcards will be deleted too.")) throw new Error("cancelled");
+      if (!confirm("Delete this topic? All its categories, subtopics, and flashcards will be deleted too.")) throw new Error("cancelled");
       const { error } = await supabase.from("topics").delete().eq("id", id);
       if (error) throw error;
     },
@@ -300,13 +328,13 @@ function TopicSidebar({
   );
 }
 
-/* ---------- Subtopics ---------- */
+/* ---------- Categories ---------- */
 
-function SubtopicPanel({
-  topic, subtopics, loading, selectedId, onSelect, onChanged,
+function CategoryPanel({
+  topic, categories, loading, selectedId, onSelect, onChanged,
 }: {
   topic: Topic | null;
-  subtopics: Subtopic[];
+  categories: Category[];
   loading: boolean;
   selectedId: string | null;
   onSelect: (id: string) => void;
@@ -321,9 +349,128 @@ function SubtopicPanel({
       if (!topic) throw new Error("Pick a topic first");
       const trimmed = name.trim();
       if (!trimmed) throw new Error("Name is required");
+      const nextOrder = Math.max(0, ...categories.map((c) => c.display_order)) + 1;
+      const { error } = await supabase.from("categories").insert({
+        topic_id: topic.id, name: trimmed, display_order: nextOrder,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Category added"); setAdding(false); setName(""); onChanged(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const update = useMutation({
+    mutationFn: async (id: string) => {
+      const trimmed = name.trim();
+      if (!trimmed) throw new Error("Name is required");
+      const { error } = await supabase.from("categories").update({ name: trimmed }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Category updated"); setEditing(null); onChanged(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      const { count } = await supabase
+        .from("subtopics")
+        .select("*", { count: "exact", head: true })
+        .eq("category_id", id);
+      const warning = count && count > 0
+        ? `⚠️ This category has ${count} subtopic${count === 1 ? "" : "s"} (and all their flashcards). Delete everything?`
+        : "Delete this category?";
+      if (!confirm(warning)) throw new Error("cancelled");
+      const { error } = await supabase.from("categories").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Category deleted"); onChanged(); },
+    onError: (e: Error) => { if (e.message !== "cancelled") toast.error(e.message); },
+  });
+
+  if (!topic) return null;
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-lg font-semibold">{topic.name} · Categories</h2>
+        <button className="btn-primary px-3 py-1.5 text-sm" onClick={() => { setAdding(true); setName(""); }}>
+          + Add category
+        </button>
+      </div>
+      {adding && (
+        <div className="mb-3 flex gap-2 rounded-xl border border-border p-2">
+          <input
+            className="flex-1 rounded-lg border border-border bg-background px-2 py-1 text-sm"
+            placeholder="Category name (e.g. Osteology, Muscles)"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoFocus
+          />
+          <button className="btn-primary px-2 py-1 text-xs" onClick={() => create.mutate()}>Save</button>
+          <button className="btn-outline px-2 py-1 text-xs" onClick={() => setAdding(false)}>Cancel</button>
+        </div>
+      )}
+      {loading ? (
+        <div className="text-sm text-muted-foreground">Loading…</div>
+      ) : categories.length === 0 ? (
+        <div className="text-sm text-muted-foreground">No categories yet. Add one to get started.</div>
+      ) : (
+        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3">
+          {categories.map((c) => (
+            <li key={c.id}>
+              {editing === c.id ? (
+                <div className="flex gap-1 rounded-xl border border-border p-2">
+                  <input
+                    className="flex-1 rounded-lg border border-border bg-background px-2 py-1 text-sm"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    autoFocus
+                  />
+                  <button className="btn-primary px-2 py-1 text-xs" onClick={() => update.mutate(c.id)}>Save</button>
+                  <button className="btn-outline px-2 py-1 text-xs" onClick={() => setEditing(null)}>Cancel</button>
+                </div>
+              ) : (
+                <div className={`flex items-center justify-between rounded-xl px-3 py-2 text-sm ${selectedId === c.id ? "bg-primary/10 text-primary" : "bg-muted/40 hover:bg-muted"}`}>
+                  <button className="flex-1 truncate text-left" onClick={() => onSelect(c.id)}>{c.name}</button>
+                  <div className="flex gap-2 text-xs opacity-70">
+                    <button className="hover:text-primary" onClick={() => { setEditing(c.id); setName(c.name); }}>edit</button>
+                    <button className="hover:text-rose-500" onClick={() => remove.mutate(c.id)}>delete</button>
+                  </div>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Subtopics ---------- */
+
+function SubtopicPanel({
+  topic, category, subtopics, loading, selectedId, onSelect, onChanged,
+}: {
+  topic: Topic | null;
+  category: Category | null;
+  subtopics: Subtopic[];
+  loading: boolean;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  onChanged: () => void;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [name, setName] = useState("");
+
+  const create = useMutation({
+    mutationFn: async () => {
+      if (!topic || !category) throw new Error("Pick a topic and category first");
+      const trimmed = name.trim();
+      if (!trimmed) throw new Error("Name is required");
       const nextOrder = Math.max(0, ...subtopics.map((s) => s.display_order)) + 1;
       const { error } = await supabase.from("subtopics").insert({
-        topic_id: topic.id, name: trimmed, display_order: nextOrder,
+        topic_id: topic.id, category_id: category.id, name: trimmed, display_order: nextOrder,
       });
       if (error) throw error;
     },
@@ -359,12 +506,12 @@ function SubtopicPanel({
     onError: (e: Error) => { if (e.message !== "cancelled") toast.error(e.message); },
   });
 
-  if (!topic) return null;
+  if (!topic || !category) return null;
 
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">{topic.name} · Subtopics</h2>
+        <h2 className="text-lg font-semibold">{topic.name} › {category.name} · Subtopics</h2>
         <button className="btn-primary px-3 py-1.5 text-sm" onClick={() => { setAdding(true); setName(""); }}>
           + Add subtopic
         </button>
@@ -427,9 +574,10 @@ function diffBadge(d: string) {
 }
 
 function FlashcardPanel({
-  topicId, subtopicId, topics, flashcards, loading, onChanged,
+  topicId, categoryId, subtopicId, topics, flashcards, loading, onChanged,
 }: {
   topicId: string;
+  categoryId: string;
   subtopicId: string;
   topics: Topic[];
   flashcards: Flashcard[];
@@ -512,7 +660,7 @@ function FlashcardPanel({
       {(creating || editing) && (
         <FlashcardForm
           topics={topics}
-          initial={editing ?? { topic_id: topicId, subtopic_id: subtopicId }}
+          initial={editing ?? { topic_id: topicId, category_id: categoryId, subtopic_id: subtopicId }}
           onClose={() => { setCreating(false); setEditing(null); }}
           onSaved={() => { setCreating(false); setEditing(null); onChanged(); }}
         />
@@ -525,7 +673,7 @@ function FlashcardForm({
   topics, initial, onClose, onSaved,
 }: {
   topics: Topic[];
-  initial: Partial<Flashcard> & { topic_id: string; subtopic_id: string };
+  initial: Partial<Flashcard> & { topic_id: string; category_id?: string; subtopic_id: string };
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -533,20 +681,48 @@ function FlashcardForm({
   const [answer, setAnswer] = useState(initial.answer ?? "");
   const [difficulty, setDifficulty] = useState<"Easy" | "Medium" | "Hard">(initial.difficulty ?? "Medium");
   const [topicId, setTopicId] = useState(initial.topic_id);
+  const [categoryId, setCategoryId] = useState(initial.category_id ?? "");
   const [subtopicId, setSubtopicId] = useState(initial.subtopic_id);
 
-  const subtopicsQ = useQuery({
-    queryKey: ["admin", "subtopics", topicId],
+  const categoriesQ = useQuery({
+    enabled: !!topicId,
+    queryKey: ["admin", "categories", topicId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("subtopics").select("id,name,topic_id,display_order").eq("topic_id", topicId).order("display_order");
+        .from("categories").select("*").eq("topic_id", topicId).order("display_order");
+      if (error) throw error;
+      return data as Category[];
+    },
+  });
+
+  // If editing an existing card, derive category from its subtopic on first load
+  useEffect(() => {
+    if (categoryId || !initial.subtopic_id) return;
+    (async () => {
+      const { data } = await supabase.from("subtopics").select("category_id").eq("id", initial.subtopic_id).maybeSingle();
+      if (data?.category_id) setCategoryId(data.category_id);
+    })();
+  }, [categoryId, initial.subtopic_id]);
+
+  const subtopicsQ = useQuery({
+    enabled: !!categoryId,
+    queryKey: ["admin", "subtopics", categoryId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("subtopics").select("*").eq("category_id", categoryId).order("display_order");
       if (error) throw error;
       return data as Subtopic[];
     },
   });
 
   useEffect(() => {
-    // if topic changes and current subtopic no longer belongs, reset
+    const list = categoriesQ.data ?? [];
+    if (list.length && !list.some((c) => c.id === categoryId)) {
+      setCategoryId(list[0].id);
+    }
+  }, [categoriesQ.data, categoryId]);
+
+  useEffect(() => {
     const list = subtopicsQ.data ?? [];
     if (list.length && !list.some((s) => s.id === subtopicId)) {
       setSubtopicId(list[0].id);
@@ -557,7 +733,7 @@ function FlashcardForm({
     mutationFn: async () => {
       if (!question.trim()) throw new Error("Question is required");
       if (!answer.trim()) throw new Error("Answer is required");
-      if (!topicId || !subtopicId) throw new Error("Topic and subtopic required");
+      if (!topicId || !categoryId || !subtopicId) throw new Error("Topic, category, and subtopic required");
       const payload = {
         topic_id: topicId,
         subtopic_id: subtopicId,
@@ -600,25 +776,36 @@ function FlashcardForm({
               onChange={(e) => setAnswer(e.target.value)}
             />
           </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium">Difficulty</label>
+            <select
+              className="w-full rounded-lg border border-border bg-background p-2 text-sm"
+              value={difficulty}
+              onChange={(e) => setDifficulty(e.target.value as "Easy" | "Medium" | "Hard")}
+            >
+              <option>Easy</option><option>Medium</option><option>Hard</option>
+            </select>
+          </div>
           <div className="grid grid-cols-3 gap-2">
-            <div>
-              <label className="mb-1 block text-xs font-medium">Difficulty</label>
-              <select
-                className="w-full rounded-lg border border-border bg-background p-2 text-sm"
-                value={difficulty}
-                onChange={(e) => setDifficulty(e.target.value as "Easy" | "Medium" | "Hard")}
-              >
-                <option>Easy</option><option>Medium</option><option>Hard</option>
-              </select>
-            </div>
             <div>
               <label className="mb-1 block text-xs font-medium">Topic</label>
               <select
                 className="w-full rounded-lg border border-border bg-background p-2 text-sm"
                 value={topicId}
-                onChange={(e) => setTopicId(e.target.value)}
+                onChange={(e) => { setTopicId(e.target.value); setCategoryId(""); setSubtopicId(""); }}
               >
                 {topics.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">Category</label>
+              <select
+                className="w-full rounded-lg border border-border bg-background p-2 text-sm"
+                value={categoryId}
+                onChange={(e) => { setCategoryId(e.target.value); setSubtopicId(""); }}
+              >
+                <option value="">Select…</option>
+                {(categoriesQ.data ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
             <div>
@@ -628,6 +815,7 @@ function FlashcardForm({
                 value={subtopicId}
                 onChange={(e) => setSubtopicId(e.target.value)}
               >
+                <option value="">Select…</option>
                 {(subtopicsQ.data ?? []).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
@@ -672,16 +860,10 @@ function parseCsv(text: string): string[][] {
   return rows;
 }
 
-function CsvImportPanel({ topics, onDone }: { topics: Topic[]; onDone: () => void }) {
+function CsvImportPanel({ onDone }: { onDone: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [summary, setSummary] = useState<{ created: number; failed: ImportRow[] } | null>(null);
-
-  const topicByName = useMemo(() => {
-    const m = new Map<string, Topic>();
-    for (const t of topics) m.set(t.name.toLowerCase(), t);
-    return m;
-  }, [topics]);
 
   async function handleFile(file: File) {
     setBusy(true);
@@ -695,22 +877,33 @@ function CsvImportPanel({ topics, onDone }: { topics: Topic[]; onDone: () => voi
         question: header.indexOf("question"),
         answer: header.indexOf("answer"),
         difficulty: header.indexOf("difficulty"),
-        topic: header.indexOf("topic"),
+        category: header.indexOf("category"),
         subtopic: header.indexOf("subtopic"),
       };
       if (Object.values(idx).some((v) => v < 0)) {
-        toast.error("CSV must have columns: question, answer, difficulty, topic, subtopic");
+        toast.error("CSV must have columns: question, answer, difficulty, category, subtopic");
         return;
       }
 
-      // preload subtopics per topic used
-      const subCache = new Map<string, Map<string, string>>(); // topicId -> (subName -> id)
-      async function subtopicMap(topicId: string) {
-        if (subCache.has(topicId)) return subCache.get(topicId)!;
-        const { data } = await supabase.from("subtopics").select("id,name").eq("topic_id", topicId);
+      // Preload categories: name(lower) -> list of {id, topic_id}
+      const { data: allCats, error: catErr } = await supabase.from("categories").select("id,name,topic_id");
+      if (catErr) throw catErr;
+      const catByName = new Map<string, { id: string; topic_id: string }[]>();
+      for (const c of allCats ?? []) {
+        const key = c.name.toLowerCase();
+        const arr = catByName.get(key) ?? [];
+        arr.push({ id: c.id, topic_id: c.topic_id });
+        catByName.set(key, arr);
+      }
+
+      // Cache subtopics per category id
+      const subCache = new Map<string, Map<string, string>>();
+      async function subtopicMap(categoryId: string) {
+        if (subCache.has(categoryId)) return subCache.get(categoryId)!;
+        const { data } = await supabase.from("subtopics").select("id,name").eq("category_id", categoryId);
         const m = new Map<string, string>();
         for (const s of data ?? []) m.set(s.name.toLowerCase(), s.id);
-        subCache.set(topicId, m);
+        subCache.set(categoryId, m);
         return m;
       }
 
@@ -725,17 +918,23 @@ function CsvImportPanel({ topics, onDone }: { topics: Topic[]; onDone: () => voi
         const question = (r[idx.question] ?? "").trim();
         const answer = (r[idx.answer] ?? "").trim();
         const difficulty = (r[idx.difficulty] ?? "").trim();
-        const topicName = (r[idx.topic] ?? "").trim();
+        const categoryName = (r[idx.category] ?? "").trim();
         const subtopicName = (r[idx.subtopic] ?? "").trim();
 
         if (!question || !answer) { failed.push({ row: rowNum, error: "Missing question or answer" }); continue; }
         if (!["Easy", "Medium", "Hard"].includes(difficulty)) { failed.push({ row: rowNum, error: "Difficulty must be Easy, Medium, or Hard" }); continue; }
-        const topic = topicByName.get(topicName.toLowerCase());
-        if (!topic) { failed.push({ row: rowNum, error: `Topic not found: ${topicName}` }); continue; }
-        const submap = await subtopicMap(topic.id);
+
+        const matches = catByName.get(categoryName.toLowerCase()) ?? [];
+        if (matches.length === 0) { failed.push({ row: rowNum, error: `Category '${categoryName}' not found` }); continue; }
+        if (matches.length > 1) {
+          failed.push({ row: rowNum, error: `Category name '${categoryName}' is ambiguous — exists under multiple topics. Rename categories to be unique or specify which topic in a future update.` });
+          continue;
+        }
+        const cat = matches[0];
+        const submap = await subtopicMap(cat.id);
         const subId = submap.get(subtopicName.toLowerCase());
-        if (!subId) { failed.push({ row: rowNum, error: `Subtopic "${subtopicName}" not found under "${topicName}"` }); continue; }
-        toInsert.push({ topic_id: topic.id, subtopic_id: subId, question, answer, difficulty });
+        if (!subId) { failed.push({ row: rowNum, error: `Subtopic '${subtopicName}' not found under category '${categoryName}'` }); continue; }
+        toInsert.push({ topic_id: cat.topic_id, subtopic_id: subId, question, answer, difficulty });
       }
 
       let created = 0;
@@ -762,7 +961,7 @@ function CsvImportPanel({ topics, onDone }: { topics: Topic[]; onDone: () => voi
     <div className="rounded-2xl border border-border bg-card p-4">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-base font-semibold">Bulk CSV import</h3>
-        <span className="text-xs text-muted-foreground">Columns: question, answer, difficulty, topic, subtopic</span>
+        <span className="text-xs text-muted-foreground">Columns: question, answer, difficulty, category, subtopic</span>
       </div>
       <input
         ref={fileRef}
