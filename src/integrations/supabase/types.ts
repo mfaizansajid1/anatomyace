@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      categories: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          name: string
+          topic_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          name: string
+          topic_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          name?: string
+          topic_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categories_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       flashcards: {
         Row: {
           answer: string
@@ -112,6 +147,7 @@ export type Database = {
       }
       subtopics: {
         Row: {
+          category_id: string
           created_at: string
           display_order: number
           id: string
@@ -120,6 +156,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          category_id: string
           created_at?: string
           display_order?: number
           id?: string
@@ -128,6 +165,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          category_id?: string
           created_at?: string
           display_order?: number
           id?: string
@@ -136,6 +174,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "subtopics_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "subtopics_topic_id_fkey"
             columns: ["topic_id"]
