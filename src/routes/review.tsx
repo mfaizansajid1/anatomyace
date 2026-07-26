@@ -19,7 +19,8 @@ export const Route = createFileRoute("/review")({
 });
 
 type Topic = { id: string; name: string };
-type Subtopic = { id: string; name: string; topic_id: string };
+type Category = { id: string; name: string; topic_id: string };
+type Subtopic = { id: string; name: string; topic_id: string; category_id: string };
 type Flashcard = {
   id: string;
   question: string;
@@ -37,6 +38,7 @@ function StudyPage() {
   const [authChecked, setAuthChecked] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [topicId, setTopicId] = useState<string>("");
+  const [categoryId, setCategoryId] = useState<string>("");
   const [subtopicId, setSubtopicId] = useState<string>("");
   const [started, setStarted] = useState(false);
   const [index, setIndex] = useState(0);
@@ -68,14 +70,28 @@ function StudyPage() {
     },
   });
 
-  const subtopicsQ = useQuery({
-    queryKey: ["study", "subtopics", topicId],
+  const categoriesQ = useQuery({
+    queryKey: ["study", "categories", topicId],
     enabled: signedIn && !!topicId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("subtopics")
+        .from("categories")
         .select("id, name, topic_id")
         .eq("topic_id", topicId)
+        .order("display_order", { ascending: true });
+      if (error) throw error;
+      return data as Category[];
+    },
+  });
+
+  const subtopicsQ = useQuery({
+    queryKey: ["study", "subtopics", categoryId],
+    enabled: signedIn && !!categoryId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("subtopics")
+        .select("id, name, topic_id, category_id")
+        .eq("category_id", categoryId)
         .order("display_order", { ascending: true });
       if (error) throw error;
       return data as Subtopic[];
@@ -83,13 +99,12 @@ function StudyPage() {
   });
 
   const cardsQ = useQuery({
-    queryKey: ["study", "cards", topicId, subtopicId],
-    enabled: signedIn && started && !!topicId && !!subtopicId,
+    queryKey: ["study", "cards", subtopicId],
+    enabled: signedIn && started && !!subtopicId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("flashcards")
         .select("id, question, answer, difficulty, clinical_correlation, mnemonic, high_yield_point, image_url, reference")
-        .eq("topic_id", topicId)
         .eq("subtopic_id", subtopicId)
         .eq("is_published", true);
       if (error) throw error;
@@ -99,10 +114,12 @@ function StudyPage() {
 
   const cards = useMemo(() => cardsQ.data ?? [], [cardsQ.data]);
   const current = cards[index];
-  const remaining = Math.max(0, cards.length - index);
+  const total = cards.length;
+  const remaining = Math.max(0, total - index);
+  const progressPct = total > 0 ? Math.min(100, Math.round((reviewed / total) * 100)) : 0;
 
   function begin() {
-    if (!topicId || !subtopicId) return;
+    if (!topicId || !categoryId || !subtopicId) return;
     setIndex(0);
     setReviewed(0);
     setShowAnswer(false);
@@ -115,7 +132,13 @@ function StudyPage() {
     setIndex((i) => i + 1);
   }
 
-  function restart() {
+  function restartSession() {
+    setIndex(0);
+    setReviewed(0);
+    setShowAnswer(false);
+  }
+
+  function pickAnother() {
     setStarted(false);
     setSubtopicId("");
     setIndex(0);
@@ -150,7 +173,7 @@ function StudyPage() {
           <div className="card-surface p-6 space-y-5">
             <div>
               <h1 className="text-2xl font-bold text-foreground">Start a study session</h1>
-              <p className="text-sm text-muted-foreground mt-1">Pick a topic and subtopic to begin.</p>
+              <p className="text-sm text-muted-foreground mt-1">Pick a topic, category, and subtopic to begin.</p>
             </div>
 
             <div className="space-y-2">
@@ -160,6 +183,7 @@ function StudyPage() {
                 value={topicId}
                 onChange={(e) => {
                   setTopicId(e.target.value);
+                  setCategoryId("");
                   setSubtopicId("");
                 }}
               >
@@ -171,15 +195,32 @@ function StudyPage() {
             </div>
 
             <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Category</label>
+              <select
+                className="input-field w-full"
+                value={categoryId}
+                onChange={(e) => { setCategoryId(e.target.value); setSubtopicId(""); }}
+                disabled={!topicId || categoriesQ.isLoading}
+              >
+                <option value="">
+                  {topicId ? (categoriesQ.isLoading ? "Loading…" : "Select a category…") : "Pick a topic first"}
+                </option>
+                {categoriesQ.data?.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">Subtopic</label>
               <select
                 className="input-field w-full"
                 value={subtopicId}
                 onChange={(e) => setSubtopicId(e.target.value)}
-                disabled={!topicId || subtopicsQ.isLoading}
+                disabled={!categoryId || subtopicsQ.isLoading}
               >
                 <option value="">
-                  {topicId ? (subtopicsQ.isLoading ? "Loading…" : "Select a subtopic…") : "Pick a topic first"}
+                  {categoryId ? (subtopicsQ.isLoading ? "Loading…" : "Select a subtopic…") : "Pick a category first"}
                 </option>
                 {subtopicsQ.data?.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
@@ -187,7 +228,7 @@ function StudyPage() {
               </select>
             </div>
 
-            <button className="btn-primary w-full" onClick={begin} disabled={!topicId || !subtopicId}>
+            <button className="btn-primary w-full" onClick={begin} disabled={!topicId || !categoryId || !subtopicId}>
               Start studying
             </button>
           </div>
@@ -202,15 +243,32 @@ function StudyPage() {
         {started && !cardsQ.isLoading && cards.length === 0 && (
           <div className="card-surface p-8 text-center space-y-4">
             <h2 className="text-xl font-semibold text-foreground">No flashcards here yet — check back soon.</h2>
-            <button className="btn-outline" onClick={restart}>Pick another subtopic</button>
+            <button className="btn-outline" onClick={pickAnother}>Pick another subtopic</button>
           </div>
         )}
 
         {started && !cardsQ.isLoading && cards.length > 0 && current && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>{remaining} card{remaining === 1 ? "" : "s"} left</span>
-              <span className="capitalize">Difficulty: {current.difficulty}</span>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>{reviewed} of {total} reviewed · {remaining} left</span>
+                <span className="capitalize">Difficulty: {current.difficulty}</span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full bg-primary transition-all duration-300"
+                  style={{ width: `${progressPct}%` }}
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={progressPct}
+                />
+              </div>
+              <div className="flex justify-end">
+                <button className="text-xs text-muted-foreground hover:text-foreground underline" onClick={restartSession}>
+                  ↻ Restart session
+                </button>
+              </div>
             </div>
 
             <div className="card-surface p-6 space-y-5">
@@ -252,8 +310,9 @@ function StudyPage() {
           <div className="card-surface p-8 text-center space-y-4">
             <h2 className="text-2xl font-bold text-foreground">Session Complete 🎉</h2>
             <p className="text-muted-foreground">You reviewed {reviewed} card{reviewed === 1 ? "" : "s"}.</p>
-            <div className="flex gap-2 justify-center">
-              <button className="btn-outline" onClick={restart}>Study another subtopic</button>
+            <div className="flex flex-wrap gap-2 justify-center">
+              <button className="btn-outline" onClick={restartSession}>↻ Restart session</button>
+              <button className="btn-outline" onClick={pickAnother}>Study another subtopic</button>
               <Link to="/dashboard" className="btn-primary">Back to Dashboard</Link>
             </div>
           </div>
