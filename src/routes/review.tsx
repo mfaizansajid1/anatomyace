@@ -1,28 +1,277 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
+import { Spinner } from "@/components/Spinner";
 
 export const Route = createFileRoute("/review")({
   head: () => ({
     meta: [
-      { title: "Flashcard Review — AnatomyAce" },
-      { name: "description", content: "Review your anatomy flashcards." },
-      { property: "og:title", content: "Flashcard Review — AnatomyAce" },
-      { property: "og:description", content: "Review your anatomy flashcards." },
+      { title: "Study — AnatomyAce" },
+      { name: "description", content: "Study anatomy flashcards." },
+      { property: "og:title", content: "Study — AnatomyAce" },
+      { property: "og:description", content: "Study anatomy flashcards." },
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: ReviewPlaceholder,
+  component: StudyPage,
 });
 
-function ReviewPlaceholder() {
+type Topic = { id: string; name: string };
+type Subtopic = { id: string; name: string; topic_id: string };
+type Flashcard = {
+  id: string;
+  question: string;
+  answer: string;
+  difficulty: string;
+  clinical_correlation: string | null;
+  mnemonic: string | null;
+  high_yield_point: string | null;
+  image_url: string | null;
+  reference: string | null;
+};
+
+function StudyPage() {
+  const navigate = useNavigate();
+  const [authChecked, setAuthChecked] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
+  const [topicId, setTopicId] = useState<string>("");
+  const [subtopicId, setSubtopicId] = useState<string>("");
+  const [started, setStarted] = useState(false);
+  const [index, setIndex] = useState(0);
+  const [showAnswer, setShowAnswer] = useState(false);
+  const [reviewed, setReviewed] = useState(0);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      if (!data.user) {
+        navigate({ to: "/login" });
+        return;
+      }
+      setSignedIn(true);
+      setAuthChecked(true);
+    })();
+  }, [navigate]);
+
+  const topicsQ = useQuery({
+    queryKey: ["study", "topics"],
+    enabled: signedIn,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("topics")
+        .select("id, name")
+        .order("display_order", { ascending: true });
+      if (error) throw error;
+      return data as Topic[];
+    },
+  });
+
+  const subtopicsQ = useQuery({
+    queryKey: ["study", "subtopics", topicId],
+    enabled: signedIn && !!topicId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("subtopics")
+        .select("id, name, topic_id")
+        .eq("topic_id", topicId)
+        .order("display_order", { ascending: true });
+      if (error) throw error;
+      return data as Subtopic[];
+    },
+  });
+
+  const cardsQ = useQuery({
+    queryKey: ["study", "cards", topicId, subtopicId],
+    enabled: signedIn && started && !!topicId && !!subtopicId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("flashcards")
+        .select("id, question, answer, difficulty, clinical_correlation, mnemonic, high_yield_point, image_url, reference")
+        .eq("topic_id", topicId)
+        .eq("subtopic_id", subtopicId)
+        .eq("is_published", true);
+      if (error) throw error;
+      return data as Flashcard[];
+    },
+  });
+
+  const cards = useMemo(() => cardsQ.data ?? [], [cardsQ.data]);
+  const current = cards[index];
+  const remaining = Math.max(0, cards.length - index);
+
+  function begin() {
+    if (!topicId || !subtopicId) return;
+    setIndex(0);
+    setReviewed(0);
+    setShowAnswer(false);
+    setStarted(true);
+  }
+
+  function next() {
+    setReviewed((r) => r + 1);
+    setShowAnswer(false);
+    setIndex((i) => i + 1);
+  }
+
+  function restart() {
+    setStarted(false);
+    setSubtopicId("");
+    setIndex(0);
+    setReviewed(0);
+    setShowAnswer(false);
+  }
+
+  if (!authChecked) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-background">
+        <Spinner />
+      </main>
+    );
+  }
+
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-background px-6 text-center">
-      <Logo size={56} />
-      <h1 className="mt-6 text-3xl font-bold text-foreground">Flashcard Review Coming Soon</h1>
-      <p className="mt-3 text-muted-foreground max-w-md">
-        This is where you'll drill anatomy cards with spaced repetition. Stay tuned.
-      </p>
-      <Link to="/dashboard" className="btn-primary mt-8">Back to Dashboard</Link>
+    <main className="min-h-screen bg-background">
+      <header className="border-b border-border">
+        <div className="mx-auto max-w-3xl px-4 py-4 flex items-center justify-between">
+          <Link to="/dashboard" className="flex items-center gap-2">
+            <Logo size={32} />
+            <span className="font-semibold text-foreground">AnatomyAce</span>
+          </Link>
+          <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
+            ← Dashboard
+          </Link>
+        </div>
+      </header>
+
+      <section className="mx-auto max-w-3xl px-4 py-8">
+        {!started && (
+          <div className="card p-6 space-y-5">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Start a study session</h1>
+              <p className="text-sm text-muted-foreground mt-1">Pick a topic and subtopic to begin.</p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Topic</label>
+              <select
+                className="input w-full"
+                value={topicId}
+                onChange={(e) => {
+                  setTopicId(e.target.value);
+                  setSubtopicId("");
+                }}
+              >
+                <option value="">Select a topic…</option>
+                {topicsQ.data?.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Subtopic</label>
+              <select
+                className="input w-full"
+                value={subtopicId}
+                onChange={(e) => setSubtopicId(e.target.value)}
+                disabled={!topicId || subtopicsQ.isLoading}
+              >
+                <option value="">
+                  {topicId ? (subtopicsQ.isLoading ? "Loading…" : "Select a subtopic…") : "Pick a topic first"}
+                </option>
+                {subtopicsQ.data?.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <button className="btn-primary w-full" onClick={begin} disabled={!topicId || !subtopicId}>
+              Start studying
+            </button>
+          </div>
+        )}
+
+        {started && cardsQ.isLoading && (
+          <div className="card p-10 flex justify-center">
+            <Spinner />
+          </div>
+        )}
+
+        {started && !cardsQ.isLoading && cards.length === 0 && (
+          <div className="card p-8 text-center space-y-4">
+            <h2 className="text-xl font-semibold text-foreground">No flashcards here yet — check back soon.</h2>
+            <button className="btn-secondary" onClick={restart}>Pick another subtopic</button>
+          </div>
+        )}
+
+        {started && !cardsQ.isLoading && cards.length > 0 && current && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <span>{remaining} card{remaining === 1 ? "" : "s"} left</span>
+              <span className="capitalize">Difficulty: {current.difficulty}</span>
+            </div>
+
+            <div className="card p-6 space-y-5">
+              <div>
+                <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Question</div>
+                <div className="text-lg text-foreground whitespace-pre-wrap">{current.question}</div>
+              </div>
+
+              {!showAnswer ? (
+                <button className="btn-primary w-full" onClick={() => setShowAnswer(true)}>
+                  Show Answer
+                </button>
+              ) : (
+                <>
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Answer</div>
+                    <div className="text-foreground whitespace-pre-wrap">{current.answer}</div>
+                  </div>
+
+                  <ExtraSection label="Clinical Correlation" value={current.clinical_correlation} />
+                  <ExtraSection label="Mnemonic" value={current.mnemonic} />
+                  <ExtraSection label="High-Yield Point" value={current.high_yield_point} />
+                  <ExtraSection label="Image" value={current.image_url} />
+                  <ExtraSection label="Reference" value={current.reference} />
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
+                    <button className="btn-secondary" onClick={next}>Again</button>
+                    <button className="btn-secondary" onClick={next}>Hard</button>
+                    <button className="btn-secondary" onClick={next}>Good</button>
+                    <button className="btn-secondary" onClick={next}>Easy</button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {started && !cardsQ.isLoading && cards.length > 0 && !current && (
+          <div className="card p-8 text-center space-y-4">
+            <h2 className="text-2xl font-bold text-foreground">Session Complete 🎉</h2>
+            <p className="text-muted-foreground">You reviewed {reviewed} card{reviewed === 1 ? "" : "s"}.</p>
+            <div className="flex gap-2 justify-center">
+              <button className="btn-secondary" onClick={restart}>Study another subtopic</button>
+              <Link to="/dashboard" className="btn-primary">Back to Dashboard</Link>
+            </div>
+          </div>
+        )}
+      </section>
     </main>
+  );
+}
+
+function ExtraSection({ label, value }: { label: string; value: string | null }) {
+  return (
+    <div>
+      <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">{label}</div>
+      {value ? (
+        <div className="text-foreground text-sm whitespace-pre-wrap">{value}</div>
+      ) : (
+        <div className="text-sm text-muted-foreground italic">Coming Soon</div>
+      )}
+    </div>
   );
 }
