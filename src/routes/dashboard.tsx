@@ -419,23 +419,33 @@ function Dashboard() {
   );
 }
 
-function TopicList({ title, topics, emptyText }: { title: string; topics: TopicRow[]; emptyText: string }) {
+function SubtopicGroups({ title, groups, emptyText }: { title: string; groups: GroupedPerf[]; emptyText: string }) {
   return (
     <div>
       <h3 className="font-semibold text-foreground text-sm">{title}</h3>
-      {topics.length === 0 ? (
+      {groups.length === 0 ? (
         <p className="mt-3 text-sm text-muted-foreground">{emptyText}</p>
       ) : (
-        <ul className="mt-3 space-y-2">
-          {topics.map((t) => (
-            <li key={t.topic_name} className="flex items-center justify-between rounded-xl bg-muted/60 px-3 py-2">
-              <span className="text-sm text-foreground">{t.topic_name}</span>
-              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${accColor(t.accuracy_percentage)}`}>
-                {t.accuracy_percentage}%
-              </span>
-            </li>
+        <div className="mt-3 space-y-4">
+          {groups.map((g) => (
+            <div key={g.topic_name}>
+              <h4 className="text-sm font-bold text-foreground mb-2">{g.topic_name}</h4>
+              <ul className="space-y-2">
+                {g.items.map((s) => (
+                  <li key={s.subtopic_id} className="flex items-center justify-between rounded-xl bg-muted/60 px-3 py-2">
+                    <span className="text-sm text-foreground">
+                      {s.subtopic_name}{" "}
+                      <span className="text-muted-foreground">({s.category_name})</span>
+                    </span>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${accColor(s.accuracy)}`}>
+                      {s.accuracy}%
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
