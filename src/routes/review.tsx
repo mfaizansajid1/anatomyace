@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/Spinner";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/review")({
   head: () => ({
@@ -98,17 +99,27 @@ function StudyPage() {
     },
   });
 
+  const qc = useQueryClient();
+
   const cardsQ = useQuery({
     queryKey: ["study", "cards", subtopicId],
     enabled: signedIn && started && !!subtopicId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("flashcards")
-        .select("id, question, answer, difficulty, clinical_correlation, mnemonic, high_yield_point, image_url, reference")
+        .select("id, question, answer, difficulty, clinical_correlation, mnemonic, high_yield_point, image_url, reference, card_reviews(next_review_date)")
         .eq("subtopic_id", subtopicId)
         .eq("is_published", true);
       if (error) throw error;
-      return data as Flashcard[];
+      const nowMs = Date.now();
+      const due = (data as (Flashcard & { card_reviews: { next_review_date: string }[] })[])
+        .filter((c) => {
+          const r = c.card_reviews?.[0];
+          if (!r) return true;
+          return new Date(r.next_review_date).getTime() <= nowMs;
+        })
+        .map(({ card_reviews: _cr, ...rest }) => rest as Flashcard);
+      return due;
     },
   });
 
@@ -126,16 +137,29 @@ function StudyPage() {
     setStarted(true);
   }
 
-  function next() {
+  async function rate(rating: "again" | "hard" | "good" | "easy") {
+    if (!current) return;
+    const cardId = current.id;
+    // optimistic advance
     setReviewed((r) => r + 1);
     setShowAnswer(false);
     setIndex((i) => i + 1);
+    const { error } = await supabase.rpc("record_card_review", {
+      _flashcard_id: cardId,
+      _rating: rating,
+    });
+    if (error) {
+      toast.error("Couldn't save your review. Please try again.");
+      return;
+    }
+    qc.invalidateQueries({ queryKey: ["dashboard"] });
   }
 
   function restartSession() {
     setIndex(0);
     setReviewed(0);
     setShowAnswer(false);
+    cardsQ.refetch();
   }
 
   function pickAnother() {
@@ -295,10 +319,10 @@ function StudyPage() {
                   <ExtraSection label="Reference" value={current.reference} />
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
-                    <button className="btn-outline" onClick={next}>Again</button>
-                    <button className="btn-outline" onClick={next}>Hard</button>
-                    <button className="btn-outline" onClick={next}>Good</button>
-                    <button className="btn-outline" onClick={next}>Easy</button>
+                    <button className="btn-outline" onClick={() => rate("again")}>Again</button>
+                    <button className="btn-outline" onClick={() => rate("hard")}>Hard</button>
+                    <button className="btn-outline" onClick={() => rate("good")}>Good</button>
+                    <button className="btn-outline" onClick={() => rate("easy")}>Easy</button>
                   </div>
                 </>
               )}

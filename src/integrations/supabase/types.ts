@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      card_reviews: {
+        Row: {
+          created_at: string
+          flashcard_id: string
+          id: string
+          last_rating: string | null
+          next_review_date: string
+          review_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          flashcard_id: string
+          id?: string
+          last_rating?: string | null
+          next_review_date?: string
+          review_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          flashcard_id?: string
+          id?: string
+          last_rating?: string | null
+          next_review_date?: string
+          review_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "card_reviews_flashcard_id_fkey"
+            columns: ["flashcard_id"]
+            isOneToOne: false
+            referencedRelation: "flashcards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           created_at: string
@@ -345,6 +386,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cards_due_count: { Args: never; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -353,6 +395,10 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      record_card_review: {
+        Args: { _flashcard_id: string; _rating: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "user"
