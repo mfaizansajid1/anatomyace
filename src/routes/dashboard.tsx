@@ -121,18 +121,53 @@ function Dashboard() {
       since.setDate(since.getDate() - 6);
       const sinceStr = since.toISOString().slice(0, 10);
 
-      const [topicsRes, activityRes, profileRes, dueRes] = await Promise.all([
-        supabase.from("topic_performance").select("topic_name,accuracy_percentage,cards_due_count").eq("user_id", uid),
+      const [reviewsRes, activityRes, profileRes, dueRes] = await Promise.all([
+        supabase
+          .from("card_reviews")
+          .select("last_rating, flashcards!inner(subtopic_id, subtopics!inner(id, name, categories!inner(name, topics!inner(name))))")
+          .eq("user_id", uid),
         supabase.from("study_activity").select("study_date,cards_studied").eq("user_id", uid).gte("study_date", sinceStr).order("study_date"),
         supabase.from("users").select("profile_photo_url,full_name").eq("id", uid).maybeSingle(),
         supabase.rpc("cards_due_count"),
       ]);
-      if (topicsRes.error) throw topicsRes.error;
+      if (reviewsRes.error) throw reviewsRes.error;
       if (activityRes.error) throw activityRes.error;
+
+      // Aggregate per subtopic
+      const map = new Map<string, SubtopicPerf & { good: number }>();
+      type ReviewRow = {
+        last_rating: string | null;
+        flashcards: { subtopic_id: string; subtopics: { id: string; name: string; categories: { name: string; topics: { name: string } } } };
+      };
+      for (const r of (reviewsRes.data ?? []) as unknown as ReviewRow[]) {
+        const sub = r.flashcards?.subtopics;
+        if (!sub) continue;
+        const key = sub.id;
+        const cur = map.get(key) ?? {
+          subtopic_id: sub.id,
+          subtopic_name: sub.name,
+          category_name: sub.categories.name,
+          topic_name: sub.categories.topics.name,
+          accuracy: 0,
+          reviews: 0,
+          good: 0,
+        };
+        cur.reviews += 1;
+        if (r.last_rating === "good" || r.last_rating === "easy") cur.good += 1;
+        map.set(key, cur);
+      }
+      const subtopics: SubtopicPerf[] = Array.from(map.values()).map((s) => ({
+        subtopic_id: s.subtopic_id,
+        subtopic_name: s.subtopic_name,
+        category_name: s.category_name,
+        topic_name: s.topic_name,
+        reviews: s.reviews,
+        accuracy: Math.round((s.good / s.reviews) * 100),
+      }));
 
       return {
         stats,
-        topics: (topicsRes.data ?? []) as TopicRow[],
+        subtopics,
         activity: (activityRes.data ?? []) as ActivityRow[],
         profile: profileRes.data as { profile_photo_url: string | null; full_name: string | null } | null,
         cardsDue: (dueRes.data as number | null) ?? 0,
