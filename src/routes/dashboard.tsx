@@ -193,12 +193,33 @@ function Dashboard() {
   const photo = data?.profile?.profile_photo_url ?? user?.photo ?? null;
   const displayName = data?.profile?.full_name ?? user?.fullName ?? null;
 
-  const weakTopics = useMemo(() =>
-    [...(data?.topics ?? [])].sort((a, b) => a.accuracy_percentage - b.accuracy_percentage).slice(0, 3),
-  [data?.topics]);
-  const strongTopics = useMemo(() =>
-    [...(data?.topics ?? [])].sort((a, b) => b.accuracy_percentage - a.accuracy_percentage).slice(0, 3),
-  [data?.topics]);
+  const { weakGroups, strongGroups } = useMemo(() => {
+    const subs = data?.subtopics ?? [];
+    const qualified = subs.filter((s) => s.reviews >= MIN_REVIEWS);
+    const group = (list: SubtopicPerf[]): GroupedPerf[] => {
+      const m = new Map<string, SubtopicPerf[]>();
+      for (const s of list) {
+        const arr = m.get(s.topic_name) ?? [];
+        arr.push(s);
+        m.set(s.topic_name, arr);
+      }
+      return Array.from(m.entries())
+        .map(([topic_name, items]) => ({
+          topic_name,
+          items: items.sort((a, b) => a.accuracy - b.accuracy),
+        }))
+        .sort((a, b) => a.topic_name.localeCompare(b.topic_name));
+    };
+    const weak = qualified.filter((s) => s.accuracy < WEAK_THRESHOLD);
+    const strong = qualified.filter((s) => s.accuracy >= STRONG_THRESHOLD);
+    return {
+      weakGroups: group(weak),
+      strongGroups: group(strong).map((g) => ({
+        ...g,
+        items: [...g.items].sort((a, b) => b.accuracy - a.accuracy),
+      })),
+    };
+  }, [data?.subtopics]);
 
   const cardsDue = data?.cardsDue ?? 0;
 
