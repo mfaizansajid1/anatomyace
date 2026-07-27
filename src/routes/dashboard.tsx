@@ -30,13 +30,22 @@ type UserStats = {
   last_topic_studied: string | null;
 };
 
-type TopicRow = {
+type SubtopicPerf = {
+  subtopic_id: string;
+  subtopic_name: string;
+  category_name: string;
   topic_name: string;
-  accuracy_percentage: number;
-  cards_due_count: number;
+  accuracy: number;
+  reviews: number;
 };
 
+type GroupedPerf = { topic_name: string; items: SubtopicPerf[] };
+
 type ActivityRow = { study_date: string; cards_studied: number };
+
+const WEAK_THRESHOLD = 60;
+const STRONG_THRESHOLD = 80;
+const MIN_REVIEWS = 3;
 
 type SessionUser = { id: string; email: string | null; fullName: string | null; photo: string | null };
 
@@ -112,18 +121,53 @@ function Dashboard() {
       since.setDate(since.getDate() - 6);
       const sinceStr = since.toISOString().slice(0, 10);
 
-      const [topicsRes, activityRes, profileRes, dueRes] = await Promise.all([
-        supabase.from("topic_performance").select("topic_name,accuracy_percentage,cards_due_count").eq("user_id", uid),
+      const [reviewsRes, activityRes, profileRes, dueRes] = await Promise.all([
+        supabase
+          .from("card_reviews")
+          .select("last_rating, flashcards!inner(subtopic_id, subtopics!inner(id, name, categories!inner(name, topics!inner(name))))")
+          .eq("user_id", uid),
         supabase.from("study_activity").select("study_date,cards_studied").eq("user_id", uid).gte("study_date", sinceStr).order("study_date"),
         supabase.from("users").select("profile_photo_url,full_name").eq("id", uid).maybeSingle(),
         supabase.rpc("cards_due_count"),
       ]);
-      if (topicsRes.error) throw topicsRes.error;
+      if (reviewsRes.error) throw reviewsRes.error;
       if (activityRes.error) throw activityRes.error;
+
+      // Aggregate per subtopic
+      const map = new Map<string, SubtopicPerf & { good: number }>();
+      type ReviewRow = {
+        last_rating: string | null;
+        flashcards: { subtopic_id: string; subtopics: { id: string; name: string; categories: { name: string; topics: { name: string } } } };
+      };
+      for (const r of (reviewsRes.data ?? []) as unknown as ReviewRow[]) {
+        const sub = r.flashcards?.subtopics;
+        if (!sub) continue;
+        const key = sub.id;
+        const cur = map.get(key) ?? {
+          subtopic_id: sub.id,
+          subtopic_name: sub.name,
+          category_name: sub.categories.name,
+          topic_name: sub.categories.topics.name,
+          accuracy: 0,
+          reviews: 0,
+          good: 0,
+        };
+        cur.reviews += 1;
+        if (r.last_rating === "good" || r.last_rating === "easy") cur.good += 1;
+        map.set(key, cur);
+      }
+      const subtopics: SubtopicPerf[] = Array.from(map.values()).map((s) => ({
+        subtopic_id: s.subtopic_id,
+        subtopic_name: s.subtopic_name,
+        category_name: s.category_name,
+        topic_name: s.topic_name,
+        reviews: s.reviews,
+        accuracy: Math.round((s.good / s.reviews) * 100),
+      }));
 
       return {
         stats,
-        topics: (topicsRes.data ?? []) as TopicRow[],
+        subtopics,
         activity: (activityRes.data ?? []) as ActivityRow[],
         profile: profileRes.data as { profile_photo_url: string | null; full_name: string | null } | null,
         cardsDue: (dueRes.data as number | null) ?? 0,
@@ -149,12 +193,33 @@ function Dashboard() {
   const photo = data?.profile?.profile_photo_url ?? user?.photo ?? null;
   const displayName = data?.profile?.full_name ?? user?.fullName ?? null;
 
-  const weakTopics = useMemo(() =>
-    [...(data?.topics ?? [])].sort((a, b) => a.accuracy_percentage - b.accuracy_percentage).slice(0, 3),
-  [data?.topics]);
-  const strongTopics = useMemo(() =>
-    [...(data?.topics ?? [])].sort((a, b) => b.accuracy_percentage - a.accuracy_percentage).slice(0, 3),
-  [data?.topics]);
+  const { weakGroups, strongGroups } = useMemo(() => {
+    const subs = data?.subtopics ?? [];
+    const qualified = subs.filter((s) => s.reviews >= MIN_REVIEWS);
+    const group = (list: SubtopicPerf[]): GroupedPerf[] => {
+      const m = new Map<string, SubtopicPerf[]>();
+      for (const s of list) {
+        const arr = m.get(s.topic_name) ?? [];
+        arr.push(s);
+        m.set(s.topic_name, arr);
+      }
+      return Array.from(m.entries())
+        .map(([topic_name, items]) => ({
+          topic_name,
+          items: items.sort((a, b) => a.accuracy - b.accuracy),
+        }))
+        .sort((a, b) => a.topic_name.localeCompare(b.topic_name));
+    };
+    const weak = qualified.filter((s) => s.accuracy < WEAK_THRESHOLD);
+    const strong = qualified.filter((s) => s.accuracy >= STRONG_THRESHOLD);
+    return {
+      weakGroups: group(weak),
+      strongGroups: group(strong).map((g) => ({
+        ...g,
+        items: [...g.items].sort((a, b) => b.accuracy - a.accuracy),
+      })),
+    };
+  }, [data?.subtopics]);
 
   const cardsDue = data?.cardsDue ?? 0;
 
@@ -282,15 +347,15 @@ function Dashboard() {
 
             {/* Weak / Strong */}
             <div className="card-surface p-5 sm:col-span-2">
-              {data.topics.length === 0 ? (
+              {(data.subtopics.length === 0) ? (
                 <div className="text-center py-6">
                   <p className="font-semibold text-foreground">Ready to start your first study session?</p>
-                  <p className="text-sm text-muted-foreground mt-1">Your weak and strong topics will appear here.</p>
+                  <p className="text-sm text-muted-foreground mt-1">Your weak and strong subtopics will appear here.</p>
                 </div>
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <TopicList title="Weak Topics" topics={weakTopics} emptyText="No weak spots — nice!" />
-                  <TopicList title="Strong Topics" topics={strongTopics} emptyText="Study more to see strengths." />
+                  <SubtopicGroups title="Weak Subtopics" groups={weakGroups} emptyText="No weak spots — nice!" />
+                  <SubtopicGroups title="Strong Subtopics" groups={strongGroups} emptyText="Study more to see strengths." />
                 </div>
               )}
             </div>
@@ -354,23 +419,33 @@ function Dashboard() {
   );
 }
 
-function TopicList({ title, topics, emptyText }: { title: string; topics: TopicRow[]; emptyText: string }) {
+function SubtopicGroups({ title, groups, emptyText }: { title: string; groups: GroupedPerf[]; emptyText: string }) {
   return (
     <div>
       <h3 className="font-semibold text-foreground text-sm">{title}</h3>
-      {topics.length === 0 ? (
+      {groups.length === 0 ? (
         <p className="mt-3 text-sm text-muted-foreground">{emptyText}</p>
       ) : (
-        <ul className="mt-3 space-y-2">
-          {topics.map((t) => (
-            <li key={t.topic_name} className="flex items-center justify-between rounded-xl bg-muted/60 px-3 py-2">
-              <span className="text-sm text-foreground">{t.topic_name}</span>
-              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${accColor(t.accuracy_percentage)}`}>
-                {t.accuracy_percentage}%
-              </span>
-            </li>
+        <div className="mt-3 space-y-4">
+          {groups.map((g) => (
+            <div key={g.topic_name}>
+              <h4 className="text-sm font-bold text-foreground mb-2">{g.topic_name}</h4>
+              <ul className="space-y-2">
+                {g.items.map((s) => (
+                  <li key={s.subtopic_id} className="flex items-center justify-between rounded-xl bg-muted/60 px-3 py-2">
+                    <span className="text-sm text-foreground">
+                      {s.subtopic_name}{" "}
+                      <span className="text-muted-foreground">({s.category_name})</span>
+                    </span>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${accColor(s.accuracy)}`}>
+                      {s.accuracy}%
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
