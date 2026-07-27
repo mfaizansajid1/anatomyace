@@ -112,10 +112,11 @@ function Dashboard() {
       since.setDate(since.getDate() - 6);
       const sinceStr = since.toISOString().slice(0, 10);
 
-      const [topicsRes, activityRes, profileRes] = await Promise.all([
+      const [topicsRes, activityRes, profileRes, dueRes] = await Promise.all([
         supabase.from("topic_performance").select("topic_name,accuracy_percentage,cards_due_count").eq("user_id", uid),
         supabase.from("study_activity").select("study_date,cards_studied").eq("user_id", uid).gte("study_date", sinceStr).order("study_date"),
         supabase.from("users").select("profile_photo_url,full_name").eq("id", uid).maybeSingle(),
+        supabase.rpc("cards_due_count"),
       ]);
       if (topicsRes.error) throw topicsRes.error;
       if (activityRes.error) throw activityRes.error;
@@ -125,6 +126,7 @@ function Dashboard() {
         topics: (topicsRes.data ?? []) as TopicRow[],
         activity: (activityRes.data ?? []) as ActivityRow[],
         profile: profileRes.data as { profile_photo_url: string | null; full_name: string | null } | null,
+        cardsDue: (dueRes.data as number | null) ?? 0,
       };
     },
   });
@@ -154,10 +156,7 @@ function Dashboard() {
     [...(data?.topics ?? [])].sort((a, b) => b.accuracy_percentage - a.accuracy_percentage).slice(0, 3),
   [data?.topics]);
 
-  const cardsDue = useMemo(
-    () => (data?.topics ?? []).reduce((s, t) => s + t.cards_due_count, 0),
-    [data?.topics],
-  );
+  const cardsDue = data?.cardsDue ?? 0;
 
   const weekly = useMemo(() => {
     const map = new Map((data?.activity ?? []).map((a) => [a.study_date, a.cards_studied]));
