@@ -319,10 +319,10 @@ function StudyPage() {
                   <ExtraSection label="Reference" value={current.reference} />
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
-                    <button className="btn-outline" onClick={next}>Again</button>
-                    <button className="btn-outline" onClick={next}>Hard</button>
-                    <button className="btn-outline" onClick={next}>Good</button>
-                    <button className="btn-outline" onClick={next}>Easy</button>
+                    <button className="btn-outline" onClick={() => rate("again")}>Again</button>
+                    <button className="btn-outline" onClick={() => rate("hard")}>Hard</button>
+                    <button className="btn-outline" onClick={() => rate("good")}>Good</button>
+                    <button className="btn-outline" onClick={() => rate("easy")}>Easy</button>
                   </div>
                 </>
               )}
