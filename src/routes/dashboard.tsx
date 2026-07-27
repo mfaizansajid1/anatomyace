@@ -347,15 +347,15 @@ function Dashboard() {
 
             {/* Weak / Strong */}
             <div className="card-surface p-5 sm:col-span-2">
-              {data.topics.length === 0 ? (
+              {(data.subtopics.length === 0) ? (
                 <div className="text-center py-6">
                   <p className="font-semibold text-foreground">Ready to start your first study session?</p>
-                  <p className="text-sm text-muted-foreground mt-1">Your weak and strong topics will appear here.</p>
+                  <p className="text-sm text-muted-foreground mt-1">Your weak and strong subtopics will appear here.</p>
                 </div>
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <TopicList title="Weak Topics" topics={weakTopics} emptyText="No weak spots — nice!" />
-                  <TopicList title="Strong Topics" topics={strongTopics} emptyText="Study more to see strengths." />
+                  <SubtopicGroups title="Weak Subtopics" groups={weakGroups} emptyText="No weak spots — nice!" />
+                  <SubtopicGroups title="Strong Subtopics" groups={strongGroups} emptyText="Study more to see strengths." />
                 </div>
               )}
             </div>
