@@ -30,13 +30,22 @@ type UserStats = {
   last_topic_studied: string | null;
 };
 
-type TopicRow = {
+type SubtopicPerf = {
+  subtopic_id: string;
+  subtopic_name: string;
+  category_name: string;
   topic_name: string;
-  accuracy_percentage: number;
-  cards_due_count: number;
+  accuracy: number;
+  reviews: number;
 };
 
+type GroupedPerf = { topic_name: string; items: SubtopicPerf[] };
+
 type ActivityRow = { study_date: string; cards_studied: number };
+
+const WEAK_THRESHOLD = 60;
+const STRONG_THRESHOLD = 80;
+const MIN_REVIEWS = 3;
 
 type SessionUser = { id: string; email: string | null; fullName: string | null; photo: string | null };
 
