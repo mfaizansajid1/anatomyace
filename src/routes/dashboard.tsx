@@ -395,7 +395,7 @@ function Dashboard() {
 
             {/* Weekly chart */}
             <div className="card-surface p-5 sm:col-span-2 lg:col-span-3">
-              <div className="flex items-center justify-between">
+              <div className="mt-6 flex items-stretch justify-between gap-2 h-40">
                 <h2 className="font-semibold text-foreground">Progress Overview</h2>
                 <span className="text-xs text-muted-foreground">Last 7 days</span>
               </div>
