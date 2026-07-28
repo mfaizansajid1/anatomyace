@@ -395,11 +395,12 @@ function Dashboard() {
 
             {/* Weekly chart */}
             <div className="card-surface p-5 sm:col-span-2 lg:col-span-3">
-              <div className="mt-6 flex items-stretch justify-between gap-2 h-40">
+              <div className="flex items-center justify-between">
                 <h2 className="font-semibold text-foreground">Progress Overview</h2>
                 <span className="text-xs text-muted-foreground">Last 7 days</span>
               </div>
-              <div className="mt-6 flex items-end justify-between gap-2 h-40">
+              <div className="mt-6 flex items-stretch justify-between gap-2 h-40">
+                {weekly.map((w) => {
                 {weekly.map((w) => {
                   const pct = (w.count / weeklyMax) * 100;
                   const isToday = w.date === new Date().toISOString().slice(0, 10);
