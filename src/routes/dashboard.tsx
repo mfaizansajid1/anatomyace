@@ -401,8 +401,7 @@ function Dashboard() {
               </div>
               <div className="mt-6 flex items-stretch justify-between gap-2 h-40">
                 {weekly.map((w) => {
-                {weekly.map((w) => {
-                  const pct = (w.count / weeklyMax) * 100;
+              const pct = (w.count / weeklyMax) * 100;
                   const isToday = w.date === new Date().toISOString().slice(0, 10);
                   return (
                     <div key={w.date} className="flex-1 flex flex-col items-center gap-2">
