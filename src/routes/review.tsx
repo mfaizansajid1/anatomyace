@@ -365,3 +365,51 @@ function ExtraSection({ label, value }: { label: string; value: string | null })
     </div>
   );
 }
+
+function BookmarkStar({ flashcardId }: { flashcardId: string }) {
+  const qc = useQueryClient();
+  const q = useQuery({
+    queryKey: ["bookmark", flashcardId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bookmarks")
+        .select("id")
+        .eq("flashcard_id", flashcardId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+  const saved = !!q.data;
+
+  async function toggle() {
+    if (saved) {
+      const { error } = await supabase.from("bookmarks").delete().eq("flashcard_id", flashcardId);
+      if (error) { toast.error("Couldn't remove bookmark."); return; }
+      toast.success("Bookmark removed");
+    } else {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return;
+      const { error } = await supabase.from("bookmarks").insert({ flashcard_id: flashcardId, user_id: u.user.id });
+      if (error) { toast.error("Couldn't save bookmark."); return; }
+      toast.success("Bookmarked");
+    }
+    qc.invalidateQueries({ queryKey: ["bookmark", flashcardId] });
+    qc.invalidateQueries({ queryKey: ["bookmarks"] });
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={saved ? "Remove bookmark" : "Save bookmark"}
+      aria-pressed={saved}
+      className="h-10 w-10 rounded-full grid place-items-center hover:bg-muted transition text-foreground"
+      title={saved ? "Bookmarked — tap to remove" : "Bookmark this card"}
+    >
+      <svg width="22" height="22" viewBox="0 0 24 24" fill={saved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: saved ? "var(--color-primary)" : undefined }} aria-hidden>
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+      </svg>
+    </button>
+  );
+}
