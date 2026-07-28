@@ -138,7 +138,19 @@ const cardsQ = useQuery({
       });
       return due;
     },
-  });
+  })useEffect(() => {
+    if (!started) return;
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return;
+      const { data: badges } = await supabase
+        .from("user_achievements")
+        .select("badge_id")
+        .eq("user_id", u.user.id);
+      setPrevBadges(new Set((badges ?? []).map((b) => b.badge_id)));
+      setGoalCelebrated(false);
+    })();
+  }, [started]);;
 
   const cards = useMemo(() => cardsQ.data ?? [], [cardsQ.data]);
   const current = cards[index];
@@ -170,6 +182,40 @@ const cardsQ = useQuery({
       return;
     }
     qc.invalidateQueries({ queryKey: ["dashboard"] });
+
+    const { data: u } = await supabase.auth.getUser();
+    if (!u.user) return;
+
+    const { data: stats } = await supabase
+      .from("user_stats")
+      .select("cards_studied_today, daily_goal")
+      .eq("user_id", u.user.id)
+      .maybeSingle();
+
+    if (stats && !goalCelebrated && stats.cards_studied_today >= stats.daily_goal) {
+      toast.success(`🎉 Daily goal complete! You've studied ${stats.cards_studied_today} cards today.`);
+      setGoalCelebrated(true);
+    }
+
+    const { data: badges } = await supabase
+      .from("user_achievements")
+      .select("badge_id")
+      .eq("user_id", u.user.id);
+
+    const badgeNames: Record<string, string> = {
+      first_session: "First Steps",
+      streak_7: "7-Day Streak",
+      century_100: "Century Club",
+      perfectionist_10: "Perfectionist",
+    };
+
+    const newBadges = (badges ?? []).filter((b) => !prevBadges.has(b.badge_id));
+    newBadges.forEach((b) => {
+      toast.success(`🏆 Achievement unlocked: ${badgeNames[b.badge_id] ?? b.badge_id}!`);
+    });
+    if (newBadges.length > 0) {
+      setPrevBadges(new Set((badges ?? []).map((b) => b.badge_id)));
+    }
   }
 
   function restartSession() {
