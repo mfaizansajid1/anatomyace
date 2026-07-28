@@ -266,7 +266,8 @@ function Dashboard() {
             <span className="font-semibold text-foreground">AnatomyAce</span>
           </Link>
           <div className="flex items-center gap-2">
-            <Link to="/bookmarks" className="hidden sm:inline-flex btn-outline" style={{ minHeight: 40 }}>Bookmarks</Link>
+            <Link to="/bookmarks" className="hidden sm:inline-flex btn-outline" style={{ minHeight: 40 }}>Bookmarks</Link> 
+            <Link to="/progress" className="hidden sm:inline-flex btn-outline" style={{ minHeight: 40 }}>Progress</Link>
             <ThemeToggle />
             <Link to="/profile" className="flex items-center gap-2 rounded-full border border-border pl-2 pr-3 py-1 hover:bg-muted transition" aria-label="Open profile">
               {photo ? (
