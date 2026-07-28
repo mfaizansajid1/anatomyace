@@ -450,14 +450,14 @@ function Dashboard() {
 function SubtopicGroups({ title, groups, emptyText }: { title: string; groups: GroupedPerf[]; emptyText: string }) {
   return (
     <div>
-      <h3 className="font-semibold text-foreground text-sm">{title}</h3>
+      <h3 className="font-bold text-foreground text-lg">{title}</h3>
       {groups.length === 0 ? (
         <p className="mt-3 text-sm text-muted-foreground">{emptyText}</p>
       ) : (
         <div className="mt-3 space-y-4">
           {groups.map((g) => (
             <div key={g.topic_name}>
-              <h4 className="text-sm font-bold text-foreground mb-2">{g.topic_name}</h4>
+              <h4 className="text-sm font-semibold text-muted-foreground mb-2">{g.topic_name}</h4>
               <ul className="space-y-2">
                 {g.items.map((s) => (
                   <li key={s.subtopic_id} className="flex items-center justify-between rounded-xl bg-muted/60 px-3 py-2">
