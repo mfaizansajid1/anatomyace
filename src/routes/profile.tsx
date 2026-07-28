@@ -142,7 +142,10 @@ function ProfilePage() {
             <Logo size={36} />
             <span className="font-semibold text-foreground">AnatomyAce</span>
           </Link>
-          <Link to="/dashboard" className="btn-outline" style={{ minHeight: 40 }}>Back</Link>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Link to="/dashboard" className="btn-outline" style={{ minHeight: 40 }}>Back</Link>
+          </div>
         </div>
       </header>
 

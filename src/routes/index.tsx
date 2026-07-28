@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "AnatomyAce — Master Anatomy, One Card at a Time" },
-      { name: "description", content: "Flashcards designed for first-year MBBS students to master anatomy faster." },
+      { name: "description", content: "Flashcards designed for MBBS students to master anatomy faster." },
       { property: "og:title", content: "AnatomyAce" },
       { property: "og:description", content: "Master Anatomy, One Card at a Time." },
     ],
@@ -15,7 +16,10 @@ export const Route = createFileRoute("/")({
 
 function Welcome() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12 bg-background">
+    <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12 bg-background relative">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-md text-center">
         <div className="flex justify-center">
           <Logo size={72} />
@@ -37,3 +41,4 @@ function Welcome() {
     </main>
   );
 }
+

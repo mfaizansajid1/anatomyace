@@ -152,9 +152,12 @@ function AdminShell() {
             <Logo />
             <span className="text-sm font-semibold text-muted-foreground">Admin</span>
           </div>
-          <Link to="/dashboard" className="text-sm text-primary hover:underline">
-            ← Back to dashboard
-          </Link>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Link to="/dashboard" className="text-sm text-primary hover:underline">
+              ← Back to dashboard
+            </Link>
+          </div>
         </div>
       </header>
 
