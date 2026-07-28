@@ -102,24 +102,38 @@ function StudyPage() {
 
   const qc = useQueryClient();
 
-  const cardsQ = useQuery({
+const cardsQ = useQuery({
     queryKey: ["study", "cards", subtopicId],
     enabled: signedIn && started && !!subtopicId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: u } = await supabase.auth.getUser();
+      const uid = u.user?.id;
+
+      const { data: cards, error } = await supabase
         .from("flashcards")
-        .select("id, question, answer, difficulty, clinical_correlation, mnemonic, high_yield_point, image_url, reference, card_reviews(next_review_date)")
+        .select("id, question, answer, difficulty, clinical_correlation, mnemonic, high_yield_point, image_url, reference")
         .eq("subtopic_id", subtopicId)
         .eq("is_published", true);
       if (error) throw error;
+
+      const cardIds = (cards ?? []).map((c) => c.id);
+      let reviewMap = new Map<string, string>();
+      if (uid && cardIds.length > 0) {
+        const { data: reviews, error: revError } = await supabase
+          .from("card_reviews")
+          .select("flashcard_id, next_review_date")
+          .eq("user_id", uid)
+          .in("flashcard_id", cardIds);
+        if (revError) throw revError;
+        reviewMap = new Map((reviews ?? []).map((r) => [r.flashcard_id, r.next_review_date]));
+      }
+
       const nowMs = Date.now();
-      const due = (data as (Flashcard & { card_reviews: { next_review_date: string }[] })[])
-        .filter((c) => {
-          const r = c.card_reviews?.[0];
-          if (!r) return true;
-          return new Date(r.next_review_date).getTime() <= nowMs;
-        })
-        .map(({ card_reviews: _cr, ...rest }) => rest as Flashcard);
+      const due = (cards as Flashcard[]).filter((c) => {
+        const nextDate = reviewMap.get(c.id);
+        if (!nextDate) return true;
+        return new Date(nextDate).getTime() <= nowMs;
+      });
       return due;
     },
   });
