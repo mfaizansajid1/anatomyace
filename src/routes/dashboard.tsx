@@ -415,6 +415,16 @@ function Dashboard() {
                 })}
               </div>
             </div>
+
+            {/* Achievements */}
+            <div className="card-surface p-5 sm:col-span-2 lg:col-span-3">
+              <div className="flex items-center justify-between">
+                <h2 className="font-semibold text-foreground">Achievements</h2>
+                <Link to="/bookmarks" className="text-sm text-muted-foreground hover:text-foreground underline">View bookmarks →</Link>
+              </div>
+              <Achievements earned={data.earnedBadges} />
+            </div>
+
           </div>
         )}
       </section>
