@@ -14,6 +14,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      bookmarks: {
+        Row: {
+          created_at: string
+          flashcard_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          flashcard_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          flashcard_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmarks_flashcard_id_fkey"
+            columns: ["flashcard_id"]
+            isOneToOne: false
+            referencedRelation: "flashcards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       card_reviews: {
         Row: {
           created_at: string
@@ -288,6 +317,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_achievements: {
+        Row: {
+          badge_id: string
+          earned_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          earned_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          earned_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -346,6 +396,33 @@ export type Database = {
           last_study_date?: string | null
           last_topic_studied?: string | null
           longest_streak?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_xp: {
+        Row: {
+          created_at: string
+          current_correct_streak: number
+          level: number
+          total_xp: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_correct_streak?: number
+          level?: number
+          total_xp?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_correct_streak?: number
+          level?: number
+          total_xp?: number
           updated_at?: string
           user_id?: string
         }
