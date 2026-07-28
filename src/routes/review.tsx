@@ -300,9 +300,12 @@ function StudyPage() {
             </div>
 
             <div className="card-surface p-6 space-y-5">
-              <div>
-                <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Question</div>
-                <div className="text-lg text-foreground whitespace-pre-wrap">{current.question}</div>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Question</div>
+                  <div className="text-lg text-foreground whitespace-pre-wrap">{current.question}</div>
+                </div>
+                <BookmarkStar flashcardId={current.id} />
               </div>
 
               {!showAnswer ? (
