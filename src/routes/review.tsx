@@ -138,7 +138,9 @@ const cardsQ = useQuery({
       });
       return due;
     },
-  })useEffect(() => {
+  });
+
+  useEffect(() => {
     if (!started) return;
     (async () => {
       const { data: u } = await supabase.auth.getUser();
