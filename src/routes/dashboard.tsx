@@ -287,8 +287,11 @@ function Dashboard() {
             {greeting()}{displayName ? `, ${displayName.split(" ")[0]}` : ""} 👋
           </h1>
           {data?.xp && (
-            <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 text-primary px-3 py-1 text-sm font-semibold">
-              <span aria-hidden>⭐</span> Level {data.xp.level} · {data.xp.total_xp} XP
+            <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-teal-500 text-white px-4 py-1.5 text-sm font-bold shadow-md">
+              <span aria-hidden className="text-base">⭐</span>
+              <span>Level {data.xp.level}</span>
+              <span className="opacity-60">|</span>
+              <span className="font-medium opacity-90">{data.xp.total_xp} XP</span>
             </span>
           )}
         </div>
@@ -421,8 +424,7 @@ function Dashboard() {
             <div className="card-surface p-5 sm:col-span-2 lg:col-span-3">
               <div className="flex items-center justify-between">
                 <h2 className="font-semibold text-foreground">Achievements</h2>
-                <Link to="/bookmarks" className="text-sm text-muted-foreground hover:text-foreground underline">View bookmarks →</Link>
-              </div>
+                        </div>
               <Achievements earned={data.earnedBadges} />
             </div>
 
