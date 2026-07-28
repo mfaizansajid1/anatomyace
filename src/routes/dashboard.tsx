@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Achievements } from "@/components/Achievements";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
