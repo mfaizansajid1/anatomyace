@@ -46,6 +46,8 @@ function StudyPage() {
   const [index, setIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [reviewed, setReviewed] = useState(0);
+  const [prevBadges, setPrevBadges] = useState<Set<string>>(new Set());
+  const [goalCelebrated, setGoalCelebrated] = useState(false);
 
   useEffect(() => {
     (async () => {
