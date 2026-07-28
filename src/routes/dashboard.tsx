@@ -263,6 +263,8 @@ function Dashboard() {
             <span className="font-semibold text-foreground">AnatomyAce</span>
           </Link>
           <div className="flex items-center gap-2">
+            <Link to="/bookmarks" className="hidden sm:inline-flex btn-outline" style={{ minHeight: 40 }}>Bookmarks</Link>
+            <ThemeToggle />
             <Link to="/profile" className="flex items-center gap-2 rounded-full border border-border pl-2 pr-3 py-1 hover:bg-muted transition" aria-label="Open profile">
               {photo ? (
                 <img src={photo} alt="Your profile" className="h-8 w-8 rounded-full object-cover" />
@@ -279,10 +281,18 @@ function Dashboard() {
       </header>
 
       <section className="mx-auto max-w-6xl px-4 py-8 sm:py-10">
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-          {greeting()}{displayName ? `, ${displayName.split(" ")[0]}` : ""} 👋
-        </h1>
+        <div className="flex flex-wrap items-baseline gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+            {greeting()}{displayName ? `, ${displayName.split(" ")[0]}` : ""} 👋
+          </h1>
+          {data?.xp && (
+            <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 text-primary px-3 py-1 text-sm font-semibold">
+              <span aria-hidden>⭐</span> Level {data.xp.level} · {data.xp.total_xp} XP
+            </span>
+          )}
+        </div>
         <p className="mt-1 text-muted-foreground">Here's your study snapshot for today.</p>
+
 
         {dashboardQuery.isError && (
           <div className="mt-6 card-surface p-6 text-center">
