@@ -34,9 +34,12 @@ function ProgressPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["progress-page"],
     queryFn: async () => {
-      const { data: u } = await supabase.auth.getUser();
-      const uid = u.user?.id;
-      if (!uid) return null;
+     const since30 = dateStr(new Date(Date.now() - 29 * 24 * 60 * 60 * 1000));
+      const { data: activity, error: actErr } = await supabase
+        .from("study_activity")
+        .select("study_date, cards_studied")
+        .eq("user_id", uid)
+        .gte("study_date", since30)
 
       const since90 = dateStr(new Date(Date.now() - 89 * 24 * 60 * 60 * 1000));
       const { data: activity, error: actErr } = await supabase
@@ -74,7 +77,7 @@ function ProgressPage() {
     const map = new Map<string, number>();
     (data?.activity ?? []).forEach((a) => map.set(a.study_date, a.cards_studied));
     const days: { date: string; count: number }[] = [];
-    for (let i = 89; i >= 0; i--) {
+    for (let i = 29; i >= 0; i--) {
       const d = dateStr(new Date(Date.now() - i * 24 * 60 * 60 * 1000));
       days.push({ date: d, count: map.get(d) ?? 0 });
     }
@@ -143,7 +146,7 @@ function ProgressPage() {
         ) : (
           <>
             <div className="card-surface p-5">
-              <h2 className="font-semibold text-foreground">Study Activity — Last 90 Days</h2>
+              <h2 className="font-semibold text-foreground">Study Activity — Last 30 Days</h2>
               <div className="mt-4 grid grid-cols-[repeat(30,minmax(0,1fr))] gap-1 overflow-x-auto">
                 {heatmapDays.map((d) => (
                   <div
