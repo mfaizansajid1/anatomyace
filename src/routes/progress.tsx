@@ -34,12 +34,9 @@ function ProgressPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["progress-page"],
     queryFn: async () => {
-     const since30 = dateStr(new Date(Date.now() - 29 * 24 * 60 * 60 * 1000));
-      const { data: activity, error: actErr } = await supabase
-        .from("study_activity")
-        .select("study_date, cards_studied")
-        .eq("user_id", uid)
-        .gte("study_date", since30)
+      const { data: authData } = await supabase.auth.getUser();
+      if (!authData.user) throw new Error("User not logged in");
+      const uid = authData.user.id;
 
       const since90 = dateStr(new Date(Date.now() - 89 * 24 * 60 * 60 * 1000));
       const { data: activity, error: actErr } = await supabase
@@ -57,12 +54,12 @@ function ProgressPage() {
         .order("topic_name", { ascending: true });
       if (topErr) throw topErr;
 
-      const since30 = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString();
+      const since30Events = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString();
       const { data: events, error: evErr } = await supabase
         .from("review_events")
         .select("rating, reviewed_at")
         .eq("user_id", uid)
-        .gte("reviewed_at", since30);
+        .gte("reviewed_at", since30Events);
       if (evErr) throw evErr;
 
       return {
