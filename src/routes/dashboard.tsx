@@ -53,9 +53,11 @@ type SessionUser = { id: string; email: string | null; fullName: string | null; 
 
 function greeting() {
   const h = new Date().getHours();
+  if (h < 3) return "Good night";
   if (h < 12) return "Good morning";
+  if (h < 14) return "Good noon";
   if (h < 18) return "Good afternoon";
-  return "Good evening";
+  return "Good night";
 }
 
 function initials(name: string | null, email: string | null) {
