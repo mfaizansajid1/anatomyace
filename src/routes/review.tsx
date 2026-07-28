@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/Spinner";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/review")({
@@ -186,9 +187,12 @@ function StudyPage() {
             <Logo size={32} />
             <span className="font-semibold text-foreground">AnatomyAce</span>
           </Link>
-          <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
-            ← Dashboard
-          </Link>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
+              ← Dashboard
+            </Link>
+          </div>
         </div>
       </header>
 
