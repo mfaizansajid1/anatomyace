@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { friendlyAuthError } from "@/lib/auth-errors";
 import { Spinner } from "@/components/Spinner";
 import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -142,7 +143,10 @@ function ProfilePage() {
             <Logo size={36} />
             <span className="font-semibold text-foreground">AnatomyAce</span>
           </Link>
-          <Link to="/dashboard" className="btn-outline" style={{ minHeight: 40 }}>Back</Link>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Link to="/dashboard" className="btn-outline" style={{ minHeight: 40 }}>Back</Link>
+          </div>
         </div>
       </header>
 

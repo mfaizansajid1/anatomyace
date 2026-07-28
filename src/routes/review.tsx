@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/Spinner";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/review")({
@@ -186,9 +187,12 @@ function StudyPage() {
             <Logo size={32} />
             <span className="font-semibold text-foreground">AnatomyAce</span>
           </Link>
-          <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
-            ← Dashboard
-          </Link>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
+              ← Dashboard
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -296,9 +300,12 @@ function StudyPage() {
             </div>
 
             <div className="card-surface p-6 space-y-5">
-              <div>
-                <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Question</div>
-                <div className="text-lg text-foreground whitespace-pre-wrap">{current.question}</div>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Question</div>
+                  <div className="text-lg text-foreground whitespace-pre-wrap">{current.question}</div>
+                </div>
+                <BookmarkStar flashcardId={current.id} />
               </div>
 
               {!showAnswer ? (
@@ -356,5 +363,53 @@ function ExtraSection({ label, value }: { label: string; value: string | null })
         <div className="text-sm text-muted-foreground italic">Coming Soon</div>
       )}
     </div>
+  );
+}
+
+function BookmarkStar({ flashcardId }: { flashcardId: string }) {
+  const qc = useQueryClient();
+  const q = useQuery({
+    queryKey: ["bookmark", flashcardId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bookmarks")
+        .select("id")
+        .eq("flashcard_id", flashcardId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+  const saved = !!q.data;
+
+  async function toggle() {
+    if (saved) {
+      const { error } = await supabase.from("bookmarks").delete().eq("flashcard_id", flashcardId);
+      if (error) { toast.error("Couldn't remove bookmark."); return; }
+      toast.success("Bookmark removed");
+    } else {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return;
+      const { error } = await supabase.from("bookmarks").insert({ flashcard_id: flashcardId, user_id: u.user.id });
+      if (error) { toast.error("Couldn't save bookmark."); return; }
+      toast.success("Bookmarked");
+    }
+    qc.invalidateQueries({ queryKey: ["bookmark", flashcardId] });
+    qc.invalidateQueries({ queryKey: ["bookmarks"] });
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={saved ? "Remove bookmark" : "Save bookmark"}
+      aria-pressed={saved}
+      className="h-10 w-10 rounded-full grid place-items-center hover:bg-muted transition text-foreground"
+      title={saved ? "Bookmarked — tap to remove" : "Bookmark this card"}
+    >
+      <svg width="22" height="22" viewBox="0 0 24 24" fill={saved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: saved ? "var(--color-primary)" : undefined }} aria-hidden>
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+      </svg>
+    </button>
   );
 }
