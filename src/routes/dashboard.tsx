@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/Spinner";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -121,7 +122,7 @@ function Dashboard() {
       since.setDate(since.getDate() - 6);
       const sinceStr = since.toISOString().slice(0, 10);
 
-      const [reviewsRes, activityRes, profileRes, dueRes] = await Promise.all([
+      const [reviewsRes, activityRes, profileRes, dueRes, xpRes, achRes] = await Promise.all([
         supabase
           .from("card_reviews")
           .select("last_rating, flashcards!inner(subtopic_id, subtopics!inner(id, name, categories!inner(name, topics!inner(name))))")
@@ -129,6 +130,8 @@ function Dashboard() {
         supabase.from("study_activity").select("study_date,cards_studied").eq("user_id", uid).gte("study_date", sinceStr).order("study_date"),
         supabase.from("users").select("profile_photo_url,full_name").eq("id", uid).maybeSingle(),
         supabase.rpc("cards_due_count"),
+        supabase.from("user_xp").select("total_xp, level").eq("user_id", uid).maybeSingle(),
+        supabase.from("user_achievements").select("badge_id, earned_at").eq("user_id", uid),
       ]);
       if (reviewsRes.error) throw reviewsRes.error;
       if (activityRes.error) throw activityRes.error;
@@ -171,6 +174,8 @@ function Dashboard() {
         activity: (activityRes.data ?? []) as ActivityRow[],
         profile: profileRes.data as { profile_photo_url: string | null; full_name: string | null } | null,
         cardsDue: (dueRes.data as number | null) ?? 0,
+        xp: (xpRes.data as { total_xp: number; level: number } | null) ?? { total_xp: 0, level: 1 },
+        earnedBadges: new Set(((achRes.data ?? []) as { badge_id: string }[]).map((a) => a.badge_id)),
       };
     },
   });
