@@ -43,6 +43,7 @@ function StudyPage() {
   const [categoryId, setCategoryId] = useState<string>("");
   const [subtopicId, setSubtopicId] = useState<string>("");
   const [started, setStarted] = useState(false);
+  const [examMode, setExamMode] = useState(false);
   const [index, setIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [reviewed, setReviewed] = useState(0);
@@ -105,7 +106,7 @@ function StudyPage() {
   const qc = useQueryClient();
 
 const cardsQ = useQuery({
-    queryKey: ["study", "cards", subtopicId],
+    queryKey: ["study", "cards", subtopicId, examMode],
     enabled: signedIn && started && !!subtopicId,
     queryFn: async () => {
       const { data: u } = await supabase.auth.getUser();
@@ -130,6 +131,9 @@ const cardsQ = useQuery({
         reviewMap = new Map((reviews ?? []).map((r) => [r.flashcard_id, r.next_review_date]));
       }
 
+     if (examMode) {
+        return cards as Flashcard[];
+      }
       const nowMs = Date.now();
       const due = (cards as Flashcard[]).filter((c) => {
         const nextDate = reviewMap.get(c.id);
@@ -319,6 +323,19 @@ const cardsQ = useQuery({
                 ))}
               </select>
             </div>
+
+            <label className="flex items-center gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={examMode}
+                onChange={(e) => setExamMode(e.target.checked)}
+              />
+              Exam Mode — review all cards, ignore due dates
+            </label>
+
+            <p className="text-xs text-muted-foreground">
+              Again: see again in 10 min · Hard: 1 day · Good: 3 days · Easy: 7 days
+            </p>
 
             <button className="btn-primary w-full" onClick={begin} disabled={!topicId || !categoryId || !subtopicId}>
               Start studying
