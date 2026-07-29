@@ -259,30 +259,25 @@ function Dashboard() {
 
   return (
     <main className="min-h-screen bg-background">
-      <header className="border-b border-border sticky top-0 bg-background/85 backdrop-blur z-10">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <Link to="/dashboard" className="flex items-center gap-3">
-            <Logo size={32} />
-            <span className="font-semibold text-foreground">AnatomyAce</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <Link to="/bookmarks" className="hidden sm:inline-flex btn-outline" style={{ minHeight: 40 }}>Bookmarks</Link> 
-            <Link to="/progress" className="hidden sm:inline-flex btn-outline" style={{ minHeight: 40 }}>Progress</Link>
-            <ThemeToggle />
-            <Link to="/profile" className="flex items-center gap-2 rounded-full border border-border pl-2 pr-3 py-1 hover:bg-muted transition" aria-label="Open profile">
-              {photo ? (
-                <img src={photo} alt="Your profile" className="h-8 w-8 rounded-full object-cover" />
-              ) : (
-                <span aria-hidden className="h-8 w-8 rounded-full bg-primary text-primary-foreground grid place-items-center text-sm font-semibold">
-                  {initials(displayName, user?.email ?? null)}
-                </span>
-              )}
-              <span className="hidden sm:inline text-sm text-foreground">Profile</span>
-            </Link>
-            <button onClick={onLogout} className="btn-outline" style={{ minHeight: 40 }}>Log out</button>
-          </div>
-        </div>
-      </header>
+     import AppHeader from '../components/AppHeader'; // Adjust relative import path
+
+// Inside your Dashboard component return statement:
+return (
+  <div className="min-h-screen bg-background">
+    <AppHeader 
+      photo={photo}
+      displayName={displayName}
+      userEmail={user?.email}
+      onLogout={onLogout}
+      getInitials={initials} // Passes your existing helper function if present
+    />
+
+    {/* Rest of your Dashboard UI stays unchanged */}
+    <main className="...">
+      {/* ... */}
+    </main>
+  </div>
+);
 
       <section className="mx-auto max-w-6xl px-4 py-8 sm:py-10">
         <div className="flex flex-wrap items-baseline gap-3">
