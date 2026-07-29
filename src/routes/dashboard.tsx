@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
@@ -84,6 +84,10 @@ function Dashboard() {
   const [authChecked, setAuthChecked] = useState(false);
   const [goalOpen, setGoalOpen] = useState(false);
 
+  // Mobile navigation state and click-outside ref
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const headerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     let active = true;
     (async () => {
@@ -104,6 +108,24 @@ function Dashboard() {
     })();
     return () => { active = false; };
   }, [navigate]);
+
+  // Click outside listener for mobile menu
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (headerRef.current && !headerRef.current.contains(event.target as Node)) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    if (isMobileMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isMobileMenuOpen]);
+
+  const closeMenu = () => setIsMobileMenuOpen(false);
 
   const dashboardQuery = useQuery({
     enabled: !!user,
@@ -256,159 +278,134 @@ function Dashboard() {
     );
   }
 
-// 1. Add state for mobile menu
-const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
-const headerRef = React.useRef<HTMLDivElement>(null);
-
-// 2. Add click-outside listener to close menu
-React.useEffect(() => {
-  const handleClickOutside = (event: MouseEvent) => {
-    if (headerRef.current && !headerRef.current.contains(event.target as Node)) {
-      setIsMobileMenuOpen(false);
-    }
-  };
-
-  if (isMobileMenuOpen) {
-    document.addEventListener('mousedown', handleClickOutside);
-  }
-  return () => {
-    document.removeEventListener('mousedown', handleClickOutside);
-  };
-}, [isMobileMenuOpen]);
-
-const closeMenu = () => setIsMobileMenuOpen(false);
   return (
     <main className="min-h-screen bg-background">
-     <header className="border-b border-border sticky top-0 bg-background/85 backdrop-blur z-50">
-  <div ref={headerRef} className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 relative">
-    
-    {/* LOGO & BRANDING */}
-    <Link to="/dashboard" onClick={closeMenu} className="flex items-center gap-3">
-      <Logo size={32} />
-      <span className="font-semibold text-foreground">AnatomyAce</span>
-    </Link>
-
-    {/* DESKTOP HEADER (Hidden on mobile - exactly your original code) */}
-    <div className="hidden md:flex items-center gap-2">
-      <Link to="/bookmarks" className="btn-outline flex items-center px-3" style={{ minHeight: 40 }}>
-        Bookmarks
-      </Link> 
-      <Link to="/progress" className="btn-outline flex items-center px-3" style={{ minHeight: 40 }}>
-        Progress
-      </Link>
-      <ThemeToggle />
-      <Link 
-        to="/profile" 
-        className="flex items-center gap-2 rounded-full border border-border pl-2 pr-3 py-1 hover:bg-muted transition" 
-        aria-label="Open profile"
-      >
-        {photo ? (
-          <img src={photo} alt="Your profile" className="h-8 w-8 rounded-full object-cover" />
-        ) : (
-          <span aria-hidden className="h-8 w-8 rounded-full bg-primary text-primary-foreground grid place-items-center text-sm font-semibold">
-            {initials(displayName, user?.email ?? null)}
-          </span>
-        )}
-        <span className="text-sm text-foreground">Profile</span>
-      </Link>
-      <button onClick={onLogout} className="btn-outline px-3" style={{ minHeight: 40 }}>
-        Log out
-      </button>
-    </div>
-
-    {/* MOBILE HAMBURGER BUTTON (Visible on mobile only) */}
-    <div className="flex md:hidden items-center">
-      <button
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="p-2 rounded-md border border-border text-foreground hover:bg-muted transition focus:outline-none"
-        aria-label="Toggle navigation menu"
-      >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          {isMobileMenuOpen ? (
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          ) : (
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
-          )}
-        </svg>
-      </button>
-    </div>
-
-    {/* MOBILE DROPDOWN MENU */}
-    {isMobileMenuOpen && (
-      <div className="absolute top-full left-0 right-0 bg-background border-b border-border shadow-lg md:hidden z-50">
-        <nav className="flex flex-col p-4 space-y-2">
-          <Link
-            to="/dashboard"
-            onClick={closeMenu}
-            className="px-3 py-2 rounded-md text-foreground hover:bg-muted transition font-medium text-sm"
-          >
-            Dashboard
-          </Link>
-          <Link
-            to="/bookmarks"
-            onClick={closeMenu}
-            className="px-3 py-2 rounded-md text-foreground hover:bg-muted transition font-medium text-sm"
-          >
-            Bookmarks
-          </Link>
-          <Link
-            to="/progress"
-            onClick={closeMenu}
-            className="px-3 py-2 rounded-md text-foreground hover:bg-muted transition font-medium text-sm"
-          >
-            Progress
-          </Link>
-          <Link
-            to="/planner"
-            onClick={closeMenu}
-            className="px-3 py-2 rounded-md text-foreground hover:bg-muted transition font-medium text-sm"
-          >
-            Revision Planner
+      {/* HEADER */}
+      <header className="border-b border-border sticky top-0 bg-background/85 backdrop-blur z-50">
+        <div ref={headerRef} className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 relative">
+          
+          {/* LOGO & BRANDING */}
+          <Link to="/dashboard" onClick={closeMenu} className="flex items-center gap-3">
+            <Logo size={32} />
+            <span className="font-semibold text-foreground">AnatomyAce</span>
           </Link>
 
-          <div className="border-t border-border my-2 pt-2 flex items-center justify-between px-3">
-            <span className="text-foreground font-medium text-sm">Theme</span>
+          {/* DESKTOP HEADER (Hidden on mobile) */}
+          <div className="hidden md:flex items-center gap-2">
+            <Link to="/bookmarks" className="btn-outline flex items-center px-3" style={{ minHeight: 40 }}>
+              Bookmarks
+            </Link> 
+            <Link to="/progress" className="btn-outline flex items-center px-3" style={{ minHeight: 40 }}>
+              Progress
+            </Link>
             <ThemeToggle />
+            <Link 
+              to="/profile" 
+              className="flex items-center gap-2 rounded-full border border-border pl-2 pr-3 py-1 hover:bg-muted transition" 
+              aria-label="Open profile"
+            >
+              {photo ? (
+                <img src={photo} alt="Your profile" className="h-8 w-8 rounded-full object-cover" />
+              ) : (
+                <span aria-hidden className="h-8 w-8 rounded-full bg-primary text-primary-foreground grid place-items-center text-sm font-semibold">
+                  {initials(displayName, user?.email ?? null)}
+                </span>
+              )}
+              <span className="text-sm text-foreground">Profile</span>
+            </Link>
+            <button onClick={onLogout} className="btn-outline px-3" style={{ minHeight: 40 }}>
+              Log out
+            </button>
           </div>
 
-          <Link
-            to="/profile"
-            onClick={closeMenu}
-            className="flex items-center gap-3 px-3 py-2 rounded-md text-foreground hover:bg-muted transition font-medium text-sm"
-          >
-            {photo ? (
-              <img src={photo} alt="Your profile" className="h-7 w-7 rounded-full object-cover" />
-            ) : (
-              <span aria-hidden className="h-7 w-7 rounded-full bg-primary text-primary-foreground grid place-items-center text-xs font-semibold">
-                {initials(displayName, user?.email ?? null)}
-              </span>
-            )}
-            <span>Profile</span>
-          </Link>
+          {/* MOBILE HAMBURGER BUTTON */}
+          <div className="flex md:hidden items-center">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-2 rounded-md border border-border text-foreground hover:bg-muted transition focus:outline-none"
+              aria-label="Toggle navigation menu"
+              aria-expanded={isMobileMenuOpen}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {isMobileMenuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+                )}
+              </svg>
+            </button>
+          </div>
 
-          <button
-            onClick={() => {
-              closeMenu();
-              onLogout();
-            }}
-            className="w-full text-left px-3 py-2 rounded-md text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition font-medium text-sm"
-          >
-            Log out
-          </button>
-        </nav>
-      </div>
-    )}
+          {/* MOBILE DROPDOWN MENU */}
+          {isMobileMenuOpen && (
+            <div className="absolute top-full left-0 right-0 bg-background border-b border-border shadow-lg md:hidden z-50">
+              <nav className="flex flex-col p-4 space-y-2">
+                <Link
+                  to="/dashboard"
+                  onClick={closeMenu}
+                  className="px-3 py-2 rounded-md text-foreground hover:bg-muted transition font-medium text-sm"
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  to="/bookmarks"
+                  onClick={closeMenu}
+                  className="px-3 py-2 rounded-md text-foreground hover:bg-muted transition font-medium text-sm"
+                >
+                  Bookmarks
+                </Link>
+                <Link
+                  to="/progress"
+                  onClick={closeMenu}
+                  className="px-3 py-2 rounded-md text-foreground hover:bg-muted transition font-medium text-sm"
+                >
+                  Progress
+                </Link>
+                <Link
+                  to="/planner"
+                  onClick={closeMenu}
+                  className="px-3 py-2 rounded-md text-foreground hover:bg-muted transition font-medium text-sm"
+                >
+                  Revision Planner
+                </Link>
 
-  </div>
-</header>
+                <div className="border-t border-border my-2 pt-2 flex items-center justify-between px-3">
+                  <span className="text-foreground font-medium text-sm">Theme</span>
+                  <ThemeToggle />
+                </div>
 
-    {/* Rest of your Dashboard UI stays unchanged */}
-    <main className="...">
-      {/* ... */}
-    </main>
-  </div>
-);
+                <Link
+                  to="/profile"
+                  onClick={closeMenu}
+                  className="flex items-center gap-3 px-3 py-2 rounded-md text-foreground hover:bg-muted transition font-medium text-sm"
+                >
+                  {photo ? (
+                    <img src={photo} alt="Your profile" className="h-7 w-7 rounded-full object-cover" />
+                  ) : (
+                    <span aria-hidden className="h-7 w-7 rounded-full bg-primary text-primary-foreground grid place-items-center text-xs font-semibold">
+                      {initials(displayName, user?.email ?? null)}
+                    </span>
+                  )}
+                  <span>Profile</span>
+                </Link>
 
+                <button
+                  onClick={() => {
+                    closeMenu();
+                    onLogout();
+                  }}
+                  className="w-full text-left px-3 py-2 rounded-md text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition font-medium text-sm"
+                >
+                  Log out
+                </button>
+              </nav>
+            </div>
+          )}
+
+        </div>
+      </header>
+
+      {/* DASHBOARD CONTENT */}
       <section className="mx-auto max-w-6xl px-4 py-8 sm:py-10">
         <div className="flex flex-wrap items-baseline gap-3">
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
@@ -424,7 +421,6 @@ const closeMenu = () => setIsMobileMenuOpen(false);
           )}
         </div>
         <p className="mt-1 text-muted-foreground">Here's your study snapshot for today.</p>
-
 
         {dashboardQuery.isError && (
           <div className="mt-6 card-surface p-6 text-center">
@@ -529,7 +525,7 @@ const closeMenu = () => setIsMobileMenuOpen(false);
               </div>
               <div className="mt-6 flex items-stretch justify-between gap-2 h-40">
                 {weekly.map((w) => {
-              const pct = (w.count / weeklyMax) * 100;
+                  const pct = (w.count / weeklyMax) * 100;
                   const isToday = w.date === new Date().toISOString().slice(0, 10);
                   return (
                     <div key={w.date} className="flex-1 flex flex-col items-center gap-2">
@@ -552,7 +548,7 @@ const closeMenu = () => setIsMobileMenuOpen(false);
             <div className="card-surface p-5 sm:col-span-2 lg:col-span-3">
               <div className="flex items-center justify-between">
                 <h2 className="font-semibold text-foreground">Achievements</h2>
-                        </div>
+              </div>
               <Achievements earned={data.earnedBadges} />
             </div>
 
