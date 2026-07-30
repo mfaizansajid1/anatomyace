@@ -761,233 +761,209 @@ function FlashcardForm({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="w-full max-w-lg rounded-2xl bg-card p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <h3 className="mb-3 text-lg font-semibold">{initial.id ? "Edit flashcard" : "Add flashcard"}</h3>
-        <div className="space-y-3">
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">Topic</label>
+              <select className="w-full rounded-lg border border-border bg-background p-1.5 text-sm" value={topicId} onChange={(e) => setTopicId(e.target.value)}>
+                {topics.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">Category</label>
+              <select className="w-full rounded-lg border border-border bg-background p-1.5 text-sm" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+                {(categoriesQ.data ?? []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">Subtopic</label>
+              <select className="w-full rounded-lg border border-border bg-background p-1.5 text-sm" value={subtopicId} onChange={(e) => setSubtopicId(e.target.value)}>
+                {(subtopicsQ.data ?? []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+          </div>
           <div>
-            <label className="mb-1 block text-xs font-medium">Question</label>
+            <label className="mb-1 block text-xs text-muted-foreground">Question</label>
             <textarea
-              className="w-full rounded-lg border border-border bg-background p-2 text-sm"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
               rows={3}
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium">Answer</label>
+            <label className="mb-1 block text-xs text-muted-foreground">Answer</label>
             <textarea
-              className="w-full rounded-lg border border-border bg-background p-2 text-sm"
-              rows={3}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              rows={4}
               value={answer}
               onChange={(e) => setAnswer(e.target.value)}
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium">Difficulty</label>
-            <select
-              className="w-full rounded-lg border border-border bg-background p-2 text-sm"
-              value={difficulty}
-              onChange={(e) => setDifficulty(e.target.value as "Easy" | "Medium" | "Hard")}
-            >
-              <option>Easy</option><option>Medium</option><option>Hard</option>
+            <label className="mb-1 block text-xs text-muted-foreground">Difficulty</label>
+            <select className="w-full rounded-lg border border-border bg-background p-1.5 text-sm" value={difficulty} onChange={(e) => setDifficulty(e.target.value as any)}>
+              <option value="Easy">Easy</option>
+              <option value="Medium">Medium</option>
+              <option value="Hard">Hard</option>
             </select>
           </div>
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <label className="mb-1 block text-xs font-medium">Topic</label>
-              <select
-                className="w-full rounded-lg border border-border bg-background p-2 text-sm"
-                value={topicId}
-                onChange={(e) => { setTopicId(e.target.value); setCategoryId(""); setSubtopicId(""); }}
-              >
-                {topics.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium">Category</label>
-              <select
-                className="w-full rounded-lg border border-border bg-background p-2 text-sm"
-                value={categoryId}
-                onChange={(e) => { setCategoryId(e.target.value); setSubtopicId(""); }}
-              >
-                <option value="">Select…</option>
-                {(categoriesQ.data ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium">Subtopic</label>
-              <select
-                className="w-full rounded-lg border border-border bg-background p-2 text-sm"
-                value={subtopicId}
-                onChange={(e) => setSubtopicId(e.target.value)}
-              >
-                <option value="">Select…</option>
-                {(subtopicsQ.data ?? []).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-            </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button className="btn-outline px-4 py-2 text-sm" onClick={onClose}>Cancel</button>
+            <button className="btn-primary px-4 py-2 text-sm" onClick={() => save.mutate()} disabled={save.isPending}>
+              {save.isPending ? "Saving..." : "Save"}
+            </button>
           </div>
-        </div>
-        <div className="mt-4 flex justify-end gap-2">
-          <button className="btn-outline px-3 py-1.5 text-sm" onClick={onClose}>Cancel</button>
-          <button className="btn-primary px-3 py-1.5 text-sm" disabled={save.isPending} onClick={() => save.mutate()}>
-            {save.isPending ? "Saving…" : "Save"}
-          </button>
         </div>
       </div>
     </div>
   );
 }
 
-/* ---------- CSV import ---------- */
-
-type ImportRow = { row: number; error?: string };
-
-function parseCsv(text: string): string[][] {
-  const rows: string[][] = [];
-  let cur: string[] = [];
-  let field = "";
-  let inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (inQuotes) {
-      if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
-      else if (c === '"') { inQuotes = false; }
-      else field += c;
-    } else {
-      if (c === '"') inQuotes = true;
-      else if (c === ',') { cur.push(field); field = ""; }
-      else if (c === '\n' || c === '\r') {
-        if (field.length || cur.length) { cur.push(field); rows.push(cur); cur = []; field = ""; }
-        if (c === '\r' && text[i + 1] === '\n') i++;
-      } else field += c;
-    }
-  }
-  if (field.length || cur.length) { cur.push(field); rows.push(cur); }
-  return rows;
-}
+/* ---------- CSV Import ---------- */
 
 function CsvImportPanel({ onDone }: { onDone: () => void }) {
+  const [importing, setImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
-  const [summary, setSummary] = useState<{ created: number; failed: ImportRow[] } | null>(null);
 
-  async function handleFile(file: File) {
-    setBusy(true);
-    setSummary(null);
+  // Helper to split a simple CSV row (handles basic quoted strings)
+  const parseCsvLine = (text: string) => {
+    const re = /(?!\s*$)\s*(?:'([^'\\]*(?:\\[\s\S][^'\\]*)*)'|"([^"\\]*(?:\\[\s\S][^"\\]*)*)"|([^,'"\s\\]*(?:\s+[^,'"\s\\]+)*))\s*(?:,|$)/g;
+    const a: string[] = [];
+    text.replace(re, (m, c1, c2, c3) => {
+      a.push(c1 !== undefined ? c1 : c2 !== undefined ? c2 : c3 !== undefined ? c3 : "");
+      return "";
+    });
+    return a.map(val => val.trim());
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
     try {
       const text = await file.text();
-      const rows = parseCsv(text).filter((r) => r.some((c) => c.trim().length));
-      if (rows.length === 0) { toast.error("Empty file"); return; }
-      const header = rows[0].map((h) => h.trim().toLowerCase());
-      const idx = {
-        question: header.indexOf("question"),
-        answer: header.indexOf("answer"),
-        difficulty: header.indexOf("difficulty"),
-        category: header.indexOf("category"),
-        subtopic: header.indexOf("subtopic"),
-      };
-      if (Object.values(idx).some((v) => v < 0)) {
-        toast.error("CSV must have columns: question, answer, difficulty, category, subtopic");
-        return;
+      const lines = text.split("\n").filter(l => l.trim().length > 0);
+      if (lines.length < 2) throw new Error("CSV must have a header row and at least one data row");
+
+      // Resolve headers
+      const headers = parseCsvLine(lines[0]).map(h => h.toLowerCase());
+      const getIndex = (name: string) => headers.indexOf(name.toLowerCase());
+      
+      const topicIdx = getIndex("Topic");
+      const categoryIdx = getIndex("Category");
+      const subtopicIdx = getIndex("Subtopic");
+      const questionIdx = getIndex("Question");
+      const answerIdx = getIndex("Answer");
+      const diffIdx = getIndex("Difficulty");
+
+      if (topicIdx === -1 || categoryIdx === -1 || subtopicIdx === -1 || questionIdx === -1 || answerIdx === -1) {
+        throw new Error("Missing required columns. Expected: Topic, Category, Subtopic, Question, Answer");
       }
 
-      // Preload categories: name(lower) -> list of {id, topic_id}
-      const { data: allCats, error: catErr } = await supabase.from("categories").select("id,name,topic_id");
-      if (catErr) throw catErr;
-      const catByName = new Map<string, { id: string; topic_id: string }[]>();
-      for (const c of allCats ?? []) {
-        const key = c.name.toLowerCase();
-        const arr = catByName.get(key) ?? [];
-        arr.push({ id: c.id, topic_id: c.topic_id });
-        catByName.set(key, arr);
-      }
+      // Fetch the hierarchy upfront for accurate matching
+      const { data: topics, error: tErr } = await supabase.from("topics").select("id, name");
+      if (tErr) throw tErr;
+      
+      const { data: categories, error: cErr } = await supabase.from("categories").select("id, topic_id, name");
+      if (cErr) throw cErr;
+      
+      const { data: subtopics, error: sErr } = await supabase.from("subtopics").select("id, category_id, name");
+      if (sErr) throw sErr;
 
-      // Cache subtopics per category id
-      const subCache = new Map<string, Map<string, string>>();
-      async function subtopicMap(categoryId: string) {
-        if (subCache.has(categoryId)) return subCache.get(categoryId)!;
-        const { data } = await supabase.from("subtopics").select("id,name").eq("category_id", categoryId);
-        const m = new Map<string, string>();
-        for (const s of data ?? []) m.set(s.name.toLowerCase(), s.id);
-        subCache.set(categoryId, m);
-        return m;
-      }
+      const flashcardsToInsert = [];
 
-      const failed: ImportRow[] = [];
-      const toInsert: {
-        topic_id: string; subtopic_id: string; question: string; answer: string; difficulty: string;
-      }[] = [];
-
-      for (let i = 1; i < rows.length; i++) {
-        const r = rows[i];
-        const rowNum = i + 1;
-        const question = (r[idx.question] ?? "").trim();
-        const answer = (r[idx.answer] ?? "").trim();
-        const difficulty = (r[idx.difficulty] ?? "").trim();
-        const categoryName = (r[idx.category] ?? "").trim();
-        const subtopicName = (r[idx.subtopic] ?? "").trim();
-
-        if (!question || !answer) { failed.push({ row: rowNum, error: "Missing question or answer" }); continue; }
-        if (!["Easy", "Medium", "Hard"].includes(difficulty)) { failed.push({ row: rowNum, error: "Difficulty must be Easy, Medium, or Hard" }); continue; }
-
-        const matches = catByName.get(categoryName.toLowerCase()) ?? [];
-        if (matches.length === 0) { failed.push({ row: rowNum, error: `Category '${categoryName}' not found` }); continue; }
-        if (matches.length > 1) {
-          failed.push({ row: rowNum, error: `Category name '${categoryName}' is ambiguous — exists under multiple topics. Rename categories to be unique or specify which topic in a future update.` });
-          continue;
+      for (let i = 1; i < lines.length; i++) {
+        const row = parseCsvLine(lines[i]);
+        if (row.length < 5) continue; // Skip malformed rows
+        
+        const rowTopic = row[topicIdx];
+        const rowCategory = row[categoryIdx];
+        const rowSubtopic = row[subtopicIdx];
+        const rowQuestion = row[questionIdx];
+        const rowAnswer = row[answerIdx];
+        
+        // Default difficulty to Medium if missing/empty
+        let rowDiff = "Medium";
+        if (diffIdx !== -1 && row[diffIdx]) {
+           const d = row[diffIdx].charAt(0).toUpperCase() + row[diffIdx].slice(1).toLowerCase();
+           if (["Easy", "Medium", "Hard"].includes(d)) rowDiff = d;
         }
-        const cat = matches[0];
-        const submap = await subtopicMap(cat.id);
-        const subId = submap.get(subtopicName.toLowerCase());
-        if (!subId) { failed.push({ row: rowNum, error: `Subtopic '${subtopicName}' not found under category '${categoryName}'` }); continue; }
-        toInsert.push({ topic_id: cat.topic_id, subtopic_id: subId, question, answer, difficulty });
+
+        // 1. Resolve Topic
+        const topicMatch = topics.find(t => t.name.toLowerCase() === rowTopic.toLowerCase());
+        if (!topicMatch) {
+          throw new Error(`Row ${i + 1} failed: Topic '${rowTopic}' not found.`);
+        }
+
+        // 2. Resolve Category (Match BOTH Topic ID and Category Name)
+        const categoryMatch = categories.find(
+          c => c.topic_id === topicMatch.id && c.name.toLowerCase() === rowCategory.toLowerCase()
+        );
+        if (!categoryMatch) {
+          throw new Error(`Row ${i + 1} failed: Category '${rowCategory}' not found under Topic '${topicMatch.name}'.`);
+        }
+
+        // 3. Resolve Subtopic (Match BOTH Category ID and Subtopic Name)
+        const subtopicMatch = subtopics.find(
+          s => s.category_id === categoryMatch.id && s.name.toLowerCase() === rowSubtopic.toLowerCase()
+        );
+        if (!subtopicMatch) {
+          throw new Error(`Row ${i + 1} failed: Subtopic '${rowSubtopic}' not found under Category '${categoryMatch.name}' (Topic: '${topicMatch.name}').`);
+        }
+
+        flashcardsToInsert.push({
+          topic_id: topicMatch.id,
+          subtopic_id: subtopicMatch.id,
+          question: rowQuestion,
+          answer: rowAnswer,
+          difficulty: rowDiff,
+          is_published: true, // Default to published on import
+        });
       }
 
-      let created = 0;
-      if (toInsert.length) {
-        const { error, data } = await supabase.from("flashcards").insert(toInsert).select("id");
-        if (error) {
-          toast.error(`Insert failed: ${error.message}`);
-        } else {
-          created = data?.length ?? toInsert.length;
-        }
-      }
-      setSummary({ created, failed });
-      if (created) toast.success(`${created} flashcard${created === 1 ? "" : "s"} imported`);
+      if (flashcardsToInsert.length === 0) throw new Error("No valid rows found to import.");
+
+      const { error: insertErr } = await supabase.from("flashcards").insert(flashcardsToInsert);
+      if (insertErr) throw insertErr;
+
+      toast.success(`Successfully imported ${flashcardsToInsert.length} flashcards.`);
       onDone();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Import failed");
+
+    } catch (err: any) {
+      toast.error(err.message || "Failed to parse CSV");
     } finally {
-      setBusy(false);
+      setImporting(false);
       if (fileRef.current) fileRef.current.value = "";
     }
-  }
+  };
 
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
-      <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-base font-semibold">Bulk CSV import</h3>
-        <span className="text-xs text-muted-foreground">Columns: question, answer, difficulty, category, subtopic</span>
+      <h3 className="mb-2 text-base font-semibold">Bulk Import Flashcards</h3>
+      <p className="mb-4 text-xs text-muted-foreground">
+        Upload a CSV file containing: <code>Topic, Category, Subtopic, Question, Answer, Difficulty</code>
+      </p>
+      <div className="flex items-center gap-3">
+        <input
+          type="file"
+          accept=".csv"
+          ref={fileRef}
+          onChange={handleImport}
+          className="hidden"
+          id="csv-upload"
+          disabled={importing}
+        />
+        <label
+          htmlFor="csv-upload"
+          className={`cursor-pointer rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+            importing ? "bg-muted text-muted-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+          }`}
+        >
+          {importing ? "Importing..." : "Choose CSV File"}
+        </label>
       </div>
-      <input
-        ref={fileRef}
-        type="file"
-        accept=".csv,text/csv"
-        disabled={busy}
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
-        className="block w-full text-sm"
-      />
-      {busy && <p className="mt-2 text-xs text-muted-foreground">Importing…</p>}
-      {summary && (
-        <div className="mt-3 space-y-1 text-sm">
-          <p><strong>{summary.created}</strong> created, <strong>{summary.failed.length}</strong> failed.</p>
-          {summary.failed.length > 0 && (
-            <ul className="max-h-40 overflow-y-auto rounded-lg border border-border bg-muted/30 p-2 text-xs">
-              {summary.failed.map((f) => (
-                <li key={f.row}>Row {f.row}: {f.error}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
     </div>
   );
 }
