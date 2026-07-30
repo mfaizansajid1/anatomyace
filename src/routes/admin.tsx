@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,37 +40,51 @@ type AuthState =
 function useAdminAuth(): AuthState {
   const [state, setState] = useState<AuthState>({ status: "loading" });
   const navigate = useNavigate();
+
   useEffect(() => {
     let active = true;
     (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!active) return;
-      if (!u.user) {
-        setState({ status: "guest" });
-        navigate({ to: "/login" });
-        return;
+      try {
+        const { data: u } = await supabase.auth.getUser();
+        if (!active) return;
+
+        if (!u.user) {
+          setState({ status: "guest" });
+          navigate({ to: "/login" });
+          return;
+        }
+
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", u.user.id);
+
+        if (!active) return;
+
+        const isAdmin = (roles ?? []).some((r) => r.role === "admin");
+        if (!isAdmin) {
+          setState({ status: "denied" });
+          toast.error("You don't have access to this page.");
+          navigate({ to: "/dashboard", replace: true });
+          return;
+        }
+
+        setState({ status: "admin", userId: u.user.id });
+      } catch (err) {
+        const error = err as Error;
+        toast.error(error.message || "Failed to verify permissions");
       }
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", u.user.id);
-      if (!active) return;
-      const isAdmin = (roles ?? []).some((r) => r.role === "admin");
-      if (!isAdmin) {
-        setState({ status: "denied" });
-        toast.error("You don't have access to this page.");
-        navigate({ to: "/dashboard", replace: true });
-        return;
-      }
-      setState({ status: "admin", userId: u.user.id });
     })();
+
     return () => { active = false; };
   }, [navigate]);
+
   return state;
 }
 
 function AdminPage() {
   const auth = useAdminAuth();
+
   if (auth.status !== "admin") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -78,6 +92,7 @@ function AdminPage() {
       </div>
     );
   }
+
   return <AdminShell />;
 }
 
@@ -245,7 +260,7 @@ function TopicSidebar({
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Topic added"); setAdding(false); setName(""); onChanged(); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const update = useMutation({
@@ -256,7 +271,7 @@ function TopicSidebar({
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Topic updated"); setEditing(null); setName(""); onChanged(); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const remove = useMutation({
@@ -266,7 +281,7 @@ function TopicSidebar({
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Topic deleted"); onChanged(); },
-    onError: (e: Error) => { if (e.message !== "cancelled") toast.error(e.message); },
+    onError: (err: Error) => { if (err.message !== "cancelled") toast.error(err.message); },
   });
 
   return (
@@ -360,7 +375,7 @@ function CategoryPanel({
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Category added"); setAdding(false); setName(""); onChanged(); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const update = useMutation({
@@ -371,7 +386,7 @@ function CategoryPanel({
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Category updated"); setEditing(null); onChanged(); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const remove = useMutation({
@@ -388,7 +403,7 @@ function CategoryPanel({
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Category deleted"); onChanged(); },
-    onError: (e: Error) => { if (e.message !== "cancelled") toast.error(e.message); },
+    onError: (err: Error) => { if (err.message !== "cancelled") toast.error(err.message); },
   });
 
   if (!topic) return null;
@@ -479,7 +494,7 @@ function SubtopicPanel({
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Subtopic added"); setAdding(false); setName(""); onChanged(); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const update = useMutation({
@@ -490,7 +505,7 @@ function SubtopicPanel({
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Subtopic updated"); setEditing(null); onChanged(); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const remove = useMutation({
@@ -507,7 +522,7 @@ function SubtopicPanel({
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Subtopic deleted"); onChanged(); },
-    onError: (e: Error) => { if (e.message !== "cancelled") toast.error(e.message); },
+    onError: (err: Error) => { if (err.message !== "cancelled") toast.error(err.message); },
   });
 
   if (!topic || !category) return null;
@@ -598,7 +613,7 @@ function FlashcardPanel({
       if (error) throw error;
     },
     onSuccess: () => onChanged(),
-    onError: (e: Error) => toast.error(e.message),
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const remove = useMutation({
@@ -608,7 +623,7 @@ function FlashcardPanel({
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Flashcard deleted"); onChanged(); },
-    onError: (e: Error) => { if (e.message !== "cancelled") toast.error(e.message); },
+    onError: (err: Error) => { if (err.message !== "cancelled") toast.error(err.message); },
   });
 
   return (
@@ -699,12 +714,15 @@ function FlashcardForm({
     },
   });
 
-  // If editing an existing card, derive category from its subtopic on first load
   useEffect(() => {
     if (categoryId || !initial.subtopic_id) return;
     (async () => {
-      const { data } = await supabase.from("subtopics").select("category_id").eq("id", initial.subtopic_id).maybeSingle();
-      if (data?.category_id) setCategoryId(data.category_id);
+      try {
+        const { data } = await supabase.from("subtopics").select("category_id").eq("id", initial.subtopic_id).maybeSingle();
+        if (data?.category_id) setCategoryId(data.category_id);
+      } catch (err) {
+        // Safe silence
+      }
     })();
   }, [categoryId, initial.subtopic_id]);
 
@@ -754,7 +772,7 @@ function FlashcardForm({
       }
     },
     onSuccess: () => { toast.success(initial.id ? "Flashcard updated" : "Flashcard added"); onSaved(); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (err: Error) => toast.error(err.message),
   });
 
   return (
@@ -802,7 +820,11 @@ function FlashcardForm({
           </div>
           <div>
             <label className="mb-1 block text-xs text-muted-foreground">Difficulty</label>
-            <select className="w-full rounded-lg border border-border bg-background p-1.5 text-sm" value={difficulty} onChange={(e) => setDifficulty(e.target.value as any)}>
+            <select
+              className="w-full rounded-lg border border-border bg-background p-1.5 text-sm"
+              value={difficulty}
+              onChange={(e) => setDifficulty(e.target.value as "Easy" | "Medium" | "Hard")}
+            >
               <option value="Easy">Easy</option>
               <option value="Medium">Medium</option>
               <option value="Hard">Hard</option>
@@ -820,22 +842,61 @@ function FlashcardForm({
   );
 }
 
-/* ---------- CSV Import ---------- */
+/* ---------- RFC 4180 CSV Parser & Bulk Import ---------- */
+
+function parseCSV(text: string): string[][] {
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
+  let currentCell = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i + 1];
+
+    if (inQuotes) {
+      if (char === '"' && nextChar === '"') {
+        currentCell += '"';
+        i++;
+      } else if (char === '"') {
+        inQuotes = false;
+      } else {
+        currentCell += char;
+      }
+    } else {
+      if (char === '"') {
+        inQuotes = true;
+      } else if (char === ",") {
+        currentRow.push(currentCell.trim());
+        currentCell = "";
+      } else if (char === "\r") {
+        // Ignore carriage return
+      } else if (char === "\n") {
+        currentRow.push(currentCell.trim());
+        if (currentRow.some((cell) => cell.length > 0)) {
+          rows.push(currentRow);
+        }
+        currentRow = [];
+        currentCell = "";
+      } else {
+        currentCell += char;
+      }
+    }
+  }
+
+  if (currentCell.length > 0 || currentRow.length > 0) {
+    currentRow.push(currentCell.trim());
+    if (currentRow.some((cell) => cell.length > 0)) {
+      rows.push(currentRow);
+    }
+  }
+
+  return rows;
+}
 
 function CsvImportPanel({ onDone }: { onDone: () => void }) {
   const [importing, setImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-
-  // Helper to split a simple CSV row (handles basic quoted strings)
-  const parseCsvLine = (text: string) => {
-    const re = /(?!\s*$)\s*(?:'([^'\\]*(?:\\[\s\S][^'\\]*)*)'|"([^"\\]*(?:\\[\s\S][^"\\]*)*)"|([^,'"\s\\]*(?:\s+[^,'"\s\\]+)*))\s*(?:,|$)/g;
-    const a: string[] = [];
-    text.replace(re, (m, c1, c2, c3) => {
-      a.push(c1 !== undefined ? c1 : c2 !== undefined ? c2 : c3 !== undefined ? c3 : "");
-      return "";
-    });
-    return a.map(val => val.trim());
-  };
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -844,115 +905,181 @@ function CsvImportPanel({ onDone }: { onDone: () => void }) {
     setImporting(true);
     try {
       const text = await file.text();
-      const lines = text.split("\n").filter(l => l.trim().length > 0);
-      if (lines.length < 2) throw new Error("CSV must have a header row and at least one data row");
-
-      // Resolve headers
-      const headers = parseCsvLine(lines[0]).map(h => h.toLowerCase());
-      const getIndex = (name: string) => headers.indexOf(name.toLowerCase());
-      
-      const topicIdx = getIndex("Topic");
-      const categoryIdx = getIndex("Category");
-      const subtopicIdx = getIndex("Subtopic");
-      const questionIdx = getIndex("Question");
-      const answerIdx = getIndex("Answer");
-      const diffIdx = getIndex("Difficulty");
-
-      if (topicIdx === -1 || categoryIdx === -1 || subtopicIdx === -1 || questionIdx === -1 || answerIdx === -1) {
-        throw new Error("Missing required columns. Expected: Topic, Category, Subtopic, Question, Answer");
+      const rows = parseCSV(text);
+      if (rows.length < 2) {
+        throw new Error("CSV must contain a header row and at least one data row.");
       }
 
-      // Fetch the hierarchy upfront for accurate matching
+      // Fetch all reference data upfront for efficient lookups
       const { data: topics, error: tErr } = await supabase.from("topics").select("id, name");
       if (tErr) throw tErr;
-      
+
       const { data: categories, error: cErr } = await supabase.from("categories").select("id, topic_id, name");
       if (cErr) throw cErr;
-      
+
       const { data: subtopics, error: sErr } = await supabase.from("subtopics").select("id, category_id, name");
       if (sErr) throw sErr;
 
-      const flashcardsToInsert = [];
-      const rowErrors: string[] = [];
+      // Create lookup maps for efficient hierarchical resolution
+      const topicMap = new Map<string, Topic>();
+      (topics ?? []).forEach((t) => {
+        topicMap.set(t.name.trim().toLowerCase(), t);
+      });
 
-      const topicMap = new Map((topics ?? []).map(t => [t.name.toLowerCase(), t]));
-      const categoryMap = new Map((categories ?? []).map(c => [`${c.topic_id}::${c.name.toLowerCase()}`, c]));
-      const subtopicMap = new Map((subtopics ?? []).map(s => [`${s.category_id}::${s.name.toLowerCase()}`, s]));
+      // Group categories by topic_id for hierarchical lookup
+      const categoriesByTopic = new Map<string, Category[]>();
+      (categories ?? []).forEach((c) => {
+        const list = categoriesByTopic.get(c.topic_id) || [];
+        list.push(c);
+        categoriesByTopic.set(c.topic_id, list);
+      });
 
-      for (let i = 1; i < lines.length; i++) {
-        const row = parseCsvLine(lines[i]);
-        if (row.length < 5) continue; // Skip malformed rows
-        
-        const rowTopic = row[topicIdx];
-        const rowCategory = row[categoryIdx];
-        const rowSubtopic = row[subtopicIdx];
-        const rowQuestion = row[questionIdx];
-        const rowAnswer = row[answerIdx];
-        
-        // Default difficulty to Medium if missing/empty
-        let rowDiff = "Medium";
-        if (diffIdx !== -1 && row[diffIdx]) {
-           const d = row[diffIdx].charAt(0).toUpperCase() + row[diffIdx].slice(1).toLowerCase();
-           if (["Easy", "Medium", "Hard"].includes(d)) rowDiff = d;
+      // Group subtopics by category_id for hierarchical lookup
+      const subtopicsByCategory = new Map<string, Subtopic[]>();
+      (subtopics ?? []).forEach((s) => {
+        const list = subtopicsByCategory.get(s.category_id) || [];
+        list.push(s);
+        subtopicsByCategory.set(s.category_id, list);
+      });
+
+      const flashcardsToInsert: Array<{
+        topic_id: string;
+        subtopic_id: string;
+        question: string;
+        answer: string;
+        difficulty: "Easy" | "Medium" | "Hard";
+        is_published: boolean;
+      }> = [];
+
+      const skippedRows: Array<{ row: number; reason: string }> = [];
+
+      // Row 0 is header, start at Row 1
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (row.length < 7) {
+          skippedRows.push({
+            row: i + 1,
+            reason: `Row has insufficient columns (found ${row.length}, expected at least 7)`,
+          });
+          continue;
         }
 
-        // 1. Resolve Topic
-        const topicMatch = topicMap.get(rowTopic.toLowerCase());
+        // Sequence: Question [0], Answer [1], [Blank] [2], Difficulty [3], Topic [4], Category [5], Subtopic [6]
+        const rowQuestion = row[0];
+        const rowAnswer = row[1];
+        const rawDiff = row[3];
+        const rowTopic = row[4];
+        const rowCategory = row[5];
+        const rowSubtopic = row[6];
+
+        // Validate required fields
+        if (!rowQuestion || !rowAnswer || !rowTopic || !rowCategory || !rowSubtopic) {
+          skippedRows.push({
+            row: i + 1,
+            reason: `Missing required fields (Question: "${rowQuestion || 'empty'}", Answer: "${rowAnswer || 'empty'}", Topic: "${rowTopic || 'empty'}", Category: "${rowCategory || 'empty'}", Subtopic: "${rowSubtopic || 'empty'}")`,
+          });
+          continue;
+        }
+
+        // Parse difficulty with fallback to Medium
+        let rowDiff: "Easy" | "Medium" | "Hard" = "Medium";
+        if (rawDiff) {
+          const formatted = rawDiff.charAt(0).toUpperCase() + rawDiff.slice(1).toLowerCase();
+          if (formatted === "Easy" || formatted === "Medium" || formatted === "Hard") {
+            rowDiff = formatted;
+          }
+        }
+
+        // Step 1: Find Topic by name (case-insensitive)
+        const topicMatch = topicMap.get(rowTopic.trim().toLowerCase());
         if (!topicMatch) {
-          rowErrors.push(`Row ${i + 1}: Topic '${rowTopic}' not found.`);
+          skippedRows.push({
+            row: i + 1,
+            reason: `Topic "${rowTopic}" does not exist in the database`,
+          });
           continue;
         }
 
-        // 2. Resolve Category (Match BOTH Topic ID and Category Name)
-        const categoryMatch = categoryMap.get(`${topicMatch.id}::${rowCategory.toLowerCase()}`);
+        // Step 2: Find Category by BOTH topic_id AND category name (hierarchical resolution)
+        const topicCategories = categoriesByTopic.get(topicMatch.id) || [];
+        const categoryMatch = topicCategories.find(
+          (c) => c.name.trim().toLowerCase() === rowCategory.trim().toLowerCase()
+        );
+
         if (!categoryMatch) {
-          rowErrors.push(`Row ${i + 1}: Category '${rowCategory}' does not belong to Topic '${topicMatch.name}'.`);
+          skippedRows.push({
+            row: i + 1,
+            reason: `Category "${rowCategory}" does not exist under Topic "${topicMatch.name}"`,
+          });
           continue;
         }
 
-        // 3. Resolve Subtopic (Match BOTH Category ID and Subtopic Name)
-        const subtopicMatch = subtopicMap.get(`${categoryMatch.id}::${rowSubtopic.toLowerCase()}`);
+        // Step 3: Find Subtopic by BOTH category_id AND subtopic name (hierarchical resolution)
+        const categorySubtopics = subtopicsByCategory.get(categoryMatch.id) || [];
+        const subtopicMatch = categorySubtopics.find(
+          (s) => s.name.trim().toLowerCase() === rowSubtopic.trim().toLowerCase()
+        );
+
         if (!subtopicMatch) {
-          rowErrors.push(`Row ${i + 1}: Subtopic '${rowSubtopic}' does not belong to Category '${categoryMatch.name}' under Topic '${topicMatch.name}'.`);
+          skippedRows.push({
+            row: i + 1,
+            reason: `Subtopic "${rowSubtopic}" does not exist under Category "${categoryMatch.name}" (Topic: "${topicMatch.name}")`,
+          });
           continue;
         }
 
+        // Step 4: Add flashcard with resolved IDs
         flashcardsToInsert.push({
           topic_id: topicMatch.id,
           subtopic_id: subtopicMatch.id,
           question: rowQuestion,
           answer: rowAnswer,
           difficulty: rowDiff,
-          is_published: true, // Default to published on import
+          is_published: true,
         });
       }
 
-     if (flashcardsToInsert.length === 0) {
-  throw new Error("No valid rows found to import.");
-}
+      // Handle results
+      if (flashcardsToInsert.length === 0) {
+        const skipSummary = skippedRows.length > 0
+          ? `\n\nSkipped rows:\n${skippedRows.map((s) => `Row ${s.row}: ${s.reason}`).join("\n")}`
+          : "";
+        throw new Error(`No valid flashcards found to import.${skipSummary}`);
+      }
 
-const { error: insertErr } = await supabase
-  .from("flashcards")
-  .insert(flashcardsToInsert);
+      // Insert all valid flashcards in a single batch
+      const { error: insertErr } = await supabase.from("flashcards").insert(flashcardsToInsert);
+      if (insertErr) throw insertErr;
 
-if (insertErr) throw insertErr;
+      // Report success with details about skipped rows
+      if (skippedRows.length > 0) {
+        const skipSummary = skippedRows
+          .map((s) => `Row ${s.row}: ${s.reason}`)
+          .join("\n");
+        toast.warning(
+          `Imported ${flashcardsToInsert.length} flashcards successfully.\n\nSkipped ${skippedRows.length} row(s):\n${skipSummary}`,
+          { duration: 8000 }
+        );
+      } else {
+        toast.success(`Successfully imported ${flashcardsToInsert.length} flashcards.`);
+      }
 
-toast.success(
-  `Successfully imported ${flashcardsToInsert.length} flashcards.${
-    rowErrors.length ? ` ${rowErrors.length} rows skipped.` : ""
-  }`
-);
+      onDone();
 
-if (rowErrors.length) {
-  toast.error(rowErrors.join("\n"));
-}
+    } catch (err) {
+      const error = err as Error;
+      toast.error(error.message || "Failed to parse CSV");
+    } finally {
+      setImporting(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
 
-onDone();
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
       <h3 className="mb-2 text-base font-semibold">Bulk Import Flashcards</h3>
       <p className="mb-4 text-xs text-muted-foreground">
-        Upload a CSV file containing: <code>Topic, Category, Subtopic, Question, Answer, Difficulty</code>
+        Upload a CSV file containing: <code>Question, Answer, [Blank], Difficulty, Topic, Category, Subtopic</code>
       </p>
       <div className="flex items-center gap-3">
         <input
