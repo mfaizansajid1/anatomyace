@@ -845,22 +845,7 @@ function CsvImportPanel({ onDone }: { onDone: () => void }) {
     try {
       const text = await file.text();
       const lines = text.split("\n").filter(l => l.trim().length > 0);
-      if (lines.length < 2) throw new Error("CSV must have a header row and at least one data row");
-
-      // Resolve headers
-      const headers = parseCsvLine(lines[0]).map(h => h.toLowerCase());
-      const getIndex = (name: string) => headers.indexOf(name.toLowerCase());
-      
-      const topicIdx = getIndex("Topic");
-      const categoryIdx = getIndex("Category");
-      const subtopicIdx = getIndex("Subtopic");
-      const questionIdx = getIndex("Question");
-      const answerIdx = getIndex("Answer");
-      const diffIdx = getIndex("Difficulty");
-
-      if (topicIdx === -1 || categoryIdx === -1 || subtopicIdx === -1 || questionIdx === -1 || answerIdx === -1) {
-        throw new Error("Missing required columns. Expected: Topic, Category, Subtopic, Question, Answer");
-      }
+      if (lines.length < 2) throw new Error("CSV must have a header row and at least one data row");[cite: 1]
 
       // Fetch the hierarchy upfront for accurate matching
       const { data: topics, error: tErr } = await supabase.from("topics").select("id, name");
@@ -876,17 +861,28 @@ function CsvImportPanel({ onDone }: { onDone: () => void }) {
 
       for (let i = 1; i < lines.length; i++) {
         const row = parseCsvLine(lines[i]);
-        if (row.length < 5) continue; // Skip malformed rows
+        if (row.length < 7) continue; // Skip malformed rows that don't have enough columns[cite: 1]
         
+        // Exact mapping from image_bbea79.png
+        const questionIdx = 0;
+        const answerIdx = 1;
+        // Index 2 is intentionally blank/skipped based on the provided image
+        const diffIdx = 3;
+        const topicIdx = 4;
+        const categoryIdx = 5;
+        const subtopicIdx = 6;
+        
+        const rowQuestion = row[questionIdx];
+        const rowAnswer = row[answerIdx];
         const rowTopic = row[topicIdx];
         const rowCategory = row[categoryIdx];
         const rowSubtopic = row[subtopicIdx];
-        const rowQuestion = row[questionIdx];
-        const rowAnswer = row[answerIdx];
+        
+        if (!rowQuestion || !rowAnswer || !rowTopic || !rowCategory || !rowSubtopic) continue;
         
         // Default difficulty to Medium if missing/empty
         let rowDiff = "Medium";
-        if (diffIdx !== -1 && row[diffIdx]) {
+        if (row[diffIdx]) {
            const d = row[diffIdx].charAt(0).toUpperCase() + row[diffIdx].slice(1).toLowerCase();
            if (["Easy", "Medium", "Hard"].includes(d)) rowDiff = d;
         }
@@ -943,7 +939,7 @@ function CsvImportPanel({ onDone }: { onDone: () => void }) {
     <div className="rounded-2xl border border-border bg-card p-4">
       <h3 className="mb-2 text-base font-semibold">Bulk Import Flashcards</h3>
       <p className="mb-4 text-xs text-muted-foreground">
-        Upload a CSV file containing: <code>Topic, Category, Subtopic, Question, Answer, Difficulty</code>
+        Upload a CSV file containing: <code>Question, Answer, [Blank], Difficulty, Topic, Category, Subtopic</code>
       </p>
       <div className="flex items-center gap-3">
         <input
