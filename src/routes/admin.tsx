@@ -927,24 +927,27 @@ function CsvImportPanel({ onDone }: { onDone: () => void }) {
         });
       }
 
-      if (flashcardsToInsert.length === 0) throw new Error("No valid rows found to import.");
+     if (flashcardsToInsert.length === 0) {
+  throw new Error("No valid rows found to import.");
+}
 
-      const { error: insertErr } = await supabase.from("flashcards").insert(flashcardsToInsert);
-      if (insertErr) throw insertErr;
+const { error: insertErr } = await supabase
+  .from("flashcards")
+  .insert(flashcardsToInsert);
 
-      toast.success(`Successfully imported ${flashcardsToInsert.length} flashcards.${rowErrors.length ? ` ${rowErrors.length} rows skipped.` : ""}`);
-      if (rowErrors.length) toast.error(rowErrors.join("
-"));
-      onDone();
+if (insertErr) throw insertErr;
 
-    } catch (err: any) {
-      toast.error(err.message || "Failed to parse CSV");
-    } finally {
-      setImporting(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  };
+toast.success(
+  `Successfully imported ${flashcardsToInsert.length} flashcards.${
+    rowErrors.length ? ` ${rowErrors.length} rows skipped.` : ""
+  }`
+);
 
+if (rowErrors.length) {
+  toast.error(rowErrors.join("\n"));
+}
+
+onDone();
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
       <h3 className="mb-2 text-base font-semibold">Bulk Import Flashcards</h3>
