@@ -273,7 +273,7 @@ const cardsQ = useQuery({
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Topic</label>
+              <label className="text-sm font-medium text-foreground">Chapter</label>
               <select
                 className="input-field w-full"
                 value={topicId}
@@ -283,7 +283,7 @@ const cardsQ = useQuery({
                   setSubtopicId("");
                 }}
               >
-                <option value="">Select a topic…</option>
+                <option value="">Select a chapter…</option>
                 {topicsQ.data?.map((t) => (
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
@@ -291,7 +291,7 @@ const cardsQ = useQuery({
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Category</label>
+              <label className="text-sm font-medium text-foreground">Topic</label>
               <select
                 className="input-field w-full"
                 value={categoryId}
@@ -299,7 +299,7 @@ const cardsQ = useQuery({
                 disabled={!topicId || categoriesQ.isLoading}
               >
                 <option value="">
-                  {topicId ? (categoriesQ.isLoading ? "Loading…" : "Select a category…") : "Pick a topic first"}
+                  {topicId ? (categoriesQ.isLoading ? "Loading…" : "Select a topic…") : "Pick a chapter first"}
                 </option>
                 {categoriesQ.data?.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
@@ -316,7 +316,7 @@ const cardsQ = useQuery({
                 disabled={!categoryId || subtopicsQ.isLoading}
               >
                 <option value="">
-                  {categoryId ? (subtopicsQ.isLoading ? "Loading…" : "Select a subtopic…") : "Pick a category first"}
+                  {categoryId ? (subtopicsQ.isLoading ? "Loading…" : "Select a subtopic…") : "Pick a topic first"}
                 </option>
                 {subtopicsQ.data?.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
