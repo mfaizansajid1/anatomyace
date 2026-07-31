@@ -269,7 +269,7 @@ const cardsQ = useQuery({
           <div className="card-surface p-6 space-y-5">
             <div>
               <h1 className="text-2xl font-bold text-foreground">Start a study session</h1>
-              <p className="text-sm text-muted-foreground mt-1">Pick a topic, category, and subtopic to begin.</p>
+              <p className="text-sm text-muted-foreground mt-1"> Pick a chapter, topic, and subtopic to begin.</p>
             </div>
 
             <div className="space-y-2">
