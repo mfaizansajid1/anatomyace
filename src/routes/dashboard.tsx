@@ -298,6 +298,9 @@ function Dashboard() {
             <Link to="/progress" className="btn-outline flex items-center px-3" style={{ minHeight: 40 }}>
               Progress
             </Link>
+            <Link to="/planner" className="btn-outline flex items-center px-3" style={{ minHeight: 40 }}>
+              Revision Planner
+            </Link>
             <ThemeToggle />
             <Link 
               to="/profile" 
