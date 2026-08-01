@@ -223,6 +223,90 @@ export type Database = {
           },
         ]
       }
+      revision_plan_days: {
+        Row: {
+          completed: boolean
+          created_at: string
+          day_number: number
+          id: string
+          plan_date: string
+          plan_id: string
+          subtopic_id: string | null
+          target_card_count: number
+          updated_at: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          day_number: number
+          id?: string
+          plan_date: string
+          plan_id: string
+          subtopic_id?: string | null
+          target_card_count?: number
+          updated_at?: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          day_number?: number
+          id?: string
+          plan_date?: string
+          plan_id?: string
+          subtopic_id?: string | null
+          target_card_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revision_plan_days_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "revision_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revision_plan_days_subtopic_id_fkey"
+            columns: ["subtopic_id"]
+            isOneToOne: false
+            referencedRelation: "subtopics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      revision_plans: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          mode: string
+          plan_type: string
+          start_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          mode?: string
+          plan_type?: string
+          start_date?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          mode?: string
+          plan_type?: string
+          start_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       study_activity: {
         Row: {
           cards_studied: number
