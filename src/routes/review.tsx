@@ -65,6 +65,28 @@ function StudyPage() {
     })();
   }, [navigate]);
 
+  const search = Route.useSearch();
+  const prefillSubtopic = search.subtopic;
+
+  useEffect(() => {
+    if (!signedIn || !prefillSubtopic) return;
+    (async () => {
+      const { data } = await supabase
+        .from("subtopics")
+        .select("id, topic_id, category_id")
+        .eq("id", prefillSubtopic)
+        .maybeSingle();
+      if (!data) return;
+      setTopicId(data.topic_id);
+      setCategoryId(data.category_id);
+      setSubtopicId(data.id);
+      setIndex(0);
+      setReviewed(0);
+      setShowAnswer(false);
+      setStarted(true);
+    })();
+  }, [signedIn, prefillSubtopic]);
+
   const topicsQ = useQuery({
     queryKey: ["study", "topics"],
     enabled: signedIn,
