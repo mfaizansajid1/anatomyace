@@ -519,3 +519,50 @@ function BookmarkStar({ flashcardId }: { flashcardId: string }) {
     </button>
   );
 }
+
+async function markPlannerProgress(subtopicId: string): Promise<boolean> {
+  try {
+    const { data: u } = await supabase.auth.getUser();
+    const uid = u.user?.id;
+    if (!uid || !subtopicId) return false;
+    const today = new Date().toISOString().slice(0, 10);
+
+    const { data: days } = await supabase
+      .from("revision_plan_days")
+      .select("id, target_card_count, completed, revision_plans!inner(user_id)")
+      .eq("subtopic_id", subtopicId)
+      .eq("plan_date", today)
+      .eq("completed", false)
+      .eq("revision_plans.user_id", uid);
+
+    if (!days || days.length === 0) return false;
+
+    const { data: cards } = await supabase
+      .from("flashcards")
+      .select("id")
+      .eq("subtopic_id", subtopicId);
+    const cardIds = (cards ?? []).map((c) => c.id);
+    if (cardIds.length === 0) return false;
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const { count } = await supabase
+      .from("review_events")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", uid)
+      .in("flashcard_id", cardIds)
+      .gte("reviewed_at", startOfDay.toISOString());
+
+    const reviewedToday = count ?? 0;
+    const toComplete = days.filter((d) => reviewedToday >= d.target_card_count);
+    if (toComplete.length === 0) return false;
+
+    await supabase
+      .from("revision_plan_days")
+      .update({ completed: true })
+      .in("id", toComplete.map((d) => d.id));
+    return true;
+  } catch {
+    return false;
+  }
+}
