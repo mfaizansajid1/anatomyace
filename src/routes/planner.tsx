@@ -369,7 +369,7 @@ function PlannerPage() {
                 </p>
               </div>
               <div className="flex gap-2">
-                <button className="btn-outline" onClick={() => setDraft(null) || generateAuto()}>
+                <button className="btn-outline" onClick={() => (mode === "auto" ? generateAuto() : generateManual())}>
                   Regenerate
                 </button>
                 <button className="btn-outline" onClick={() => deletePlan(existing.plan.id)}>
