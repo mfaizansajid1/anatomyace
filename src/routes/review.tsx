@@ -400,11 +400,7 @@ const cardsQ = useQuery({
                     <div className="text-foreground whitespace-pre-wrap">{current.answer}</div>
                   </div>
 
-                  <ExtraSection label="Clinical Correlation" value={current.clinical_correlation} />
-                  <ExtraSection label="Mnemonic" value={current.mnemonic} />
-                  <ExtraSection label="High-Yield Point" value={current.high_yield_point} />
-                  <ExtraSection label="Image" value={current.image_url} />
-                  <ExtraSection label="Reference" value={current.reference} />
+                  <ReferenceSection value={current.reference} />
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
                     <button className="btn-outline" onClick={() => rate("again")}>Again</button>
@@ -434,15 +430,13 @@ const cardsQ = useQuery({
   );
 }
 
-function ExtraSection({ label, value }: { label: string; value: string | null }) {
+function ReferenceSection({ value }: { value: string | null }) {
   return (
     <div>
-      <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">{label}</div>
-      {value ? (
-        <div className="text-foreground text-sm whitespace-pre-wrap">{value}</div>
-      ) : (
-        <div className="text-sm text-muted-foreground italic">Coming Soon</div>
-      )}
+      <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Reference</div>
+      <div className="text-foreground text-sm whitespace-pre-wrap">
+        {value && value.trim() ? value : "Snell's Clinical Anatomy By Regions"}
+      </div>
     </div>
   );
 }
