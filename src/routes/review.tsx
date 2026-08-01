@@ -8,6 +8,9 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/review")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    subtopic: typeof search.subtopic === "string" ? search.subtopic : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Study — AnatomyAce" },
@@ -61,6 +64,28 @@ function StudyPage() {
       setAuthChecked(true);
     })();
   }, [navigate]);
+
+  const search = Route.useSearch();
+  const prefillSubtopic = search.subtopic;
+
+  useEffect(() => {
+    if (!signedIn || !prefillSubtopic) return;
+    (async () => {
+      const { data } = await supabase
+        .from("subtopics")
+        .select("id, topic_id, category_id")
+        .eq("id", prefillSubtopic)
+        .maybeSingle();
+      if (!data) return;
+      setTopicId(data.topic_id);
+      setCategoryId(data.category_id);
+      setSubtopicId(data.id);
+      setIndex(0);
+      setReviewed(0);
+      setShowAnswer(false);
+      setStarted(true);
+    })();
+  }, [signedIn, prefillSubtopic]);
 
   const topicsQ = useQuery({
     queryKey: ["study", "topics"],
@@ -188,6 +213,12 @@ const cardsQ = useQuery({
       return;
     }
     qc.invalidateQueries({ queryKey: ["dashboard"] });
+    markPlannerProgress(subtopicId).then((done) => {
+      if (done) {
+        toast.success("✅ Plan day completed!");
+        qc.invalidateQueries({ queryKey: ["planner"] });
+      }
+    });
 
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return;
@@ -400,11 +431,7 @@ const cardsQ = useQuery({
                     <div className="text-foreground whitespace-pre-wrap">{current.answer}</div>
                   </div>
 
-                  <ExtraSection label="Clinical Correlation" value={current.clinical_correlation} />
-                  <ExtraSection label="Mnemonic" value={current.mnemonic} />
-                  <ExtraSection label="High-Yield Point" value={current.high_yield_point} />
-                  <ExtraSection label="Image" value={current.image_url} />
-                  <ExtraSection label="Reference" value={current.reference} />
+                  <ReferenceSection value={current.reference} />
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
                     <button className="btn-outline" onClick={() => rate("again")}>Again</button>
@@ -434,15 +461,13 @@ const cardsQ = useQuery({
   );
 }
 
-function ExtraSection({ label, value }: { label: string; value: string | null }) {
+function ReferenceSection({ value }: { value: string | null }) {
   return (
     <div>
-      <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">{label}</div>
-      {value ? (
-        <div className="text-foreground text-sm whitespace-pre-wrap">{value}</div>
-      ) : (
-        <div className="text-sm text-muted-foreground italic">Coming Soon</div>
-      )}
+      <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Reference</div>
+      <div className="text-foreground text-sm whitespace-pre-wrap">
+        {value && value.trim() ? value : "Snell's Clinical Anatomy By Regions"}
+      </div>
     </div>
   );
 }
@@ -493,4 +518,51 @@ function BookmarkStar({ flashcardId }: { flashcardId: string }) {
       </svg>
     </button>
   );
+}
+
+async function markPlannerProgress(subtopicId: string): Promise<boolean> {
+  try {
+    const { data: u } = await supabase.auth.getUser();
+    const uid = u.user?.id;
+    if (!uid || !subtopicId) return false;
+    const today = new Date().toISOString().slice(0, 10);
+
+    const { data: days } = await supabase
+      .from("revision_plan_days")
+      .select("id, target_card_count, completed, revision_plans!inner(user_id)")
+      .eq("subtopic_id", subtopicId)
+      .eq("plan_date", today)
+      .eq("completed", false)
+      .eq("revision_plans.user_id", uid);
+
+    if (!days || days.length === 0) return false;
+
+    const { data: cards } = await supabase
+      .from("flashcards")
+      .select("id")
+      .eq("subtopic_id", subtopicId);
+    const cardIds = (cards ?? []).map((c) => c.id);
+    if (cardIds.length === 0) return false;
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const { count } = await supabase
+      .from("review_events")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", uid)
+      .in("flashcard_id", cardIds)
+      .gte("reviewed_at", startOfDay.toISOString());
+
+    const reviewedToday = count ?? 0;
+    const toComplete = days.filter((d) => reviewedToday >= d.target_card_count);
+    if (toComplete.length === 0) return false;
+
+    await supabase
+      .from("revision_plan_days")
+      .update({ completed: true })
+      .in("id", toComplete.map((d) => d.id));
+    return true;
+  } catch {
+    return false;
+  }
 }

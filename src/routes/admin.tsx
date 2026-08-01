@@ -921,13 +921,13 @@ function CsvImportPanel({ onDone }: { onDone: () => void }) {
       if (sErr) throw sErr;
 
       // Create lookup maps for efficient hierarchical resolution
-      const topicMap = new Map<string, Topic>();
+      const topicMap = new Map<string, { id: string; name: string }>();
       (topics ?? []).forEach((t) => {
         topicMap.set(t.name.trim().toLowerCase(), t);
       });
 
       // Group categories by topic_id for hierarchical lookup
-      const categoriesByTopic = new Map<string, Category[]>();
+      const categoriesByTopic = new Map<string, Array<{ id: string; name: string; topic_id: string }>>();
       (categories ?? []).forEach((c) => {
         const list = categoriesByTopic.get(c.topic_id) || [];
         list.push(c);
@@ -935,7 +935,7 @@ function CsvImportPanel({ onDone }: { onDone: () => void }) {
       });
 
       // Group subtopics by category_id for hierarchical lookup
-      const subtopicsByCategory = new Map<string, Subtopic[]>();
+      const subtopicsByCategory = new Map<string, Array<{ id: string; name: string; category_id: string }>>();
       (subtopics ?? []).forEach((s) => {
         const list = subtopicsByCategory.get(s.category_id) || [];
         list.push(s);

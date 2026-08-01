@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-// Note: Adjust the import below to match your routing library (e.g., react-router-dom or next/link)
-import { Link } from 'react-router-dom'; 
+import { Link } from '@tanstack/react-router';
 
 interface AppHeaderProps {
   // Pass your existing Supabase logout function and theme toggle function as props
