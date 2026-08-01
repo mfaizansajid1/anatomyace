@@ -8,6 +8,9 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/review")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    subtopic: typeof search.subtopic === "string" ? search.subtopic : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Study — AnatomyAce" },
