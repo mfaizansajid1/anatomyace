@@ -213,6 +213,12 @@ const cardsQ = useQuery({
       return;
     }
     qc.invalidateQueries({ queryKey: ["dashboard"] });
+    markPlannerProgress(subtopicId).then((done) => {
+      if (done) {
+        toast.success("✅ Plan day completed!");
+        qc.invalidateQueries({ queryKey: ["planner"] });
+      }
+    });
 
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return;
