@@ -191,6 +191,38 @@ export type Database = {
           },
         ]
       }
+      review_events: {
+        Row: {
+          flashcard_id: string
+          id: string
+          rating: string
+          reviewed_at: string
+          user_id: string
+        }
+        Insert: {
+          flashcard_id: string
+          id?: string
+          rating: string
+          reviewed_at?: string
+          user_id: string
+        }
+        Update: {
+          flashcard_id?: string
+          id?: string
+          rating?: string
+          reviewed_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_events_flashcard_id_fkey"
+            columns: ["flashcard_id"]
+            isOneToOne: false
+            referencedRelation: "flashcards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       study_activity: {
         Row: {
           cards_studied: number
