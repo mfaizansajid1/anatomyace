@@ -114,6 +114,20 @@ function RootComponent() {
     return () => sub.subscription.unsubscribe();
   }, [router]);
 
+  // Google Analytics 4: load once, then send a page_view on every SPA navigation.
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const searchStr = useRouterState({ select: (s) => s.location.searchStr });
+
+  useEffect(() => {
+    initAnalytics();
+  }, []);
+
+  useEffect(() => {
+    trackPageView(`${pathname}${searchStr ?? ""}`);
+  }, [pathname, searchStr]);
+
+
+
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
