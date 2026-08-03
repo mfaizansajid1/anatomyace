@@ -512,6 +512,18 @@ function Dashboard() {
               )}
             </div>
 
+            {/* Exam Countdown */}
+            <ExamCountdownCard
+              settings={{ exam_name: stats.exam_name ?? null, exam_date: stats.exam_date ?? null }}
+              pending={updateExam.isPending}
+              onSave={(s) => updateExam.mutate(s)}
+            />
+
+            {/* Daily Anatomy Fact */}
+            <DailyFactCard />
+
+
+
             {/* Continue Studying */}
             <div className="card-surface p-5">
               <h2 className="font-semibold text-foreground">Continue Studying</h2>
