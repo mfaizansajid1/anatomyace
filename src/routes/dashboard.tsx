@@ -30,7 +30,10 @@ type UserStats = {
   longest_streak: number;
   last_study_date: string | null;
   last_topic_studied: string | null;
+  exam_name: string | null;
+  exam_date: string | null;
 };
+
 
 type SubtopicPerf = {
   subtopic_id: string;
