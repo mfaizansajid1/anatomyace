@@ -6,6 +6,9 @@ import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Achievements } from "@/components/Achievements";
+import { ExamCountdownCard } from "@/components/ExamCountdownCard";
+import { DailyFactCard } from "@/components/DailyFactCard";
+
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
