@@ -483,6 +483,8 @@ export type Database = {
           created_at: string
           current_streak: number
           daily_goal: number
+          exam_date: string | null
+          exam_name: string | null
           last_study_date: string | null
           last_topic_studied: string | null
           longest_streak: number
@@ -496,6 +498,8 @@ export type Database = {
           created_at?: string
           current_streak?: number
           daily_goal?: number
+          exam_date?: string | null
+          exam_name?: string | null
           last_study_date?: string | null
           last_topic_studied?: string | null
           longest_streak?: number
@@ -509,6 +513,8 @@ export type Database = {
           created_at?: string
           current_streak?: number
           daily_goal?: number
+          exam_date?: string | null
+          exam_name?: string | null
           last_study_date?: string | null
           last_topic_studied?: string | null
           longest_streak?: number

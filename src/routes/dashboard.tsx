@@ -6,6 +6,9 @@ import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Achievements } from "@/components/Achievements";
+import { ExamCountdownCard } from "@/components/ExamCountdownCard";
+import { DailyFactCard } from "@/components/DailyFactCard";
+
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -30,7 +33,10 @@ type UserStats = {
   longest_streak: number;
   last_study_date: string | null;
   last_topic_studied: string | null;
+  exam_name: string | null;
+  exam_date: string | null;
 };
+
 
 type SubtopicPerf = {
   subtopic_id: string;
@@ -212,6 +218,18 @@ function Dashboard() {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["dashboard", user?.id] }),
   });
+
+  const updateExam = useMutation({
+    mutationFn: async (s: { exam_name: string; exam_date: string }) => {
+      const { error } = await supabase
+        .from("user_stats")
+        .update({ exam_name: s.exam_name, exam_date: s.exam_date })
+        .eq("user_id", user!.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["dashboard", user?.id] }),
+  });
+
 
   async function onLogout() {
     await supabase.auth.signOut();
@@ -505,6 +523,18 @@ function Dashboard() {
                 </div>
               )}
             </div>
+
+            {/* Exam Countdown */}
+            <ExamCountdownCard
+              settings={{ exam_name: stats.exam_name ?? null, exam_date: stats.exam_date ?? null }}
+              pending={updateExam.isPending}
+              onSave={(s) => updateExam.mutate(s)}
+            />
+
+            {/* Daily Anatomy Fact */}
+            <DailyFactCard />
+
+
 
             {/* Continue Studying */}
             <div className="card-surface p-5">
