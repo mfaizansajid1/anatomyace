@@ -219,6 +219,18 @@ function Dashboard() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["dashboard", user?.id] }),
   });
 
+  const updateExam = useMutation({
+    mutationFn: async (s: { exam_name: string; exam_date: string }) => {
+      const { error } = await supabase
+        .from("user_stats")
+        .update({ exam_name: s.exam_name, exam_date: s.exam_date })
+        .eq("user_id", user!.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["dashboard", user?.id] }),
+  });
+
+
   async function onLogout() {
     await supabase.auth.signOut();
     navigate({ to: "/", replace: true });
