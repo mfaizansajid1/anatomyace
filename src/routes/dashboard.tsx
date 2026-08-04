@@ -310,6 +310,9 @@ function Dashboard() {
 
           {/* DESKTOP HEADER (Hidden on mobile) */}
           <div className="hidden md:flex items-center gap-2">
+            <Link to="/study" className="btn-outline flex items-center px-3" style={{ minHeight: 40 }}>
+              Study
+            </Link>
             <Link to="/bookmarks" className="btn-outline flex items-center px-3" style={{ minHeight: 40 }}>
               Bookmarks
             </Link> 
@@ -367,6 +370,13 @@ function Dashboard() {
                   className="px-3 py-2 rounded-md text-foreground hover:bg-muted transition font-medium text-sm"
                 >
                   Dashboard
+                </Link>
+                <Link
+                  to="/study"
+                  onClick={closeMenu}
+                  className="px-3 py-2 rounded-md text-foreground hover:bg-muted transition font-medium text-sm"
+                >
+                  Study
                 </Link>
                 <Link
                   to="/bookmarks"

@@ -191,6 +191,50 @@ export type Database = {
           },
         ]
       }
+      practical_items: {
+        Row: {
+          correct_answer: string
+          created_at: string
+          explanation: string | null
+          id: string
+          image_url: string
+          is_published: boolean
+          structure_type: string
+          subtopic_id: string
+          updated_at: string
+        }
+        Insert: {
+          correct_answer: string
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          image_url: string
+          is_published?: boolean
+          structure_type?: string
+          subtopic_id: string
+          updated_at?: string
+        }
+        Update: {
+          correct_answer?: string
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          image_url?: string
+          is_published?: boolean
+          structure_type?: string
+          subtopic_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practical_items_subtopic_id_fkey"
+            columns: ["subtopic_id"]
+            isOneToOne: false
+            referencedRelation: "subtopics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       review_events: {
         Row: {
           flashcard_id: string
@@ -596,6 +640,10 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       record_card_review: {
         Args: { _flashcard_id: string; _rating: string }
+        Returns: undefined
+      }
+      record_practical_answer: {
+        Args: { _is_correct: boolean; _practical_item_id: string }
         Returns: undefined
       }
     }
