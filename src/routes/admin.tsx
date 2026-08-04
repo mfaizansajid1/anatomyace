@@ -230,6 +230,7 @@ function AdminShell() {
           <CsvImportPanel
             onDone={() => { invalidate("flashcards"); }}
           />
+          <PracticalAdminPanel />
         </section>
       </main>
     </div>
