@@ -242,7 +242,13 @@ function PracticalCsvImport({ onDone }: { onDone: () => void }) {
       });
 
       const failures: { row: number; reason: string }[] = [];
-      const inserts: Record<string, unknown>[] = [];
+      const inserts: {
+        subtopic_id: string;
+        structure_type: string;
+        image_url: string;
+        correct_answer: string;
+        explanation: string | null;
+      }[] = [];
 
       for (let r = 1; r < rows.length; r++) {
         const row = rows[r];
