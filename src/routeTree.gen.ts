@@ -16,6 +16,7 @@ import { Route as ReviewRouteImport } from './routes/review'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ProgressRouteImport } from './routes/progress'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as PracticalRouteImport } from './routes/practical'
 import { Route as PlannerRouteImport } from './routes/planner'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
@@ -57,6 +58,11 @@ const ProgressRoute = ProgressRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PracticalRoute = PracticalRouteImport.update({
+  id: '/practical',
+  path: '/practical',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PlannerRoute = PlannerRouteImport.update({
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/planner': typeof PlannerRoute
+  '/practical': typeof PracticalRoute
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -119,6 +126,7 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/planner': typeof PlannerRoute
+  '/practical': typeof PracticalRoute
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -136,6 +144,7 @@ export interface FileRoutesById {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/planner': typeof PlannerRoute
+  '/practical': typeof PracticalRoute
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -154,6 +163,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/planner'
+    | '/practical'
     | '/profile'
     | '/progress'
     | '/reset-password'
@@ -170,6 +180,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/planner'
+    | '/practical'
     | '/profile'
     | '/progress'
     | '/reset-password'
@@ -186,6 +197,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/planner'
+    | '/practical'
     | '/profile'
     | '/progress'
     | '/reset-password'
@@ -203,6 +215,7 @@ export interface RootRouteChildren {
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   PlannerRoute: typeof PlannerRoute
+  PracticalRoute: typeof PracticalRoute
   ProfileRoute: typeof ProfileRoute
   ProgressRoute: typeof ProgressRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -261,6 +274,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/practical': {
+      id: '/practical'
+      path: '/practical'
+      fullPath: '/practical'
+      preLoaderRoute: typeof PracticalRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/planner': {
@@ -323,6 +343,7 @@ const rootRouteChildren: RootRouteChildren = {
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   PlannerRoute: PlannerRoute,
+  PracticalRoute: PracticalRoute,
   ProfileRoute: ProfileRoute,
   ProgressRoute: ProgressRoute,
   ResetPasswordRoute: ResetPasswordRoute,
