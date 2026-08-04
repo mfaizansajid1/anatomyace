@@ -372,6 +372,13 @@ function Dashboard() {
                   Dashboard
                 </Link>
                 <Link
+                  to="/study"
+                  onClick={closeMenu}
+                  className="px-3 py-2 rounded-md text-foreground hover:bg-muted transition font-medium text-sm"
+                >
+                  Study
+                </Link>
+                <Link
                   to="/bookmarks"
                   onClick={closeMenu}
                   className="px-3 py-2 rounded-md text-foreground hover:bg-muted transition font-medium text-sm"
