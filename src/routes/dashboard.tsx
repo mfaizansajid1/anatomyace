@@ -310,6 +310,9 @@ function Dashboard() {
 
           {/* DESKTOP HEADER (Hidden on mobile) */}
           <div className="hidden md:flex items-center gap-2">
+            <Link to="/study" className="btn-outline flex items-center px-3" style={{ minHeight: 40 }}>
+              Study
+            </Link>
             <Link to="/bookmarks" className="btn-outline flex items-center px-3" style={{ minHeight: 40 }}>
               Bookmarks
             </Link> 
