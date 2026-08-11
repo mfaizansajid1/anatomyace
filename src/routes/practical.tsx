@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { HierarchyPicker, type HierarchySelection } from "@/components/HierarchyPicker";
+import { ChapterTopicPicker, type ChapterTopicSelection } from "@/components/ChapterTopicPicker";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/practical")({
