@@ -99,6 +99,7 @@ function AdminPage() {
 
 function AdminShell() {
   const qc = useQueryClient();
+  const [tab, setTab] = useState<"flashcards" | "practical">("flashcards");
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubtopic, setSelectedSubtopic] = useState<string | null>(null);
@@ -178,62 +179,87 @@ function AdminShell() {
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-6xl grid-cols-1 gap-4 px-4 py-6 md:grid-cols-[220px_1fr]">
-        <aside className="rounded-2xl border border-border bg-card p-3">
-          <TopicSidebar
-            topics={topicsQ.data ?? []}
-            loading={topicsQ.isLoading}
-            selectedId={selectedTopic}
-            onSelect={(id) => { setSelectedTopic(id); setSelectedCategory(null); setSelectedSubtopic(null); }}
-            onChanged={() => invalidate("topics")}
-          />
-        </aside>
+      <div className="mx-auto max-w-6xl px-4 pt-6">
+        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Admin sections">
+          {(["flashcards", "practical"] as const).map((t) => (
+            <button
+              key={t}
+              role="tab"
+              aria-selected={tab === t}
+              onClick={() => setTab(t)}
+              className={
+                tab === t
+                  ? "rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+                  : "rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+              }
+            >
+              {t === "flashcards" ? "Flashcards" : "Practical Mode"}
+            </button>
+          ))}
+        </div>
+      </div>
 
-        <section className="space-y-4">
-          {!selectedTopic ? (
-            <div className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground">
-              Select a topic from the left to manage its categories, subtopics, and flashcards.
-            </div>
-          ) : (
-            <>
-              <CategoryPanel
-                topic={currentTopic}
-                categories={categoriesQ.data ?? []}
-                loading={categoriesQ.isLoading}
-                selectedId={selectedCategory}
-                onSelect={(id) => { setSelectedCategory(id); setSelectedSubtopic(null); }}
-                onChanged={() => invalidate("categories")}
-              />
-              {selectedCategory && (
-                <SubtopicPanel
+      {tab === "flashcards" ? (
+        <main className="mx-auto grid max-w-6xl grid-cols-1 gap-4 px-4 py-6 md:grid-cols-[220px_1fr]">
+          <aside className="rounded-2xl border border-border bg-card p-3">
+            <TopicSidebar
+              topics={topicsQ.data ?? []}
+              loading={topicsQ.isLoading}
+              selectedId={selectedTopic}
+              onSelect={(id) => { setSelectedTopic(id); setSelectedCategory(null); setSelectedSubtopic(null); }}
+              onChanged={() => invalidate("topics")}
+            />
+          </aside>
+
+          <section className="space-y-4">
+            {!selectedTopic ? (
+              <div className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground">
+                Select a topic from the left to manage its categories, subtopics, and flashcards.
+              </div>
+            ) : (
+              <>
+                <CategoryPanel
                   topic={currentTopic}
-                  category={currentCategory}
-                  subtopics={subtopicsQ.data ?? []}
-                  loading={subtopicsQ.isLoading}
-                  selectedId={selectedSubtopic}
-                  onSelect={setSelectedSubtopic}
-                  onChanged={() => invalidate("subtopics")}
+                  categories={categoriesQ.data ?? []}
+                  loading={categoriesQ.isLoading}
+                  selectedId={selectedCategory}
+                  onSelect={(id) => { setSelectedCategory(id); setSelectedSubtopic(null); }}
+                  onChanged={() => invalidate("categories")}
                 />
-              )}
-              {selectedSubtopic && selectedCategory && (
-                <FlashcardPanel
-                  topicId={selectedTopic}
-                  categoryId={selectedCategory}
-                  subtopicId={selectedSubtopic}
-                  topics={topicsQ.data ?? []}
-                  flashcards={flashcardsQ.data ?? []}
-                  loading={flashcardsQ.isLoading}
-                  onChanged={() => invalidate("flashcards")}
-                />
-              )}
-            </>
-          )}
-          <CsvImportPanel
-            onDone={() => { invalidate("flashcards"); }}
-          />
+                {selectedCategory && (
+                  <SubtopicPanel
+                    topic={currentTopic}
+                    category={currentCategory}
+                    subtopics={subtopicsQ.data ?? []}
+                    loading={subtopicsQ.isLoading}
+                    selectedId={selectedSubtopic}
+                    onSelect={setSelectedSubtopic}
+                    onChanged={() => invalidate("subtopics")}
+                  />
+                )}
+                {selectedSubtopic && selectedCategory && (
+                  <FlashcardPanel
+                    topicId={selectedTopic}
+                    categoryId={selectedCategory}
+                    subtopicId={selectedSubtopic}
+                    topics={topicsQ.data ?? []}
+                    flashcards={flashcardsQ.data ?? []}
+                    loading={flashcardsQ.isLoading}
+                    onChanged={() => invalidate("flashcards")}
+                  />
+                )}
+              </>
+            )}
+            <CsvImportPanel
+              onDone={() => { invalidate("flashcards"); }}
+            />
+          </section>
+        </main>
+      ) : (
+        <main className="mx-auto max-w-6xl px-4 py-6">
           <PracticalAdminPanel />
-        </section>
-      </main>
+        </main>
+      )}
     </div>
   );
 }

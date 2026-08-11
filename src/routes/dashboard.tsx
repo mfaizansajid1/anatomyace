@@ -494,7 +494,7 @@ function Dashboard() {
               <h2 className="font-semibold text-foreground">Cards Due</h2>
               <p className="mt-4 text-4xl font-bold text-foreground">{cardsDue}</p>
               <p className="text-sm text-muted-foreground">ready for review</p>
-              <Link to="/review" className="btn-primary mt-4 self-start">Start Review</Link>
+              <Link to="/review" search={{ subtopic: undefined }} className="btn-primary mt-4 self-start">Start Review</Link>
             </div>
 
             {/* Streak */}
@@ -553,7 +553,7 @@ function Dashboard() {
                 <>
                   <p className="mt-3 text-foreground">{stats.last_topic_studied}</p>
                   <p className="text-sm text-muted-foreground">Pick up where you left off.</p>
-                  <Link to="/review" className="btn-primary mt-4 self-start">Resume</Link>
+                  <Link to="/review" search={{ subtopic: undefined }} className="btn-primary mt-4 self-start">Resume</Link>
                 </>
               ) : (
                 <p className="mt-3 text-sm text-muted-foreground">Start a session to see your last topic here.</p>

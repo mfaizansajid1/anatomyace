@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { HierarchyPicker, type HierarchySelection } from "@/components/HierarchyPicker";
+import { ChapterTopicPicker, type ChapterTopicSelection } from "@/components/ChapterTopicPicker";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/practical")({
@@ -40,7 +40,7 @@ function PracticalPage() {
   const qc = useQueryClient();
   const [authChecked, setAuthChecked] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
-  const [sel, setSel] = useState<HierarchySelection>({ topicId: "", categoryId: "", subtopicId: "" });
+  const [sel, setSel] = useState<ChapterTopicSelection>({ topicId: "", categoryId: "" });
   const [started, setStarted] = useState(false);
   const [index, setIndex] = useState(0);
   const [guess, setGuess] = useState("");
@@ -58,13 +58,13 @@ function PracticalPage() {
   }, [navigate]);
 
   const itemsQ = useQuery({
-    queryKey: ["practical", "items", sel.subtopicId],
-    enabled: signedIn && started && !!sel.subtopicId,
+    queryKey: ["practical", "items", sel.categoryId],
+    enabled: signedIn && started && !!sel.categoryId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("practical_items")
         .select("id, structure_type, image_url, correct_answer, explanation")
-        .eq("subtopic_id", sel.subtopicId)
+        .eq("category_id", sel.categoryId)
         .eq("is_published", true)
         .order("created_at", { ascending: true });
       if (error) throw error;
@@ -77,7 +77,7 @@ function PracticalPage() {
   const total = items.length;
 
   function begin() {
-    if (!sel.subtopicId) return;
+    if (!sel.categoryId) return;
     setIndex(0);
     setGuess("");
     setResult(null);
@@ -94,7 +94,7 @@ function PracticalPage() {
     setAnswered(0);
     if (pickNew) {
       setStarted(false);
-      setSel((s) => ({ ...s, subtopicId: "" }));
+      setSel((s) => ({ ...s, categoryId: "" }));
     }
   }
 
@@ -157,9 +157,9 @@ function PracticalPage() {
               </p>
             </div>
 
-            <HierarchyPicker value={sel} onChange={setSel} />
+            <ChapterTopicPicker value={sel} onChange={setSel} />
 
-            <button className="btn-primary w-full" onClick={begin} disabled={!sel.subtopicId}>
+            <button className="btn-primary w-full" onClick={begin} disabled={!sel.categoryId}>
               Start practical session
             </button>
           </div>
@@ -250,9 +250,11 @@ function PracticalPage() {
         {started && !itemsQ.isLoading && total > 0 && !current && (
           <div className="card-surface p-8 text-center space-y-4">
             <h2 className="text-2xl font-bold text-foreground">Session Complete 🎉</h2>
-            <p className="text-muted-foreground">
-              You scored {score} out of {answered} ({answered > 0 ? Math.round((score / answered) * 100) : 0}%).
-            </p>
+            <div className="text-muted-foreground space-y-1">
+              <p>Score: <span className="font-medium text-foreground">{score} / {answered}</span></p>
+              <p>Correct: <span className="font-medium text-foreground">{score}</span> · Incorrect: <span className="font-medium text-foreground">{answered - score}</span></p>
+              <p>Accuracy: <span className="font-medium text-foreground">{answered > 0 ? Math.round((score / answered) * 100) : 0}%</span></p>
+            </div>
             <div className="flex flex-wrap gap-2 justify-center">
               <button className="btn-outline" onClick={() => reset(false)}>↻ Restart session</button>
               <button className="btn-outline" onClick={() => reset(true)}>Try another subtopic</button>
