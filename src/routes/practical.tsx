@@ -40,7 +40,7 @@ function PracticalPage() {
   const qc = useQueryClient();
   const [authChecked, setAuthChecked] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
-  const [sel, setSel] = useState<HierarchySelection>({ topicId: "", categoryId: "", subtopicId: "" });
+  const [sel, setSel] = useState<ChapterTopicSelection>({ topicId: "", categoryId: "" });
   const [started, setStarted] = useState(false);
   const [index, setIndex] = useState(0);
   const [guess, setGuess] = useState("");
