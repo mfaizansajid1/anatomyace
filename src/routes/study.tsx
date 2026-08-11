@@ -66,6 +66,7 @@ function StudyHubPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Link
             to="/review"
+            search={{ subtopic: undefined }}
             className="card-surface p-6 flex flex-col gap-2 hover:shadow-lg transition"
             style={{ minHeight: 160 }}
           >
