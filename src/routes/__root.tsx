@@ -133,6 +133,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
+      <Footer />
       <Toaster />
     </QueryClientProvider>
   );
