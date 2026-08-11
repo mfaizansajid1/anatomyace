@@ -64,7 +64,7 @@ function PracticalPage() {
       const { data, error } = await supabase
         .from("practical_items")
         .select("id, structure_type, image_url, correct_answer, explanation")
-        .eq("subtopic_id", sel.categoryId)
+        .eq("category_id", sel.categoryId)
         .eq("is_published", true)
         .order("created_at", { ascending: true });
       if (error) throw error;
