@@ -193,6 +193,7 @@ export type Database = {
       }
       practical_items: {
         Row: {
+          category_id: string | null
           correct_answer: string
           created_at: string
           explanation: string | null
@@ -200,10 +201,11 @@ export type Database = {
           image_url: string
           is_published: boolean
           structure_type: string
-          subtopic_id: string
+          subtopic_id: string | null
           updated_at: string
         }
         Insert: {
+          category_id?: string | null
           correct_answer: string
           created_at?: string
           explanation?: string | null
@@ -211,10 +213,11 @@ export type Database = {
           image_url: string
           is_published?: boolean
           structure_type?: string
-          subtopic_id: string
+          subtopic_id?: string | null
           updated_at?: string
         }
         Update: {
+          category_id?: string | null
           correct_answer?: string
           created_at?: string
           explanation?: string | null
@@ -222,10 +225,17 @@ export type Database = {
           image_url?: string
           is_published?: boolean
           structure_type?: string
-          subtopic_id?: string
+          subtopic_id?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "practical_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "practical_items_subtopic_id_fkey"
             columns: ["subtopic_id"]
