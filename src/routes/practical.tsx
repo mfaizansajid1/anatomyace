@@ -250,9 +250,11 @@ function PracticalPage() {
         {started && !itemsQ.isLoading && total > 0 && !current && (
           <div className="card-surface p-8 text-center space-y-4">
             <h2 className="text-2xl font-bold text-foreground">Session Complete 🎉</h2>
-            <p className="text-muted-foreground">
-              You scored {score} out of {answered} ({answered > 0 ? Math.round((score / answered) * 100) : 0}%).
-            </p>
+            <div className="text-muted-foreground space-y-1">
+              <p>Score: <span className="font-medium text-foreground">{score} / {answered}</span></p>
+              <p>Correct: <span className="font-medium text-foreground">{score}</span> · Incorrect: <span className="font-medium text-foreground">{answered - score}</span></p>
+              <p>Accuracy: <span className="font-medium text-foreground">{answered > 0 ? Math.round((score / answered) * 100) : 0}%</span></p>
+            </div>
             <div className="flex flex-wrap gap-2 justify-center">
               <button className="btn-outline" onClick={() => reset(false)}>↻ Restart session</button>
               <button className="btn-outline" onClick={() => reset(true)}>Try another subtopic</button>
