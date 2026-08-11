@@ -58,13 +58,13 @@ function PracticalPage() {
   }, [navigate]);
 
   const itemsQ = useQuery({
-    queryKey: ["practical", "items", sel.subtopicId],
-    enabled: signedIn && started && !!sel.subtopicId,
+    queryKey: ["practical", "items", sel.categoryId],
+    enabled: signedIn && started && !!sel.categoryId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("practical_items")
         .select("id, structure_type, image_url, correct_answer, explanation")
-        .eq("subtopic_id", sel.subtopicId)
+        .eq("subtopic_id", sel.categoryId)
         .eq("is_published", true)
         .order("created_at", { ascending: true });
       if (error) throw error;
@@ -77,7 +77,7 @@ function PracticalPage() {
   const total = items.length;
 
   function begin() {
-    if (!sel.subtopicId) return;
+    if (!sel.categoryId) return;
     setIndex(0);
     setGuess("");
     setResult(null);
@@ -94,7 +94,7 @@ function PracticalPage() {
     setAnswered(0);
     if (pickNew) {
       setStarted(false);
-      setSel((s) => ({ ...s, subtopicId: "" }));
+      setSel((s) => ({ ...s, categoryId: "" }));
     }
   }
 
@@ -157,9 +157,9 @@ function PracticalPage() {
               </p>
             </div>
 
-            <HierarchyPicker value={sel} onChange={setSel} />
+            <ChapterTopicPicker value={sel} onChange={setSel} />
 
-            <button className="btn-primary w-full" onClick={begin} disabled={!sel.subtopicId}>
+            <button className="btn-primary w-full" onClick={begin} disabled={!sel.categoryId}>
               Start practical session
             </button>
           </div>
