@@ -99,6 +99,7 @@ function AdminPage() {
 
 function AdminShell() {
   const qc = useQueryClient();
+  const [tab, setTab] = useState<"flashcards" | "practical">("flashcards");
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubtopic, setSelectedSubtopic] = useState<string | null>(null);
