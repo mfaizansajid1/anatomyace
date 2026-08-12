@@ -455,7 +455,18 @@ function Dashboard() {
         </div>
         <p className="mt-1 text-muted-foreground">Here's your study snapshot for today.</p>
 
+        {stats && (
+          <ReminderBanner
+            currentStreak={stats.current_streak}
+            cardsStudiedToday={stats.cards_studied_today}
+            dailyGoal={stats.daily_goal}
+            lastStudyDate={stats.last_study_date}
+            cardsDue={cardsDue ?? 0}
+          />
+        )}
+
         {dashboardQuery.isError && (
+
           <div className="mt-6 card-surface p-6 text-center">
             <p className="text-foreground font-medium">Couldn't load your dashboard.</p>
             <button onClick={() => dashboardQuery.refetch()} className="btn-primary mt-4">Tap to retry</button>
