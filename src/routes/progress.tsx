@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { StudyInsights } from "@/components/StudyInsights";
+
 import {
   ResponsiveContainer,
   LineChart,
