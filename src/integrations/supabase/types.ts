@@ -46,8 +46,10 @@ export type Database = {
       card_reviews: {
         Row: {
           created_at: string
+          ease_factor: number
           flashcard_id: string
           id: string
+          interval_days: number
           last_rating: string | null
           next_review_date: string
           review_count: number
@@ -56,8 +58,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          ease_factor?: number
           flashcard_id: string
           id?: string
+          interval_days?: number
           last_rating?: string | null
           next_review_date?: string
           review_count?: number
@@ -66,8 +70,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          ease_factor?: number
           flashcard_id?: string
           id?: string
+          interval_days?: number
           last_rating?: string | null
           next_review_date?: string
           review_count?: number

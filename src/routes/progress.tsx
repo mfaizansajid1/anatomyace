@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { StudyInsights } from "@/components/StudyInsights";
+
 import {
   ResponsiveContainer,
   LineChart,
@@ -62,11 +64,29 @@ function ProgressPage() {
         .gte("reviewed_at", since30Events);
       if (evErr) throw evErr;
 
+      // Insight events: last 90 days, with topic names for per-topic accuracy
+      const since90Events = new Date(Date.now() - 89 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: insightRows, error: insErr } = await supabase
+        .from("review_events")
+        .select("rating, reviewed_at, flashcards!inner(topics!inner(name))")
+        .eq("user_id", uid)
+        .gte("reviewed_at", since90Events);
+      if (insErr) throw insErr;
+
+      type InsightRow = { rating: string; reviewed_at: string; flashcards: { topics: { name: string } } | null };
+      const insightEvents = ((insightRows ?? []) as unknown as InsightRow[]).map((r) => ({
+        rating: r.rating,
+        reviewed_at: r.reviewed_at,
+        topic_name: r.flashcards?.topics?.name ?? null,
+      }));
+
       return {
         activity: activity ?? [],
         topics: topics ?? [],
         events: events ?? [],
+        insightEvents,
       };
+
     },
   });
 
@@ -206,7 +226,13 @@ function ProgressPage() {
                 </div>
               )}
             </div>
+
+            <StudyInsights
+              events={data?.insightEvents ?? []}
+              activity={data?.activity ?? []}
+            />
           </>
+
         )}
       </main>
     </div>
