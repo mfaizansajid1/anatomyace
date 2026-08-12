@@ -226,7 +226,13 @@ function ProgressPage() {
                 </div>
               )}
             </div>
+
+            <StudyInsights
+              events={data?.insightEvents ?? []}
+              activity={data?.activity ?? []}
+            />
           </>
+
         )}
       </main>
     </div>
