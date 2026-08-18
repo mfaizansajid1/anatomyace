@@ -125,6 +125,59 @@ export type Database = {
           },
         ]
       }
+      clinical_mcqs: {
+        Row: {
+          category_id: string
+          correct_option: string
+          created_at: string
+          explanation: string | null
+          id: string
+          is_published: boolean
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          question: string
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          correct_option: string
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          is_published?: boolean
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          question: string
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          correct_option?: string
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          is_published?: boolean
+          option_a?: string
+          option_b?: string
+          option_c?: string
+          option_d?: string
+          question?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_mcqs_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       flashcards: {
         Row: {
           answer: string
@@ -196,6 +249,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      mcq_timer_settings: {
+        Row: {
+          auto_default_seconds: number
+          id: string
+          max_seconds: number
+          min_seconds: number
+          updated_at: string
+        }
+        Insert: {
+          auto_default_seconds?: number
+          id?: string
+          max_seconds?: number
+          min_seconds?: number
+          updated_at?: string
+        }
+        Update: {
+          auto_default_seconds?: number
+          id?: string
+          max_seconds?: number
+          min_seconds?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       practical_items: {
         Row: {
@@ -656,6 +733,10 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       record_card_review: {
         Args: { _flashcard_id: string; _rating: string }
+        Returns: undefined
+      }
+      record_mcq_answer: {
+        Args: { _is_correct: boolean; _mcq_id: string }
         Returns: undefined
       }
       record_practical_answer: {
