@@ -7,6 +7,7 @@ import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PracticalAdminPanel } from "@/components/PracticalAdminPanel";
+import { McqAdminPanel } from "@/components/McqAdminPanel";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -99,7 +100,7 @@ function AdminPage() {
 
 function AdminShell() {
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"flashcards" | "practical">("flashcards");
+  const [tab, setTab] = useState<"flashcards" | "practical" | "mcq">("flashcards");
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubtopic, setSelectedSubtopic] = useState<string | null>(null);
@@ -181,7 +182,7 @@ function AdminShell() {
 
       <div className="mx-auto max-w-6xl px-4 pt-6">
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="Admin sections">
-          {(["flashcards", "practical"] as const).map((t) => (
+          {(["flashcards", "practical", "mcq"] as const).map((t) => (
             <button
               key={t}
               role="tab"
@@ -193,7 +194,7 @@ function AdminShell() {
                   : "rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
               }
             >
-              {t === "flashcards" ? "Flashcards" : "Practical Mode"}
+              {t === "flashcards" ? "Flashcards" : t === "practical" ? "Practical Mode" : "Clinical MCQs"}
             </button>
           ))}
         </div>
@@ -254,10 +255,14 @@ function AdminShell() {
               onDone={() => { invalidate("flashcards"); }}
             />
           </section>
+                </main>
+      ) : tab === "practical" ? (
+        <main className="mx-auto max-w-6xl px-4 py-6">
+          <PracticalAdminPanel />
         </main>
       ) : (
         <main className="mx-auto max-w-6xl px-4 py-6">
-          <PracticalAdminPanel />
+          <McqAdminPanel />
         </main>
       )}
     </div>
