@@ -89,22 +89,17 @@ function StudyHubPage() {
             </p>
           </Link>
 
-          <div
-            className="card-surface p-6 flex flex-col gap-2 opacity-60 cursor-not-allowed"
+                    <Link
+            to="/mcq"
+            className="card-surface p-6 flex flex-col gap-2 hover:shadow-lg transition"
             style={{ minHeight: 160 }}
-            aria-disabled="true"
           >
             <span aria-hidden className="text-3xl">✅</span>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold text-foreground">Clinical MCQs</h2>
-              <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                Coming Soon
-              </span>
-            </div>
+            <h2 className="text-lg font-semibold text-foreground">Clinical MCQs</h2>
             <p className="text-sm text-muted-foreground">
-              Exam-style clinical multiple-choice questions. Not available yet.
+              Exam-style clinical multiple-choice questions with instant feedback.
             </p>
-          </div>
+          </Link>
         </div>
       </section>
     </main>
