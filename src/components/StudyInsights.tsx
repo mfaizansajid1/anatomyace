@@ -3,10 +3,10 @@ import { useMemo } from "react";
 export type InsightEvent = { rating: string; reviewed_at: string; topic_name: string | null };
 export type InsightActivity = { study_date: string; cards_studied: number };
 
-const MIN_EVENTS_FOR_TIME = 50;
-const MIN_REVIEWS_PER_TOPIC = 20;
-const MIN_EVENTS_FOR_TREND = 30;
-const MIN_ACTIVE_DAYS = 14;
+const MIN_EVENTS_FOR_TIME = 20;
+const MIN_REVIEWS_PER_TOPIC = 10;
+const MIN_EVENTS_FOR_TREND = 14;
+const MIN_ACTIVE_DAYS = 5;
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
