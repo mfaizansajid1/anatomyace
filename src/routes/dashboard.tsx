@@ -847,7 +847,7 @@ function Dashboard() {
                 <h2 className="font-semibold text-foreground">Weekly Progress</h2>
                 <span className="text-xs text-muted-foreground">Last 7 days</span>
               </div>
-              <div className="flex items-end justify-between gap-3 h-48">
+                            <div className="flex items-stretch justify-between gap-3 h-48">
                 {weekly.map((w) => {
                   const pct = (w.count / weeklyMax) * 100;
                   const isToday = w.date === new Date().toISOString().slice(0, 10);
