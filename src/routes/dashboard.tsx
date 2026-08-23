@@ -11,7 +11,6 @@ import { DailyFactCard } from "@/components/DailyFactCard";
 import { ReminderBanner } from "@/components/ReminderBanner";
 import { 
   Target, 
-  Lock, 
   Trophy, 
   BookOpen, 
   Bone, 
@@ -32,27 +31,22 @@ const designTokens = `
     --primary: #009688;
     --primary-hover: #00796b;
     --primary-light: #e0f2f1;
-    --primary-dark: #004d40;
     --bg-primary: #f8fafc;
     --bg-secondary: #ffffff;
-    --bg-tertiary: #f1f5f9;
     --text-primary: #0f172a;
     --text-secondary: #475569;
-    --text-tertiary: #94a3b8;
     --border-primary: #e2e8f0;
-    --border-secondary: #f1f5f9;
   }
   
   .dark {
+    --primary: #009688;
+    --primary-hover: #00796b;
+    --primary-light: rgba(0, 150, 136, 0.15);
     --bg-primary: #0f172a;
     --bg-secondary: #1e293b;
-    --bg-tertiary: #334155;
     --text-primary: #f8fafc;
     --text-secondary: #cbd5e1;
-    --text-tertiary: #64748b;
     --border-primary: #334155;
-    --border-secondary: #1e293b;
-    --primary-light: rgba(0, 150, 136, 0.15);
   }
 `;
 
@@ -76,15 +70,419 @@ export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
 });
 
-// Type definitions remain the same...
+// Type definitions
+type UserStats = {
+  user_id: string;
+  daily_goal: number;
+  flashcards_daily_goal: number;
+  practical_daily_goal: number;
+  mcq_daily_goal: number;
+  cards_studied_today: number;
+  cards_studied_total: number;
+  cards_studied_this_week: number;
+  current_streak: number;
+  longest_streak: number;
+  last_study_date: string | null;
+  last_topic_studied: string | null;
+  exam_name: string | null;
+  exam_date: string | null;
+};
+
+type SubtopicPerf = {
+  subtopic_id: string;
+  subtopic_name: string;
+  category_name: string;
+  topic_name: string;
+  accuracy: number;
+  reviews: number;
+};
+
+type GroupedPerf = { topic_name: string; items: SubtopicPerf[] };
+
+type TopicPerf = {
+  category_id: string;
+  category_name: string;
+  topic_name: string;
+  accuracy: number;
+  reviews: number;
+  sources: string[];
+};
+
+type GroupedTopicPerf = { topic_name: string; items: TopicPerf[] };
+
+type ActivityRow = { 
+  study_date: string; 
+  study_type: string; 
+  cards_studied: number 
+};
+
+const WEAK_THRESHOLD = 60;
+const STRONG_THRESHOLD = 80;
+const MIN_REVIEWS = 3;
+
+type SessionUser = { 
+  id: string; 
+  email: string | null; 
+  fullName: string | null; 
+  photo: string | null 
+};
+
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 3) return "Good night";
+  if (h < 12) return "Good morning";
+  if (h < 14) return "Good noon";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+function initials(name: string | null, email: string | null) {
+  const src = (name || email || "?").trim();
+  const parts = src.split(/\s+/);
+  const letters = parts.length >= 2 ? parts[0][0] + parts[1][0] : src.slice(0, 2);
+  return letters.toUpperCase();
+}
 
 function Skeleton({ className = "" }: { className?: string }) {
   return <div className={`animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800 ${className}`} />;
 }
 
 function Dashboard() {
-  // Existing state and logic remains the same...
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const [user, setUser] = useState<SessionUser | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [goalOpen, setGoalOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const headerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      if (!active) return;
+      if (!data.user) {
+        navigate({ to: "/login" });
+        return;
+      }
+      const meta = (data.user.user_metadata ?? {}) as { full_name?: string; name?: string; avatar_url?: string };
+      setUser({
+        id: data.user.id,
+        email: data.user.email ?? null,
+        fullName: meta.full_name ?? meta.name ?? null,
+        photo: meta.avatar_url ?? null,
+      });
+      setAuthChecked(true);
+    })();
+    return () => { active = false; };
+  }, [navigate]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (headerRef.current && !headerRef.current.contains(event.target as Node)) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    if (isMobileMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isMobileMenuOpen]);
+
+  const closeMenu = () => setIsMobileMenuOpen(false);
+
+  const dashboardQuery = useQuery({
+    enabled: !!user,
+    queryKey: ["dashboard", user?.id],
+    queryFn: async () => {
+      const uid = user!.id;
+      // Ensure stats row exists
+      const { data: statsRow } = await supabase
+        .from("user_stats").select("*").eq("user_id", uid).maybeSingle();
+      let stats = statsRow as UserStats | null;
+      if (!stats) {
+        const { data: inserted, error } = await supabase
+          .from("user_stats").insert({ user_id: uid }).select("*").single();
+        if (error) throw error;
+        stats = inserted as UserStats;
+      }
+
+      const since = new Date();
+      since.setDate(since.getDate() - 6);
+      const sinceStr = since.toISOString().slice(0, 10);
+      const todayStr = new Date().toISOString().slice(0, 10);
+
+      const [reviewsRes, activityRes, profileRes, xpRes, achRes, practicalRes, mcqRes] = await Promise.all([
+        supabase
+          .from("card_reviews")
+          .select("last_rating, flashcards!inner(subtopic_id, subtopics!inner(id, name, categories!inner(name, topics!inner(name))))")
+          .eq("user_id", uid),
+        supabase.from("study_activity").select("study_date,study_type,cards_studied").eq("user_id", uid).gte("study_date", sinceStr).order("study_date"),
+        supabase.from("users").select("profile_photo_url,full_name").eq("id", uid).maybeSingle(),
+        supabase.from("user_xp").select("total_xp, level").eq("user_id", uid).maybeSingle(),
+        supabase.from("user_achievements").select("badge_id, earned_at").eq("user_id", uid),
+        supabase
+          .from("practical_answers")
+          .select("is_correct, categories!inner(id, name, topics!inner(name))")
+          .eq("user_id", uid),
+        supabase
+          .from("mcq_answers")
+          .select("is_correct, categories!inner(id, name, topics!inner(name))")
+          .eq("user_id", uid),
+      ]);
+      
+      if (reviewsRes.error) throw reviewsRes.error;
+      if (activityRes.error) throw activityRes.error;
+      if (practicalRes.error) throw practicalRes.error;
+      if (mcqRes.error) throw mcqRes.error;
+
+      // Aggregate per subtopic
+      const map = new Map<string, SubtopicPerf & { good: number }>();
+      type ReviewRow = {
+        last_rating: string | null;
+        flashcards: { 
+          subtopic_id: string; 
+          subtopics: { 
+            id: string; 
+            name: string; 
+            categories: { name: string; topics: { name: string } } 
+          } 
+        };
+      };
+      
+      for (const r of (reviewsRes.data ?? []) as unknown as ReviewRow[]) {
+        const sub = r.flashcards?.subtopics;
+        if (!sub) continue;
+        const key = sub.id;
+        const cur = map.get(key) ?? {
+          subtopic_id: sub.id,
+          subtopic_name: sub.name,
+          category_name: sub.categories.name,
+          topic_name: sub.categories.topics.name,
+          accuracy: 0,
+          reviews: 0,
+          good: 0,
+        };
+        cur.reviews += 1;
+        if (r.last_rating === "good" || r.last_rating === "easy") cur.good += 1;
+        map.set(key, cur);
+      }
+      
+      const subtopics: SubtopicPerf[] = Array.from(map.values()).map((s) => ({
+        subtopic_id: s.subtopic_id,
+        subtopic_name: s.subtopic_name,
+        category_name: s.category_name,
+        topic_name: s.topic_name,
+        reviews: s.reviews,
+        accuracy: Math.round((s.good / s.reviews) * 100),
+      }));
+
+      // Aggregate topics from practical and MCQ answers
+      const topicMap = new Map<string, TopicPerf & { good: number }>();
+      
+      type PracticalRow = {
+        is_correct: boolean;
+        categories: { id: string; name: string; topics: { name: string } };
+      };
+      
+      for (const r of (practicalRes.data ?? []) as unknown as PracticalRow[]) {
+        const cat = r.categories;
+        if (!cat) continue;
+        const key = cat.id;
+        const cur = topicMap.get(key) ?? {
+          category_id: cat.id,
+          category_name: cat.name,
+          topic_name: cat.topics.name,
+          accuracy: 0,
+          reviews: 0,
+          sources: [],
+          good: 0,
+        };
+        cur.reviews += 1;
+        if (r.is_correct) cur.good += 1;
+        if (!cur.sources.includes('practical')) cur.sources.push('practical');
+        topicMap.set(key, cur);
+      }
+
+      type McqRow = {
+        is_correct: boolean;
+        categories: { id: string; name: string; topics: { name: string } };
+      };
+      
+      for (const r of (mcqRes.data ?? []) as unknown as McqRow[]) {
+        const cat = r.categories;
+        if (!cat) continue;
+        const key = cat.id;
+        const cur = topicMap.get(key) ?? {
+          category_id: cat.id,
+          category_name: cat.name,
+          topic_name: cat.topics.name,
+          accuracy: 0,
+          reviews: 0,
+          sources: [],
+          good: 0,
+        };
+        cur.reviews += 1;
+        if (r.is_correct) cur.good += 1;
+        if (!cur.sources.includes('mcq')) cur.sources.push('mcq');
+        topicMap.set(key, cur);
+      }
+
+      const topics: TopicPerf[] = Array.from(topicMap.values()).map((t) => ({
+        category_id: t.category_id,
+        category_name: t.category_name,
+        topic_name: t.topic_name,
+        reviews: t.reviews,
+        accuracy: Math.round((t.good / t.reviews) * 100),
+        sources: t.sources,
+      }));
+
+      return {
+        stats,
+        subtopics,
+        topics,
+        activity: (activityRes.data ?? []) as ActivityRow[],
+        profile: profileRes.data as { profile_photo_url: string | null; full_name: string | null } | null,
+        xp: (xpRes.data as { total_xp: number; level: number } | null) ?? { total_xp: 0, level: 1 },
+        earnedBadges: new Set(((achRes.data ?? []) as { badge_id: string }[]).map((a) => a.badge_id)),
+      };
+    },
+  });
+
+  const updateGoals = useMutation({
+    mutationFn: async (goals: { flashcards: number; practical: number; mcq: number }) => {
+      const { error } = await supabase
+        .from("user_stats")
+        .update({
+          flashcards_daily_goal: goals.flashcards,
+          practical_daily_goal: goals.practical,
+          mcq_daily_goal: goals.mcq,
+        })
+        .eq("user_id", user!.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["dashboard", user?.id] }),
+  });
+
+  const updateExam = useMutation({
+    mutationFn: async (s: { exam_name: string; exam_date: string }) => {
+      const { error } = await supabase
+        .from("user_stats")
+        .update({ exam_name: s.exam_name, exam_date: s.exam_date })
+        .eq("user_id", user!.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["dashboard", user?.id] }),
+  });
+
+  async function onLogout() {
+    await supabase.auth.signOut();
+    navigate({ to: "/", replace: true });
+  }
+
+  const data = dashboardQuery.data;
+  const stats = data?.stats;
+  const photo = data?.profile?.profile_photo_url ?? user?.photo ?? null;
+  const displayName = data?.profile?.full_name ?? user?.fullName ?? null;
+
+  const { weakGroups, strongGroups } = useMemo(() => {
+    const subs = data?.subtopics ?? [];
+    const qualified = subs.filter((s) => s.reviews >= MIN_REVIEWS);
+    const group = (list: SubtopicPerf[]): GroupedPerf[] => {
+      const m = new Map<string, SubtopicPerf[]>();
+      for (const s of list) {
+        const arr = m.get(s.topic_name) ?? [];
+        arr.push(s);
+        m.set(s.topic_name, arr);
+      }
+      return Array.from(m.entries())
+        .map(([topic_name, items]) => ({
+          topic_name,
+          items: items.sort((a, b) => a.accuracy - b.accuracy),
+        }))
+        .sort((a, b) => a.topic_name.localeCompare(b.topic_name));
+    };
+    const weak = qualified.filter((s) => s.accuracy < WEAK_THRESHOLD);
+    const strong = qualified.filter((s) => s.accuracy >= STRONG_THRESHOLD);
+    return {
+      weakGroups: group(weak),
+      strongGroups: group(strong).map((g) => ({
+        ...g,
+        items: [...g.items].sort((a, b) => b.accuracy - a.accuracy),
+      })),
+    };
+  }, [data?.subtopics]);
+
+  const { weakTopicGroups, strongTopicGroups } = useMemo(() => {
+    const topics = data?.topics ?? [];
+    const qualified = topics.filter((t) => t.reviews >= MIN_REVIEWS);
+    const group = (list: TopicPerf[]): GroupedTopicPerf[] => {
+      const m = new Map<string, TopicPerf[]>();
+      for (const t of list) {
+        const arr = m.get(t.topic_name) ?? [];
+        arr.push(t);
+        m.set(t.topic_name, arr);
+      }
+      return Array.from(m.entries())
+        .map(([topic_name, items]) => ({
+          topic_name,
+          items: items.sort((a, b) => a.accuracy - b.accuracy),
+        }))
+        .sort((a, b) => a.topic_name.localeCompare(b.topic_name));
+    };
+    const weak = qualified.filter((t) => t.accuracy < WEAK_THRESHOLD);
+    const strong = qualified.filter((t) => t.accuracy >= STRONG_THRESHOLD);
+    return {
+      weakTopicGroups: group(weak),
+      strongTopicGroups: group(strong).map((g) => ({
+        ...g,
+        items: [...g.items].sort((a, b) => b.accuracy - a.accuracy),
+      })),
+    };
+  }, [data?.topics]);
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayActivity = (data?.activity ?? []).filter(a => a.study_date === todayStr);
   
+  const todayFlashcards = todayActivity.filter(a => a.study_type === 'flashcard').reduce((sum, a) => sum + a.cards_studied, 0);
+  const todayPractical = todayActivity.filter(a => a.study_type === 'practical').reduce((sum, a) => sum + a.cards_studied, 0);
+  const todayMcq = todayActivity.filter(a => a.study_type === 'mcq').reduce((sum, a) => sum + a.cards_studied, 0);
+  
+  const totalToday = todayFlashcards + todayPractical + todayMcq;
+  const totalGoal = (stats?.flashcards_daily_goal ?? 0) + (stats?.practical_daily_goal ?? 0) + (stats?.mcq_daily_goal ?? 0);
+
+  const weekly = useMemo(() => {
+    const map = new Map<string, number>();
+    (data?.activity ?? []).forEach((a) => {
+      map.set(a.study_date, (map.get(a.study_date) ?? 0) + a.cards_studied);
+    });
+    const out: { label: string; date: string; count: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      out.push({
+        label: d.toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2),
+        date: key,
+        count: map.get(key) ?? 0,
+      });
+    }
+    return out;
+  }, [data?.activity]);
+  
+  const weeklyMax = Math.max(1, ...weekly.map((w) => w.count));
+
+  if (!authChecked) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <Spinner className="h-6 w-6 text-teal-600" />
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
       {/* HEADER - Full dark mode support */}
@@ -166,8 +564,35 @@ function Dashboard() {
                 >
                   Dashboard
                 </Link>
-                {/* Other mobile nav links with same dark mode classes */}
-                
+                <Link
+                  to="/study"
+                  onClick={closeMenu}
+                  className="px-3 py-2 text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition font-medium text-sm"
+                >
+                  Study
+                </Link>
+                <Link
+                  to="/bookmarks"
+                  onClick={closeMenu}
+                  className="px-3 py-2 text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition font-medium text-sm"
+                >
+                  Bookmarks
+                </Link>
+                <Link
+                  to="/progress"
+                  onClick={closeMenu}
+                  className="px-3 py-2 text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition font-medium text-sm"
+                >
+                  Progress
+                </Link>
+                <Link
+                  to="/planner"
+                  onClick={closeMenu}
+                  className="px-3 py-2 text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition font-medium text-sm"
+                >
+                  Revision Planner
+                </Link>
+
                 <div className="border-t border-slate-200 dark:border-slate-700 my-2 pt-2 flex items-center justify-between px-3">
                   <span className="text-slate-700 dark:text-slate-300 font-medium text-sm">Theme</span>
                   <ThemeToggle />
@@ -290,7 +715,31 @@ function Dashboard() {
                     </div>
                   </div>
                   
-                  {/* Other progress bars with same styling */}
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Practical</span>
+                      <span className="text-sm text-slate-600 dark:text-slate-400">{todayPractical}/{stats.practical_daily_goal}</span>
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5">
+                      <div 
+                        className="bg-teal-600 dark:bg-teal-500 rounded-full h-2.5 transition-all duration-300"
+                        style={{ width: `${Math.min(100, (todayPractical / Math.max(1, stats.practical_daily_goal)) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">MCQs</span>
+                      <span className="text-sm text-slate-600 dark:text-slate-400">{todayMcq}/{stats.mcq_daily_goal}</span>
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5">
+                      <div 
+                        className="bg-teal-600 dark:bg-teal-500 rounded-full h-2.5 transition-all duration-300"
+                        style={{ width: `${Math.min(100, (todayMcq / Math.max(1, stats.mcq_daily_goal)) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
               
@@ -327,7 +776,46 @@ function Dashboard() {
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">Longest: {stats.longest_streak} days</p>
               </div>
               
-              {/* Other metric cards with same dark mode styling */}
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-4 transition-colors duration-200 hover:shadow-md">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-teal-50 dark:bg-teal-900/30 rounded-lg">
+                    <BookOpen className="w-6 h-6 text-teal-600 dark:text-teal-400" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.cards_studied_total}</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Flashcards Studied</p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">{stats.cards_studied_this_week} this week</p>
+              </div>
+              
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-4 transition-colors duration-200 hover:shadow-md">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-teal-50 dark:bg-teal-900/30 rounded-lg">
+                    <Bone className="w-6 h-6 text-teal-600 dark:text-teal-400" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                      {data.topics.filter(t => t.sources.includes('practical')).reduce((sum, t) => sum + t.reviews, 0)}
+                    </p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Practical Completed</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-4 transition-colors duration-200 hover:shadow-md">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg">
+                    <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                      {data.topics.filter(t => t.sources.includes('mcq')).reduce((sum, t) => sum + t.reviews, 0)}
+                    </p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">MCQs Completed</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* MAIN ACTION AREA - Weak Subtopics & Continue Studying */}
@@ -597,7 +1085,30 @@ function GoalDialog({
               aria-label="Flashcards daily goal"
             />
           </div>
-          {/* Other input fields with same styling */}
+          <div>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
+              <Bone className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+              Practical Mode
+            </label>
+            <input
+              type="number" min={1} max={500}
+              value={practical} onChange={(e) => setPractical(e.target.value)}
+              className="mt-1 w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400 focus:border-transparent transition-colors"
+              aria-label="Practical mode daily goal"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              Clinical MCQs
+            </label>
+            <input
+              type="number" min={1} max={500}
+              value={mcq} onChange={(e) => setMcq(e.target.value)}
+              className="mt-1 w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400 focus:border-transparent transition-colors"
+              aria-label="MCQ daily goal"
+            />
+          </div>
         </div>
         
         <div className="mt-6 flex justify-end gap-2">
