@@ -28,6 +28,9 @@ export const Route = createFileRoute("/dashboard")({
 type UserStats = {
   user_id: string;
   daily_goal: number;
+  flashcards_daily_goal: number;
+  practical_daily_goal: number;
+  mcq_daily_goal: number;
   cards_studied_today: number;
   cards_studied_total: number;
   cards_studied_this_week: number;
@@ -51,7 +54,18 @@ type SubtopicPerf = {
 
 type GroupedPerf = { topic_name: string; items: SubtopicPerf[] };
 
-type ActivityRow = { study_date: string; cards_studied: number };
+type TopicPerf = {
+  category_id: string;
+  category_name: string;
+  topic_name: string;
+  accuracy: number;
+  reviews: number;
+  sources: string[];
+};
+
+type GroupedTopicPerf = { topic_name: string; items: TopicPerf[] };
+
+type ActivityRow = { study_date: string; study_type: string; cards_studied: number };
 
 const WEAK_THRESHOLD = 60;
 const STRONG_THRESHOLD = 80;
@@ -154,20 +168,30 @@ function Dashboard() {
       const since = new Date();
       since.setDate(since.getDate() - 6);
       const sinceStr = since.toISOString().slice(0, 10);
+      const todayStr = new Date().toISOString().slice(0, 10);
 
-      const [reviewsRes, activityRes, profileRes, dueRes, xpRes, achRes] = await Promise.all([
+      const [reviewsRes, activityRes, profileRes, xpRes, achRes, practicalRes, mcqRes] = await Promise.all([
         supabase
           .from("card_reviews")
           .select("last_rating, flashcards!inner(subtopic_id, subtopics!inner(id, name, categories!inner(name, topics!inner(name))))")
           .eq("user_id", uid),
-        supabase.from("study_activity").select("study_date,cards_studied").eq("user_id", uid).gte("study_date", sinceStr).order("study_date"),
+        supabase.from("study_activity").select("study_date,study_type,cards_studied").eq("user_id", uid).gte("study_date", sinceStr).order("study_date"),
         supabase.from("users").select("profile_photo_url,full_name").eq("id", uid).maybeSingle(),
-        supabase.rpc("cards_due_count"),
         supabase.from("user_xp").select("total_xp, level").eq("user_id", uid).maybeSingle(),
         supabase.from("user_achievements").select("badge_id, earned_at").eq("user_id", uid),
+        supabase
+          .from("practical_answers")
+          .select("is_correct, categories!inner(id, name, topics!inner(name))")
+          .eq("user_id", uid),
+        supabase
+          .from("mcq_answers")
+          .select("is_correct, categories!inner(id, name, topics!inner(name))")
+          .eq("user_id", uid),
       ]);
       if (reviewsRes.error) throw reviewsRes.error;
       if (activityRes.error) throw activityRes.error;
+      if (practicalRes.error) throw practicalRes.error;
+      if (mcqRes.error) throw mcqRes.error;
 
       // Aggregate per subtopic
       const map = new Map<string, SubtopicPerf & { good: number }>();
@@ -201,21 +225,88 @@ function Dashboard() {
         accuracy: Math.round((s.good / s.reviews) * 100),
       }));
 
+      // Aggregate topics from practical and MCQ answers
+      const topicMap = new Map<string, TopicPerf & { good: number }>();
+      
+      type PracticalRow = {
+        is_correct: boolean;
+        categories: { id: string; name: string; topics: { name: string } };
+      };
+      
+      for (const r of (practicalRes.data ?? []) as unknown as PracticalRow[]) {
+        const cat = r.categories;
+        if (!cat) continue;
+        const key = cat.id;
+        const cur = topicMap.get(key) ?? {
+          category_id: cat.id,
+          category_name: cat.name,
+          topic_name: cat.topics.name,
+          accuracy: 0,
+          reviews: 0,
+          sources: [],
+          good: 0,
+        };
+        cur.reviews += 1;
+        if (r.is_correct) cur.good += 1;
+        if (!cur.sources.includes('practical')) cur.sources.push('practical');
+        topicMap.set(key, cur);
+      }
+
+      type McqRow = {
+        is_correct: boolean;
+        categories: { id: string; name: string; topics: { name: string } };
+      };
+      
+      for (const r of (mcqRes.data ?? []) as unknown as McqRow[]) {
+        const cat = r.categories;
+        if (!cat) continue;
+        const key = cat.id;
+        const cur = topicMap.get(key) ?? {
+          category_id: cat.id,
+          category_name: cat.name,
+          topic_name: cat.topics.name,
+          accuracy: 0,
+          reviews: 0,
+          sources: [],
+          good: 0,
+        };
+        cur.reviews += 1;
+        if (r.is_correct) cur.good += 1;
+        if (!cur.sources.includes('mcq')) cur.sources.push('mcq');
+        topicMap.set(key, cur);
+      }
+
+      const topics: TopicPerf[] = Array.from(topicMap.values()).map((t) => ({
+        category_id: t.category_id,
+        category_name: t.category_name,
+        topic_name: t.topic_name,
+        reviews: t.reviews,
+        accuracy: Math.round((t.good / t.reviews) * 100),
+        sources: t.sources,
+      }));
+
       return {
         stats,
         subtopics,
+        topics,
         activity: (activityRes.data ?? []) as ActivityRow[],
         profile: profileRes.data as { profile_photo_url: string | null; full_name: string | null } | null,
-        cardsDue: (dueRes.data as number | null) ?? 0,
         xp: (xpRes.data as { total_xp: number; level: number } | null) ?? { total_xp: 0, level: 1 },
         earnedBadges: new Set(((achRes.data ?? []) as { badge_id: string }[]).map((a) => a.badge_id)),
       };
     },
   });
 
-  const updateGoal = useMutation({
-    mutationFn: async (goal: number) => {
-      const { error } = await supabase.from("user_stats").update({ daily_goal: goal }).eq("user_id", user!.id);
+  const updateGoals = useMutation({
+    mutationFn: async (goals: { flashcards: number; practical: number; mcq: number }) => {
+      const { error } = await supabase
+        .from("user_stats")
+        .update({
+          flashcards_daily_goal: goals.flashcards,
+          practical_daily_goal: goals.practical,
+          mcq_daily_goal: goals.mcq,
+        })
+        .eq("user_id", user!.id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["dashboard", user?.id] }),
@@ -271,10 +362,49 @@ function Dashboard() {
     };
   }, [data?.subtopics]);
 
-  const cardsDue = data?.cardsDue ?? 0;
+  const { weakTopicGroups, strongTopicGroups } = useMemo(() => {
+    const topics = data?.topics ?? [];
+    const qualified = topics.filter((t) => t.reviews >= MIN_REVIEWS);
+    const group = (list: TopicPerf[]): GroupedTopicPerf[] => {
+      const m = new Map<string, TopicPerf[]>();
+      for (const t of list) {
+        const arr = m.get(t.topic_name) ?? [];
+        arr.push(t);
+        m.set(t.topic_name, arr);
+      }
+      return Array.from(m.entries())
+        .map(([topic_name, items]) => ({
+          topic_name,
+          items: items.sort((a, b) => a.accuracy - b.accuracy),
+        }))
+        .sort((a, b) => a.topic_name.localeCompare(b.topic_name));
+    };
+    const weak = qualified.filter((t) => t.accuracy < WEAK_THRESHOLD);
+    const strong = qualified.filter((t) => t.accuracy >= STRONG_THRESHOLD);
+    return {
+      weakTopicGroups: group(weak),
+      strongTopicGroups: group(strong).map((g) => ({
+        ...g,
+        items: [...g.items].sort((a, b) => b.accuracy - a.accuracy),
+      })),
+    };
+  }, [data?.topics]);
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayActivity = (data?.activity ?? []).filter(a => a.study_date === todayStr);
+  
+  const todayFlashcards = todayActivity.filter(a => a.study_type === 'flashcard').reduce((sum, a) => sum + a.cards_studied, 0);
+  const todayPractical = todayActivity.filter(a => a.study_type === 'practical').reduce((sum, a) => sum + a.cards_studied, 0);
+  const todayMcq = todayActivity.filter(a => a.study_type === 'mcq').reduce((sum, a) => sum + a.cards_studied, 0);
+  
+  const totalToday = todayFlashcards + todayPractical + todayMcq;
+  const totalGoal = (stats?.flashcards_daily_goal ?? 0) + (stats?.practical_daily_goal ?? 0) + (stats?.mcq_daily_goal ?? 0);
 
   const weekly = useMemo(() => {
-    const map = new Map((data?.activity ?? []).map((a) => [a.study_date, a.cards_studied]));
+    const map = new Map<string, number>();
+    (data?.activity ?? []).forEach((a) => {
+      map.set(a.study_date, (map.get(a.study_date) ?? 0) + a.cards_studied);
+    });
     const out: { label: string; date: string; count: number }[] = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
@@ -458,10 +588,10 @@ function Dashboard() {
         {stats && (
           <ReminderBanner
             currentStreak={stats.current_streak}
-            cardsStudiedToday={stats.cards_studied_today}
-            dailyGoal={stats.daily_goal}
+            cardsStudiedToday={totalToday}
+            dailyGoal={totalGoal}
             lastStudyDate={stats.last_study_date}
-            cardsDue={cardsDue ?? 0}
+            cardsDue={0}
           />
         )}
 
@@ -485,30 +615,27 @@ function Dashboard() {
             <button
               onClick={() => setGoalOpen(true)}
               className="card-surface p-5 text-left hover:brightness-[1.02] transition"
-              aria-label="Edit today's goal"
+              aria-label="Edit today's goals"
             >
               <div className="flex items-center justify-between">
                 <h2 className="font-semibold text-foreground">Today's Goal</h2>
                 <span className="text-xs text-muted-foreground">Tap to edit</span>
               </div>
               <div className="mt-4 flex items-center gap-4">
-                <ProgressRing value={stats.cards_studied_today} max={stats.daily_goal} />
+                <ProgressRing value={totalToday} max={totalGoal} />
                 <div>
                   <p className="text-2xl font-bold text-foreground">
-                    {stats.cards_studied_today} <span className="text-muted-foreground text-base font-medium">/ {stats.daily_goal}</span>
+                    {totalToday} <span className="text-muted-foreground text-base font-medium">/ {totalGoal}</span>
                   </p>
-                  <p className="text-sm text-muted-foreground">cards today</p>
+                  <p className="text-sm text-muted-foreground">items today</p>
                 </div>
               </div>
+              <div className="mt-4 space-y-2 text-sm">
+                <p className="text-foreground">🗂️ Flashcards: {todayFlashcards}/{stats.flashcards_daily_goal}</p>
+                <p className="text-foreground">🦴 Practical: {todayPractical}/{stats.practical_daily_goal}</p>
+                <p className="text-foreground">✅ MCQs: {todayMcq}/{stats.mcq_daily_goal}</p>
+              </div>
             </button>
-
-            {/* Cards Due */}
-            <div className="card-surface p-5 flex flex-col">
-              <h2 className="font-semibold text-foreground">Cards Due</h2>
-              <p className="mt-4 text-4xl font-bold text-foreground">{cardsDue}</p>
-              <p className="text-sm text-muted-foreground">ready for review</p>
-              <Link to="/review" search={{ subtopic: undefined }} className="btn-primary mt-4 self-start">Start Review</Link>
-            </div>
 
             {/* Streak */}
             <div className="card-surface p-5">
@@ -521,18 +648,30 @@ function Dashboard() {
               <p className="text-sm text-muted-foreground mt-2">Longest: {stats.longest_streak} days</p>
             </div>
 
-            {/* Cards Studied */}
+            {/* Items Studied */}
             <div className="card-surface p-5">
-              <h2 className="font-semibold text-foreground">Cards Studied</h2>
-              <p className="mt-4 text-4xl font-bold text-foreground">{stats.cards_studied_total}</p>
-              <p className="text-sm text-muted-foreground">all-time</p>
+              <h2 className="font-semibold text-foreground">Items Studied</h2>
+              <div className="mt-4 space-y-2">
+                <p className="text-sm text-foreground">
+                  🗂️ <span className="font-semibold">{stats.cards_studied_total}</span>{" "}
+                  <span className="text-muted-foreground">flashcards</span>
+                </p>
+                <p className="text-sm text-foreground">
+                  🦴 <span className="font-semibold">{data.topics.reduce((sum, t) => sum + t.reviews, 0)}</span>{" "}
+                  <span className="text-muted-foreground">practical</span>
+                </p>
+                <p className="text-sm text-foreground">
+                  ✅ <span className="font-semibold">{data.topics.reduce((sum, t) => sum + t.reviews, 0)}</span>{" "}
+                  <span className="text-muted-foreground">MCQs</span>
+                </p>
+              </div>
               <p className="mt-3 text-sm text-foreground">
                 <span className="font-semibold">{stats.cards_studied_this_week}</span>{" "}
                 <span className="text-muted-foreground">this week</span>
               </p>
             </div>
 
-            {/* Weak / Strong */}
+            {/* Weak / Strong Subtopics */}
             <div className="card-surface p-5 sm:col-span-2">
               {(data.subtopics.length === 0) ? (
                 <div className="text-center py-6">
@@ -543,6 +682,21 @@ function Dashboard() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <SubtopicGroups title="Weak Subtopics" groups={weakGroups} emptyText="No weak spots — nice!" />
                   <SubtopicGroups title="Strong Subtopics" groups={strongGroups} emptyText="Study more to see strengths." />
+                </div>
+              )}
+            </div>
+
+            {/* Weak / Strong Topics */}
+            <div className="card-surface p-5 sm:col-span-2">
+              {(data.topics.length === 0) ? (
+                <div className="text-center py-6">
+                  <p className="font-semibold text-foreground">No topic data yet</p>
+                  <p className="text-sm text-muted-foreground mt-1">Complete practical mode or MCQs to see topic performance.</p>
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <TopicGroups title="Weak Topics" groups={weakTopicGroups} emptyText="No weak topics — nice!" />
+                  <TopicGroups title="Strong Topics" groups={strongTopicGroups} emptyText="Study more to see strengths." />
                 </div>
               )}
             </div>
@@ -566,7 +720,7 @@ function Dashboard() {
                 <>
                   <p className="mt-3 text-foreground">{stats.last_topic_studied}</p>
                   <p className="text-sm text-muted-foreground">Pick up where you left off.</p>
-                  <Link to="/review" search={{ subtopic: undefined }} className="btn-primary mt-4 self-start">Resume</Link>
+                  <Link to="/study" className="btn-primary mt-4 self-start">Resume</Link>
                 </>
               ) : (
                 <p className="mt-3 text-sm text-muted-foreground">Start a session to see your last topic here.</p>
@@ -590,7 +744,7 @@ function Dashboard() {
                         <div
                           className={`w-full rounded-t-lg transition-all ${isToday ? "bg-primary" : "bg-accent/60"}`}
                           style={{ height: `${Math.max(pct, 4)}%` }}
-                          aria-label={`${w.count} cards on ${w.date}`}
+                          aria-label={`${w.count} items on ${w.date}`}
                         />
                       </div>
                       <span className="text-xs text-muted-foreground">{w.label}</span>
@@ -614,11 +768,15 @@ function Dashboard() {
 
       {goalOpen && stats && (
         <GoalDialog
-          initial={stats.daily_goal}
-          pending={updateGoal.isPending}
+          initial={{
+            flashcards: stats.flashcards_daily_goal,
+            practical: stats.practical_daily_goal,
+            mcq: stats.mcq_daily_goal,
+          }}
+          pending={updateGoals.isPending}
           onClose={() => setGoalOpen(false)}
-          onSave={async (n) => {
-            await updateGoal.mutateAsync(n);
+          onSave={async (goals) => {
+            await updateGoals.mutateAsync(goals);
             setGoalOpen(false);
           }}
         />
@@ -659,6 +817,41 @@ function SubtopicGroups({ title, groups, emptyText }: { title: string; groups: G
   );
 }
 
+function TopicGroups({ title, groups, emptyText }: { title: string; groups: GroupedTopicPerf[]; emptyText: string }) {
+  return (
+    <div>
+      <h3 className="font-bold text-foreground text-lg">{title}</h3>
+      {groups.length === 0 ? (
+        <p className="mt-3 text-sm text-muted-foreground">{emptyText}</p>
+      ) : (
+        <div className="mt-3 space-y-4">
+          {groups.map((g) => (
+            <div key={g.topic_name}>
+              <h4 className="text-sm font-semibold text-muted-foreground mb-2">{g.topic_name}</h4>
+              <ul className="space-y-2">
+                {g.items.map((t) => (
+                  <li key={t.category_id} className="flex items-center justify-between rounded-xl bg-muted/60 px-3 py-2">
+                    <span className="text-sm text-foreground">
+                      {t.category_name}{" "}
+                      <span className="text-muted-foreground">
+                        {t.sources.includes('practical') && <span title="Practical Mode">🦴</span>}
+                        {t.sources.includes('mcq') && <span title="Clinical MCQs">✅</span>}
+                      </span>
+                    </span>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${accColor(t.accuracy)}`}>
+                      {t.accuracy}%
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ProgressRing({ value, max }: { value: number; max: number }) {
   const size = 72;
   const stroke = 8;
@@ -680,29 +873,67 @@ function ProgressRing({ value, max }: { value: number; max: number }) {
 
 function GoalDialog({
   initial, pending, onClose, onSave,
-}: { initial: number; pending: boolean; onClose: () => void; onSave: (n: number) => void }) {
-  const [val, setVal] = useState(String(initial));
-  const n = Number(val);
-  const valid = Number.isFinite(n) && n >= 1 && n <= 500;
+}: { 
+  initial: { flashcards: number; practical: number; mcq: number }; 
+  pending: boolean; 
+  onClose: () => void; 
+  onSave: (goals: { flashcards: number; practical: number; mcq: number }) => void;
+}) {
+  const [flashcards, setFlashcards] = useState(String(initial.flashcards));
+  const [practical, setPractical] = useState(String(initial.practical));
+  const [mcq, setMcq] = useState(String(initial.mcq));
+  
+  const nFlashcards = Number(flashcards);
+  const nPractical = Number(practical);
+  const nMcq = Number(mcq);
+  
+  const valid = Number.isFinite(nFlashcards) && nFlashcards >= 1 && nFlashcards <= 500 &&
+                Number.isFinite(nPractical) && nPractical >= 1 && nPractical <= 500 &&
+                Number.isFinite(nMcq) && nMcq >= 1 && nMcq <= 500;
+                
   return (
-    <div role="dialog" aria-modal="true" aria-label="Edit daily goal"
+    <div role="dialog" aria-modal="true" aria-label="Edit daily goals"
       className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4"
       onClick={onClose}
     >
       <div className="card-surface p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-semibold text-foreground">Daily Goal</h3>
-        <p className="text-sm text-muted-foreground mt-1">How many cards do you want to study per day?</p>
-        <input
-          autoFocus
-          type="number" min={1} max={500}
-          value={val} onChange={(e) => setVal(e.target.value)}
-          className="input-field mt-4"
-          aria-label="Daily card goal"
-        />
+        <h3 className="text-lg font-semibold text-foreground">Daily Goals</h3>
+        <p className="text-sm text-muted-foreground mt-1">Set your daily goals for each study mode.</p>
+        
+        <div className="mt-4 space-y-3">
+          <div>
+            <label className="text-sm font-medium text-foreground">🗂️ Flashcards</label>
+            <input
+              type="number" min={1} max={500}
+              value={flashcards} onChange={(e) => setFlashcards(e.target.value)}
+              className="input-field mt-1"
+              aria-label="Flashcards daily goal"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-foreground">🦴 Practical Mode</label>
+            <input
+              type="number" min={1} max={500}
+              value={practical} onChange={(e) => setPractical(e.target.value)}
+              className="input-field mt-1"
+              aria-label="Practical mode daily goal"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-foreground">✅ Clinical MCQs</label>
+            <input
+              type="number" min={1} max={500}
+              value={mcq} onChange={(e) => setMcq(e.target.value)}
+              className="input-field mt-1"
+              aria-label="MCQ daily goal"
+            />
+          </div>
+        </div>
+        
         <div className="mt-6 flex justify-end gap-2">
           <button onClick={onClose} className="btn-outline" style={{ minHeight: 44 }}>Cancel</button>
           <button
-            onClick={() => valid && onSave(n)}
+            onClick={() => valid && onSave({ flashcards: nFlashcards, practical: nPractical, mcq: nMcq })}
             disabled={!valid || pending}
             className="btn-primary" style={{ minHeight: 44 }}
           >
