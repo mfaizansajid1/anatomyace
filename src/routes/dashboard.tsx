@@ -26,6 +26,24 @@ import {
   Settings
 } from "lucide-react";
 
+// Add CSS variables for teal color system
+const styles = `
+  :root {
+    --primary: #0099AD;
+    --primary-hover: #008A9B;
+    --primary-light: #E6F6F8;
+    --text-primary: #0B1F3A;
+    --track: #EEF2F5;
+  }
+`;
+
+// Inject styles
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement("style");
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
+
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
@@ -435,7 +453,7 @@ function Dashboard() {
   if (!authChecked) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Spinner className="h-6 w-6 text-indigo-600" />
+        <Spinner className="h-6 w-6 text-teal-600" />
       </main>
     );
   }
@@ -479,7 +497,7 @@ function Dashboard() {
                 {photo ? (
                   <img src={photo} alt="Your profile" className="h-8 w-8 rounded-full object-cover" />
                 ) : (
-                  <span aria-hidden className="h-8 w-8 rounded-full bg-indigo-600 text-white grid place-items-center text-sm font-semibold">
+                  <span aria-hidden className="h-8 w-8 rounded-full bg-teal-600 text-white grid place-items-center text-sm font-semibold">
                     {initials(displayName, user?.email ?? null)}
                   </span>
                 )}
@@ -563,7 +581,7 @@ function Dashboard() {
                   {photo ? (
                     <img src={photo} alt="Your profile" className="h-7 w-7 rounded-full object-cover" />
                   ) : (
-                    <span aria-hidden className="h-7 w-7 rounded-full bg-indigo-600 text-white grid place-items-center text-xs font-semibold">
+                    <span aria-hidden className="h-7 w-7 rounded-full bg-teal-600 text-white grid place-items-center text-xs font-semibold">
                       {initials(displayName, user?.email ?? null)}
                     </span>
                   )}
@@ -597,7 +615,7 @@ function Dashboard() {
             <p className="mt-1 text-slate-600">Here's your study snapshot for today.</p>
           </div>
           {data?.xp && (
-            <div className="flex items-center gap-2 bg-indigo-50 text-indigo-700 rounded-full px-4 py-2 border border-indigo-100">
+            <div className="flex items-center gap-2 bg-teal-50 text-teal-700 rounded-full px-4 py-2 border border-teal-100">
               <Zap className="w-5 h-5" />
               <span className="font-semibold">Level {data.xp.level}</span>
               <span className="text-slate-400">|</span>
@@ -619,7 +637,7 @@ function Dashboard() {
         {dashboardQuery.isError && (
           <div className="mt-6 bg-white border border-slate-200 rounded-xl shadow-sm p-6 text-center">
             <p className="text-slate-900 font-medium">Couldn't load your dashboard.</p>
-            <button onClick={() => dashboardQuery.refetch()} className="mt-4 px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium">
+            <button onClick={() => dashboardQuery.refetch()} className="mt-4 px-6 py-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition font-medium">
               Tap to retry
             </button>
           </div>
@@ -639,7 +657,7 @@ function Dashboard() {
                 <h2 className="text-lg font-semibold text-slate-900">Today's Study Progress</h2>
                 <button
                   onClick={() => setGoalOpen(true)}
-                  className="text-sm text-indigo-600 hover:text-indigo-700 transition flex items-center gap-1"
+                  className="text-sm text-teal-600 hover:text-teal-700 transition flex items-center gap-1"
                   aria-label="Edit today's goals"
                 >
                   <Settings className="w-4 h-4" />
@@ -666,7 +684,7 @@ function Dashboard() {
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-2.5">
                       <div 
-                        className="bg-indigo-600 rounded-full h-2.5 transition-all"
+                        className="bg-teal-600 rounded-full h-2.5 transition-all"
                         style={{ width: `${Math.min(100, (todayFlashcards / Math.max(1, stats.flashcards_daily_goal)) * 100)}%` }}
                       />
                     </div>
@@ -679,7 +697,7 @@ function Dashboard() {
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-2.5">
                       <div 
-                        className="bg-indigo-600 rounded-full h-2.5 transition-all"
+                        className="bg-teal-600 rounded-full h-2.5 transition-all"
                         style={{ width: `${Math.min(100, (todayPractical / Math.max(1, stats.practical_daily_goal)) * 100)}%` }}
                       />
                     </div>
@@ -692,7 +710,7 @@ function Dashboard() {
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-2.5">
                       <div 
-                        className="bg-indigo-600 rounded-full h-2.5 transition-all"
+                        className="bg-teal-600 rounded-full h-2.5 transition-all"
                         style={{ width: `${Math.min(100, (todayMcq / Math.max(1, stats.mcq_daily_goal)) * 100)}%` }}
                       />
                     </div>
@@ -702,7 +720,7 @@ function Dashboard() {
               
               {/* Primary CTA */}
               <div className="mt-6 flex justify-center">
-                <Link to="/study" className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-base font-semibold shadow-sm">
+                <Link to="/study" className="inline-flex items-center gap-2 px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition text-base font-semibold shadow-sm">
                   {stats.last_topic_studied ? (
                     <>
                       <span>Continue Studying</span>
@@ -735,8 +753,8 @@ function Dashboard() {
               
               <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-indigo-50 rounded-lg">
-                    <BookOpen className="w-6 h-6 text-indigo-600" />
+                  <div className="p-2 bg-teal-50 rounded-lg">
+                    <BookOpen className="w-6 h-6 text-teal-600" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-slate-900">{stats.cards_studied_total}</p>
@@ -748,8 +766,8 @@ function Dashboard() {
               
               <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-50 rounded-lg">
-                    <Bone className="w-6 h-6 text-purple-600" />
+                  <div className="p-2 bg-teal-50 rounded-lg">
+                    <Bone className="w-6 h-6 text-teal-600" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-slate-900">
@@ -817,7 +835,7 @@ function Dashboard() {
               <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5 flex flex-col justify-between">
                 <div>
                   <h2 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                    <Target className="w-5 h-5 text-indigo-600" />
+                    <Target className="w-5 h-5 text-teal-600" />
                     Continue Studying
                   </h2>
                   {stats.last_topic_studied ? (
@@ -829,7 +847,7 @@ function Dashboard() {
                     <p className="text-sm text-slate-600">Start a session to see your last topic here.</p>
                   )}
                 </div>
-                <Link to="/study" className="mt-4 w-full inline-flex justify-center items-center px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium">
+                <Link to="/study" className="mt-4 w-full inline-flex justify-center items-center px-4 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition font-medium">
                   {stats.last_topic_studied ? "Resume" : "Start"}
                 </Link>
               </div>
@@ -879,41 +897,44 @@ function Dashboard() {
               <DailyFactCard />
             </div>
 
-            {/* WEEKLY PROGRESS */}
+            {/* WEEKLY PROGRESS - REDESIGNED */}
             <div className="mt-6 bg-white border border-slate-200 rounded-xl shadow-sm p-5">
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-4">
                 <h2 className="font-semibold text-slate-900">Weekly Progress</h2>
                 <span className="text-xs text-slate-500">Last 7 days</span>
               </div>
-              <div className="flex items-stretch justify-between gap-3 h-48">
+              <div className="flex items-end justify-between gap-2 sm:gap-3">
                 {weekly.map((w) => {
                   const pct = (w.count / weeklyMax) * 100;
                   const isToday = w.date === new Date().toISOString().slice(0, 10);
                   return (
-                    <div key={w.date} className="flex-1 flex flex-col items-center gap-2 relative">
-                      {/* Background track */}
-                      <div className="absolute inset-0 flex items-end justify-center pb-8">
-                        <div className="w-full h-full bg-slate-100 rounded-lg" />
-                      </div>
+                    <div key={w.date} className="flex-1 flex flex-col items-center gap-1.5">
+                      {/* Number label */}
+                      <span className="text-xs font-medium text-slate-700">
+                        {w.count}
+                      </span>
                       
-                      {/* Content */}
-                      <div className="relative z-10 flex flex-col items-center gap-2 h-full">
-                        <span className={`text-xs font-medium ${isToday ? 'text-indigo-600' : 'text-slate-600'}`}>
-                          {w.count}
-                        </span>
-                        <div className="w-full flex-1 flex items-end">
+                      {/* Bar area with track */}
+                      <div className="w-full h-32 sm:h-36 md:h-40 relative flex items-end justify-center">
+                        {/* Background track */}
+                        <div className="absolute inset-0 bg-slate-100 rounded-lg" />
+                        
+                        {/* Fill bar */}
+                        {w.count > 0 ? (
                           <div
-                            className={`w-full rounded-t-lg transition-all ${
-                              isToday ? "bg-indigo-600" : "bg-indigo-400 hover:bg-indigo-500"
-                            }`}
-                            style={{ height: `${Math.max(pct, 4)}%` }}
+                            className="relative w-3/4 max-w-[40px] bg-teal-600 rounded-t-lg transition-all"
+                            style={{ height: `${Math.max(pct, 8)}%` }}
                             aria-label={`${w.count} items on ${w.date}`}
                           />
-                        </div>
-                        <span className={`text-xs ${isToday ? 'font-semibold text-indigo-600' : 'text-slate-600'}`}>
-                          {w.label}
-                        </span>
+                        ) : (
+                          <div className="relative w-3/4 max-w-[40px] h-0" />
+                        )}
                       </div>
+                      
+                      {/* Day label */}
+                      <span className={`text-xs ${isToday ? 'font-semibold text-teal-600 border-b-2 border-teal-600 pb-0.5' : 'text-slate-600'}`}>
+                        {w.label}
+                      </span>
                     </div>
                   );
                 })}
@@ -962,7 +983,7 @@ function ProgressRing({ value, max, size = 72, stroke = 8 }: { value: number; ma
       <circle cx={size / 2} cy={size / 2} r={r} stroke="#E2E8F0" strokeWidth={stroke} fill="none" />
       <circle
         cx={size / 2} cy={size / 2} r={r}
-        stroke="#4F46E5" strokeWidth={stroke} fill="none"
+        stroke="#0099AD" strokeWidth={stroke} fill="none"
         strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset}
         className="transition-all duration-300"
       />
@@ -1002,25 +1023,25 @@ function GoalDialog({
         <div className="mt-4 space-y-3">
           <div>
             <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-indigo-600" />
+              <BookOpen className="w-4 h-4 text-teal-600" />
               Flashcards
             </label>
             <input
               type="number" min={1} max={500}
               value={flashcards} onChange={(e) => setFlashcards(e.target.value)}
-              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               aria-label="Flashcards daily goal"
             />
           </div>
           <div>
             <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
-              <Bone className="w-4 h-4 text-purple-600" />
+              <Bone className="w-4 h-4 text-teal-600" />
               Practical Mode
             </label>
             <input
               type="number" min={1} max={500}
               value={practical} onChange={(e) => setPractical(e.target.value)}
-              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               aria-label="Practical mode daily goal"
             />
           </div>
@@ -1032,7 +1053,7 @@ function GoalDialog({
             <input
               type="number" min={1} max={500}
               value={mcq} onChange={(e) => setMcq(e.target.value)}
-              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               aria-label="MCQ daily goal"
             />
           </div>
@@ -1045,7 +1066,7 @@ function GoalDialog({
           <button
             onClick={() => valid && onSave({ flashcards: nFlashcards, practical: nPractical, mcq: nMcq })}
             disabled={!valid || pending}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {pending ? <Spinner className="h-4 w-4" /> : "Save"}
           </button>
