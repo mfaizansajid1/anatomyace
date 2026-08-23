@@ -911,10 +911,7 @@ function Dashboard() {
                       
                       {/* Bar container */}
                       <div className="w-full h-36 sm:h-40 md:h-44 relative flex items-end justify-center">
-                        {/* Background track - subtle for zero days */}
-                        <div className={`absolute inset-x-0 bottom-0 top-0 rounded-t-lg ${
-                          w.count > 0 ? 'bg-muted' : 'bg-muted/40'
-                        }`} />
+                      
                         
                         {/* Fill bar */}
                         <div
