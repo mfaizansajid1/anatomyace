@@ -80,11 +80,53 @@ function ProgressPage() {
         topic_name: r.flashcards?.topics?.name ?? null,
       }));
 
+      // Fetch mode-specific stats
+      const [cardReviewsRes, practicalAnswersRes, mcqAnswersRes] = await Promise.all([
+        supabase
+          .from("card_reviews")
+          .select("last_rating")
+          .eq("user_id", uid),
+        supabase
+          .from("practical_answers")
+          .select("is_correct")
+          .eq("user_id", uid),
+        supabase
+          .from("mcq_answers")
+          .select("is_correct")
+          .eq("user_id", uid),
+      ]);
+
+      if (cardReviewsRes.error) throw cardReviewsRes.error;
+      if (practicalAnswersRes.error) throw practicalAnswersRes.error;
+      if (mcqAnswersRes.error) throw mcqAnswersRes.error;
+
+      // Calculate mode stats
+      const cardReviews = cardReviewsRes.data ?? [];
+      const practicalAnswers = practicalAnswersRes.data ?? [];
+      const mcqAnswers = mcqAnswersRes.data ?? [];
+
+      const flashcardTotal = cardReviews.length;
+      const flashcardCorrect = cardReviews.filter(r => r.last_rating === 'good' || r.last_rating === 'easy').length;
+      const flashcardAccuracy = flashcardTotal > 0 ? Math.round((flashcardCorrect / flashcardTotal) * 100) : 0;
+
+      const practicalTotal = practicalAnswers.length;
+      const practicalCorrect = practicalAnswers.filter(a => a.is_correct).length;
+      const practicalAccuracy = practicalTotal > 0 ? Math.round((practicalCorrect / practicalTotal) * 100) : 0;
+
+      const mcqTotal = mcqAnswers.length;
+      const mcqCorrect = mcqAnswers.filter(a => a.is_correct).length;
+      const mcqAccuracy = mcqTotal > 0 ? Math.round((mcqCorrect / mcqTotal) * 100) : 0;
+
       return {
         activity: activity ?? [],
         topics: topics ?? [],
         events: events ?? [],
         insightEvents,
+        modeStats: {
+          flashcards: { total: flashcardTotal, accuracy: flashcardAccuracy },
+          practical: { total: practicalTotal, accuracy: practicalAccuracy },
+          mcq: { total: mcqTotal, accuracy: mcqAccuracy },
+        },
       };
 
     },
@@ -133,6 +175,12 @@ function ProgressPage() {
     return "bg-primary/20";
   }
 
+  function accColor(acc: number) {
+    if (acc >= 80) return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300";
+    if (acc >= 65) return "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300";
+    return "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300";
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border">
@@ -162,6 +210,39 @@ function ProgressPage() {
           </div>
         ) : (
           <>
+            <div className="card-surface p-5">
+              <h2 className="font-semibold text-foreground">By Study Mode</h2>
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center justify-between rounded-xl bg-muted/60 px-3 py-2">
+                  <span className="text-sm text-foreground">🗂️ Flashcards</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-muted-foreground">{data?.modeStats.flashcards.total} reviews</span>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${accColor(data?.modeStats.flashcards.accuracy ?? 0)}`}>
+                      {data?.modeStats.flashcards.accuracy}%
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between rounded-xl bg-muted/60 px-3 py-2">
+                  <span className="text-sm text-foreground">🦴 Practical Mode</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-muted-foreground">{data?.modeStats.practical.total} answers</span>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${accColor(data?.modeStats.practical.accuracy ?? 0)}`}>
+                      {data?.modeStats.practical.accuracy}%
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between rounded-xl bg-muted/60 px-3 py-2">
+                  <span className="text-sm text-foreground">✅ Clinical MCQs</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-muted-foreground">{data?.modeStats.mcq.total} answers</span>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${accColor(data?.modeStats.mcq.accuracy ?? 0)}`}>
+                      {data?.modeStats.mcq.accuracy}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="card-surface p-5">
               <h2 className="font-semibold text-foreground">Study Activity — Last 30 Days</h2>
               <div className="mt-4 grid grid-cols-[repeat(30,minmax(0,1fr))] gap-1 overflow-x-auto">
