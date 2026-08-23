@@ -25,38 +25,6 @@ import {
   Settings
 } from "lucide-react";
 
-// Design tokens using CSS variables for consistency
-const designTokens = `
-  :root {
-    --primary: #009688;
-    --primary-hover: #00796b;
-    --primary-light: #e0f2f1;
-    --bg-primary: #f8fafc;
-    --bg-secondary: #ffffff;
-    --text-primary: #0f172a;
-    --text-secondary: #475569;
-    --border-primary: #e2e8f0;
-  }
-  
-  .dark {
-    --primary: #009688;
-    --primary-hover: #00796b;
-    --primary-light: rgba(0, 150, 136, 0.15);
-    --bg-primary: #0f172a;
-    --bg-secondary: #1e293b;
-    --text-primary: #f8fafc;
-    --text-secondary: #cbd5e1;
-    --border-primary: #334155;
-  }
-`;
-
-// Inject design tokens
-if (typeof document !== 'undefined') {
-  const styleSheet = document.createElement("style");
-  styleSheet.textContent = designTokens;
-  document.head.appendChild(styleSheet);
-}
-
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
@@ -144,7 +112,7 @@ function initials(name: string | null, email: string | null) {
 }
 
 function Skeleton({ className = "" }: { className?: string }) {
-  return <div className={`animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800 ${className}`} />;
+  return <div className={`animate-pulse rounded-xl bg-muted/40 ${className}`} />;
 }
 
 function Dashboard() {
@@ -477,37 +445,37 @@ function Dashboard() {
 
   if (!authChecked) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <Spinner className="h-6 w-6 text-teal-600" />
+      <main className="min-h-screen flex items-center justify-center bg-background">
+        <Spinner className="h-6 w-6 text-primary" />
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
-      {/* HEADER - Full dark mode support */}
-      <header className="border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur z-50 transition-colors duration-200">
+    <main className="min-h-screen bg-background transition-colors duration-200">
+      {/* HEADER */}
+      <header className="border-b border-border sticky top-0 bg-background/95 backdrop-blur z-50 transition-colors duration-200">
         <div ref={headerRef} className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 relative">
           
           {/* LOGO & BRANDING */}
           <Link to="/dashboard" onClick={closeMenu} className="flex items-center gap-3">
             <Logo size={32} />
-            <span className="font-semibold text-slate-900 dark:text-slate-100">AnatomyAce</span>
+            <span className="font-semibold text-foreground">AnatomyAce</span>
           </Link>
 
           {/* DESKTOP HEADER */}
           <div className="hidden md:flex items-center gap-6">
             <nav className="flex items-center gap-6">
-              <Link to="/study" className="text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 text-sm font-medium transition-colors">
+              <Link to="/study" className="text-muted-foreground hover:text-primary text-sm font-medium transition-colors">
                 Study
               </Link>
-              <Link to="/bookmarks" className="text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 text-sm font-medium transition-colors">
+              <Link to="/bookmarks" className="text-muted-foreground hover:text-primary text-sm font-medium transition-colors">
                 Bookmarks
               </Link>
-              <Link to="/progress" className="text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 text-sm font-medium transition-colors">
+              <Link to="/progress" className="text-muted-foreground hover:text-primary text-sm font-medium transition-colors">
                 Progress
               </Link>
-              <Link to="/planner" className="text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 text-sm font-medium transition-colors">
+              <Link to="/planner" className="text-muted-foreground hover:text-primary text-sm font-medium transition-colors">
                 Revision Planner
               </Link>
             </nav>
@@ -516,21 +484,21 @@ function Dashboard() {
               <ThemeToggle />
               <Link 
                 to="/profile" 
-                className="flex items-center gap-2 rounded-full border border-slate-200 dark:border-slate-700 pl-2 pr-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800 transition" 
+                className="flex items-center gap-2 rounded-full border border-border pl-2 pr-3 py-1.5 hover:bg-muted/60 transition" 
                 aria-label="Open profile"
               >
                 {photo ? (
                   <img src={photo} alt="Your profile" className="h-8 w-8 rounded-full object-cover" />
                 ) : (
-                  <span aria-hidden className="h-8 w-8 rounded-full bg-teal-600 text-white grid place-items-center text-sm font-semibold">
+                  <span aria-hidden className="h-8 w-8 rounded-full bg-primary text-primary-foreground grid place-items-center text-sm font-semibold">
                     {initials(displayName, user?.email ?? null)}
                   </span>
                 )}
-                <span className="text-sm text-slate-700 dark:text-slate-300">Profile</span>
+                <span className="text-sm text-foreground">Profile</span>
               </Link>
               <button 
                 onClick={onLogout} 
-                className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+                className="btn-outline text-sm"
               >
                 Log out
               </button>
@@ -541,7 +509,7 @@ function Dashboard() {
           <div className="flex md:hidden items-center">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition focus:outline-none"
+              className="p-2 rounded-lg text-foreground hover:bg-muted/60 transition focus:outline-none"
               aria-label="Toggle navigation menu"
               aria-expanded={isMobileMenuOpen}
             >
@@ -555,58 +523,58 @@ function Dashboard() {
 
           {/* MOBILE DROPDOWN MENU */}
           {isMobileMenuOpen && (
-            <div className="absolute top-full left-0 right-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-lg md:hidden z-50">
+            <div className="absolute top-full left-0 right-0 bg-background border-b border-border shadow-lg md:hidden z-50">
               <nav className="flex flex-col p-4 space-y-1">
                 <Link
                   to="/dashboard"
                   onClick={closeMenu}
-                  className="px-3 py-2 text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition font-medium text-sm"
+                  className="px-3 py-2 text-foreground hover:text-primary hover:bg-muted/60 rounded-lg transition font-medium text-sm"
                 >
                   Dashboard
                 </Link>
                 <Link
                   to="/study"
                   onClick={closeMenu}
-                  className="px-3 py-2 text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition font-medium text-sm"
+                  className="px-3 py-2 text-foreground hover:text-primary hover:bg-muted/60 rounded-lg transition font-medium text-sm"
                 >
                   Study
                 </Link>
                 <Link
                   to="/bookmarks"
                   onClick={closeMenu}
-                  className="px-3 py-2 text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition font-medium text-sm"
+                  className="px-3 py-2 text-foreground hover:text-primary hover:bg-muted/60 rounded-lg transition font-medium text-sm"
                 >
                   Bookmarks
                 </Link>
                 <Link
                   to="/progress"
                   onClick={closeMenu}
-                  className="px-3 py-2 text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition font-medium text-sm"
+                  className="px-3 py-2 text-foreground hover:text-primary hover:bg-muted/60 rounded-lg transition font-medium text-sm"
                 >
                   Progress
                 </Link>
                 <Link
                   to="/planner"
                   onClick={closeMenu}
-                  className="px-3 py-2 text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition font-medium text-sm"
+                  className="px-3 py-2 text-foreground hover:text-primary hover:bg-muted/60 rounded-lg transition font-medium text-sm"
                 >
                   Revision Planner
                 </Link>
 
-                <div className="border-t border-slate-200 dark:border-slate-700 my-2 pt-2 flex items-center justify-between px-3">
-                  <span className="text-slate-700 dark:text-slate-300 font-medium text-sm">Theme</span>
+                <div className="border-t border-border my-2 pt-2 flex items-center justify-between px-3">
+                  <span className="text-foreground font-medium text-sm">Theme</span>
                   <ThemeToggle />
                 </div>
 
                 <Link
                   to="/profile"
                   onClick={closeMenu}
-                  className="flex items-center gap-3 px-3 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition font-medium text-sm"
+                  className="flex items-center gap-3 px-3 py-2 text-foreground hover:bg-muted/60 rounded-lg transition font-medium text-sm"
                 >
                   {photo ? (
                     <img src={photo} alt="Your profile" className="h-7 w-7 rounded-full object-cover" />
                   ) : (
-                    <span aria-hidden className="h-7 w-7 rounded-full bg-teal-600 text-white grid place-items-center text-xs font-semibold">
+                    <span aria-hidden className="h-7 w-7 rounded-full bg-primary text-primary-foreground grid place-items-center text-xs font-semibold">
                       {initials(displayName, user?.email ?? null)}
                     </span>
                   )}
@@ -618,7 +586,7 @@ function Dashboard() {
                     closeMenu();
                     onLogout();
                   }}
-                  className="w-full text-left px-3 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition font-medium text-sm"
+                  className="w-full text-left px-3 py-2 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition font-medium text-sm"
                 >
                   Log out
                 </button>
@@ -634,16 +602,16 @@ function Dashboard() {
         {/* Header with Greeting and XP */}
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
               {greeting()}{displayName ? `, ${displayName.split(" ")[0]}` : ""}
             </h1>
-            <p className="mt-1 text-slate-600 dark:text-slate-400">Here's your study snapshot for today.</p>
+            <p className="mt-1 text-muted-foreground">Here's your study snapshot for today.</p>
           </div>
           {data?.xp && (
-            <div className="flex items-center gap-2 bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 rounded-full px-4 py-2 border border-teal-100 dark:border-teal-800">
+            <div className="flex items-center gap-2 bg-primary/10 text-primary rounded-full px-4 py-2 border border-primary/20">
               <Zap className="w-5 h-5" />
               <span className="font-semibold">Level {data.xp.level}</span>
-              <span className="text-slate-400 dark:text-slate-500">|</span>
+              <span className="text-muted-foreground">|</span>
               <span className="font-medium">{data.xp.total_xp} XP</span>
             </div>
           )}
@@ -660,9 +628,9 @@ function Dashboard() {
         )}
 
         {dashboardQuery.isError && (
-          <div className="mt-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-6 text-center">
-            <p className="text-slate-900 dark:text-slate-100 font-medium">Couldn't load your dashboard.</p>
-            <button onClick={() => dashboardQuery.refetch()} className="mt-4 px-6 py-2.5 bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition font-medium">
+          <div className="mt-6 card-surface p-6 text-center">
+            <p className="text-foreground font-medium">Couldn't load your dashboard.</p>
+            <button onClick={() => dashboardQuery.refetch()} className="mt-4 btn-primary">
               Tap to retry
             </button>
           </div>
@@ -677,12 +645,12 @@ function Dashboard() {
         {stats && data && (
           <>
             {/* HERO SECTION - Today's Study Progress */}
-            <div className="mt-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-6 sm:p-8 transition-colors duration-200">
+            <div className="mt-6 card-surface p-6 sm:p-8 transition-colors duration-200">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Today's Study Progress</h2>
+                <h2 className="text-lg font-semibold text-foreground">Today's Study Progress</h2>
                 <button
                   onClick={() => setGoalOpen(true)}
-                  className="text-sm text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition flex items-center gap-1"
+                  className="text-sm text-primary hover:text-primary/80 transition flex items-center gap-1"
                   aria-label="Edit today's goals"
                 >
                   <Settings className="w-4 h-4" />
@@ -695,8 +663,8 @@ function Dashboard() {
                 <div className="relative flex-shrink-0">
                   <ProgressRing value={totalToday} max={totalGoal} size={140} stroke={12} />
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-3xl font-bold text-slate-900 dark:text-slate-100">{totalToday}</span>
-                    <span className="text-sm text-slate-600 dark:text-slate-400">of {totalGoal}</span>
+                    <span className="text-3xl font-bold text-foreground">{totalToday}</span>
+                    <span className="text-sm text-muted-foreground">of {totalGoal}</span>
                   </div>
                 </div>
                 
@@ -704,12 +672,12 @@ function Dashboard() {
                 <div className="flex-1 w-full space-y-4">
                   <div>
                     <div className="flex justify-between mb-2">
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Flashcards</span>
-                      <span className="text-sm text-slate-600 dark:text-slate-400">{todayFlashcards}/{stats.flashcards_daily_goal}</span>
+                      <span className="text-sm font-medium text-foreground">Flashcards</span>
+                      <span className="text-sm text-muted-foreground">{todayFlashcards}/{stats.flashcards_daily_goal}</span>
                     </div>
-                    <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5">
+                    <div className="w-full bg-muted rounded-full h-2.5">
                       <div 
-                        className="bg-teal-600 dark:bg-teal-500 rounded-full h-2.5 transition-all duration-300"
+                        className="bg-primary rounded-full h-2.5 transition-all duration-300"
                         style={{ width: `${Math.min(100, (todayFlashcards / Math.max(1, stats.flashcards_daily_goal)) * 100)}%` }}
                       />
                     </div>
@@ -717,12 +685,12 @@ function Dashboard() {
                   
                   <div>
                     <div className="flex justify-between mb-2">
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Practical</span>
-                      <span className="text-sm text-slate-600 dark:text-slate-400">{todayPractical}/{stats.practical_daily_goal}</span>
+                      <span className="text-sm font-medium text-foreground">Practical</span>
+                      <span className="text-sm text-muted-foreground">{todayPractical}/{stats.practical_daily_goal}</span>
                     </div>
-                    <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5">
+                    <div className="w-full bg-muted rounded-full h-2.5">
                       <div 
-                        className="bg-teal-600 dark:bg-teal-500 rounded-full h-2.5 transition-all duration-300"
+                        className="bg-primary rounded-full h-2.5 transition-all duration-300"
                         style={{ width: `${Math.min(100, (todayPractical / Math.max(1, stats.practical_daily_goal)) * 100)}%` }}
                       />
                     </div>
@@ -730,12 +698,12 @@ function Dashboard() {
                   
                   <div>
                     <div className="flex justify-between mb-2">
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">MCQs</span>
-                      <span className="text-sm text-slate-600 dark:text-slate-400">{todayMcq}/{stats.mcq_daily_goal}</span>
+                      <span className="text-sm font-medium text-foreground">MCQs</span>
+                      <span className="text-sm text-muted-foreground">{todayMcq}/{stats.mcq_daily_goal}</span>
                     </div>
-                    <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5">
+                    <div className="w-full bg-muted rounded-full h-2.5">
                       <div 
-                        className="bg-teal-600 dark:bg-teal-500 rounded-full h-2.5 transition-all duration-300"
+                        className="bg-primary rounded-full h-2.5 transition-all duration-300"
                         style={{ width: `${Math.min(100, (todayMcq / Math.max(1, stats.mcq_daily_goal)) * 100)}%` }}
                       />
                     </div>
@@ -745,7 +713,7 @@ function Dashboard() {
               
               {/* Primary CTA */}
               <div className="mt-6 flex justify-center">
-                <Link to="/study" className="inline-flex items-center gap-2 px-6 py-3 bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition text-base font-semibold shadow-sm dark:shadow-teal-900/20">
+                <Link to="/study" className="btn-primary inline-flex items-center gap-2 text-base">
                   {stats.last_topic_studied ? (
                     <>
                       <span>Continue Studying</span>
@@ -763,56 +731,56 @@ function Dashboard() {
 
             {/* COMPACT METRICS GRID */}
             <div className="mt-6 grid gap-4 grid-cols-2 lg:grid-cols-4">
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-4 transition-colors duration-200 hover:shadow-md">
+              <div className="card-surface p-4 transition-colors duration-200 hover:shadow-md">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-orange-50 dark:bg-orange-900/30 rounded-lg">
+                  <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
                     <Flame className="w-6 h-6 text-orange-600 dark:text-orange-400" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.current_streak}</p>
-                    <p className="text-xs text-slate-600 dark:text-slate-400">Day Streak</p>
+                    <p className="text-2xl font-bold text-foreground">{stats.current_streak}</p>
+                    <p className="text-xs text-muted-foreground">Day Streak</p>
                   </div>
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">Longest: {stats.longest_streak} days</p>
+                <p className="text-xs text-muted-foreground mt-2">Longest: {stats.longest_streak} days</p>
               </div>
               
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-4 transition-colors duration-200 hover:shadow-md">
+              <div className="card-surface p-4 transition-colors duration-200 hover:shadow-md">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-teal-50 dark:bg-teal-900/30 rounded-lg">
-                    <BookOpen className="w-6 h-6 text-teal-600 dark:text-teal-400" />
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <BookOpen className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.cards_studied_total}</p>
-                    <p className="text-xs text-slate-600 dark:text-slate-400">Flashcards Studied</p>
+                    <p className="text-2xl font-bold text-foreground">{stats.cards_studied_total}</p>
+                    <p className="text-xs text-muted-foreground">Flashcards Studied</p>
                   </div>
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">{stats.cards_studied_this_week} this week</p>
+                <p className="text-xs text-muted-foreground mt-2">{stats.cards_studied_this_week} this week</p>
               </div>
               
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-4 transition-colors duration-200 hover:shadow-md">
+              <div className="card-surface p-4 transition-colors duration-200 hover:shadow-md">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-teal-50 dark:bg-teal-900/30 rounded-lg">
-                    <Bone className="w-6 h-6 text-teal-600 dark:text-teal-400" />
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Bone className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                    <p className="text-2xl font-bold text-foreground">
                       {data.topics.filter(t => t.sources.includes('practical')).reduce((sum, t) => sum + t.reviews, 0)}
                     </p>
-                    <p className="text-xs text-slate-600 dark:text-slate-400">Practical Completed</p>
+                    <p className="text-xs text-muted-foreground">Practical Completed</p>
                   </div>
                 </div>
               </div>
               
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-4 transition-colors duration-200 hover:shadow-md">
+              <div className="card-surface p-4 transition-colors duration-200 hover:shadow-md">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg">
+                  <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
                     <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                    <p className="text-2xl font-bold text-foreground">
                       {data.topics.filter(t => t.sources.includes('mcq')).reduce((sum, t) => sum + t.reviews, 0)}
                     </p>
-                    <p className="text-xs text-slate-600 dark:text-slate-400">MCQs Completed</p>
+                    <p className="text-xs text-muted-foreground">MCQs Completed</p>
                   </div>
                 </div>
               </div>
@@ -821,26 +789,26 @@ function Dashboard() {
             {/* MAIN ACTION AREA - Weak Subtopics & Continue Studying */}
             <div className="mt-6 grid gap-6 lg:grid-cols-2">
               {/* Weak Subtopics */}
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-5 transition-colors duration-200">
-                <h2 className="font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+              <div className="card-surface p-5 transition-colors duration-200">
+                <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-rose-500 dark:text-rose-400" />
                   Weak Subtopics
                 </h2>
                 {weakGroups.length === 0 ? (
-                  <p className="text-sm text-slate-600 dark:text-slate-400">No weak spots — nice work!</p>
+                  <p className="text-sm text-muted-foreground">No weak spots — nice work!</p>
                 ) : (
                   <div className="space-y-4">
                     {weakGroups.map((g) => (
                       <div key={g.topic_name}>
-                        <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2">{g.topic_name}</h3>
+                        <h3 className="text-sm font-semibold text-foreground mb-2">{g.topic_name}</h3>
                         <div className="space-y-2">
                           {g.items.slice(0, 3).map((s) => (
                             <div key={s.subtopic_id} className="flex items-center gap-3">
-                              <span className="text-sm text-slate-800 dark:text-slate-200 flex-1">
+                              <span className="text-sm text-foreground flex-1">
                                 {s.subtopic_name}
-                                <span className="text-slate-500 dark:text-slate-400 text-xs ml-1">({s.category_name})</span>
+                                <span className="text-muted-foreground text-xs ml-1">({s.category_name})</span>
                               </span>
-                              <div className="w-24 bg-slate-100 dark:bg-slate-800 rounded-full h-2">
+                              <div className="w-24 bg-muted rounded-full h-2">
                                 <div 
                                   className="bg-rose-500 rounded-full h-2"
                                   style={{ width: `${s.accuracy}%` }}
@@ -857,22 +825,22 @@ function Dashboard() {
               </div>
               
               {/* Continue Studying */}
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-5 flex flex-col justify-between transition-colors duration-200">
+              <div className="card-surface p-5 flex flex-col justify-between transition-colors duration-200">
                 <div>
-                  <h2 className="font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
-                    <Target className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                  <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                    <Target className="w-5 h-5 text-primary" />
                     Continue Studying
                   </h2>
                   {stats.last_topic_studied ? (
                     <>
-                      <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">{stats.last_topic_studied}</p>
-                      <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">Pick up where you left off.</p>
+                      <p className="text-lg font-semibold text-foreground">{stats.last_topic_studied}</p>
+                      <p className="text-sm text-muted-foreground mt-2">Pick up where you left off.</p>
                     </>
                   ) : (
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Start a session to see your last topic here.</p>
+                    <p className="text-sm text-muted-foreground">Start a session to see your last topic here.</p>
                   )}
                 </div>
-                <Link to="/study" className="mt-4 w-full inline-flex justify-center items-center px-4 py-3 bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition font-medium">
+                <Link to="/study" className="mt-4 w-full btn-primary justify-center">
                   {stats.last_topic_studied ? "Resume" : "Start"}
                 </Link>
               </div>
@@ -880,23 +848,23 @@ function Dashboard() {
 
             {/* STRONG SUBTOPICS */}
             {strongGroups.length > 0 && (
-              <div className="mt-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-5 transition-colors duration-200">
-                <h2 className="font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+              <div className="mt-6 card-surface p-5 transition-colors duration-200">
+                <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
                   <Award className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                   Strong Subtopics
                 </h2>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {strongGroups.map((g) => (
                     <div key={g.topic_name}>
-                      <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2">{g.topic_name}</h3>
+                      <h3 className="text-sm font-semibold text-foreground mb-2">{g.topic_name}</h3>
                       <div className="space-y-2">
                         {g.items.slice(0, 3).map((s) => (
                           <div key={s.subtopic_id} className="flex items-center gap-3">
-                            <span className="text-sm text-slate-800 dark:text-slate-200 flex-1">
+                            <span className="text-sm text-foreground flex-1">
                               {s.subtopic_name}
-                              <span className="text-slate-500 dark:text-slate-400 text-xs ml-1">({s.category_name})</span>
+                              <span className="text-muted-foreground text-xs ml-1">({s.category_name})</span>
                             </span>
-                            <div className="w-20 bg-slate-100 dark:bg-slate-800 rounded-full h-2">
+                            <div className="w-20 bg-muted rounded-full h-2">
                               <div 
                                 className="bg-emerald-500 rounded-full h-2"
                                 style={{ width: `${s.accuracy}%` }}
@@ -923,10 +891,10 @@ function Dashboard() {
             </div>
 
             {/* WEEKLY PROGRESS - REDESIGNED */}
-            <div className="mt-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-5 transition-colors duration-200">
+            <div className="mt-6 card-surface p-5 transition-colors duration-200">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="font-semibold text-slate-900 dark:text-slate-100">Weekly Progress</h2>
-                <span className="text-xs text-slate-500 dark:text-slate-400">Last 7 days</span>
+                <h2 className="font-semibold text-foreground">Weekly Progress</h2>
+                <span className="text-xs text-muted-foreground">Last 7 days</span>
               </div>
               
               <div className="flex items-end justify-between gap-3 sm:gap-4">
@@ -937,7 +905,7 @@ function Dashboard() {
                   return (
                     <div key={w.date} className="flex-1 flex flex-col items-center gap-2">
                       {/* Number label */}
-                      <span className={`text-xs font-semibold ${w.count > 0 ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-600'}`}>
+                      <span className={`text-xs font-semibold ${w.count > 0 ? 'text-foreground' : 'text-muted-foreground'}`}>
                         {w.count}
                       </span>
                       
@@ -945,17 +913,13 @@ function Dashboard() {
                       <div className="w-full h-36 sm:h-40 md:h-44 relative flex items-end justify-center">
                         {/* Background track - subtle for zero days */}
                         <div className={`absolute inset-x-0 bottom-0 top-0 rounded-t-lg ${
-                          w.count > 0 
-                            ? 'bg-slate-100 dark:bg-slate-800' 
-                            : 'bg-slate-50 dark:bg-slate-800/50'
+                          w.count > 0 ? 'bg-muted' : 'bg-muted/40'
                         }`} />
                         
                         {/* Fill bar */}
                         <div
                           className={`relative w-3/4 max-w-[48px] rounded-t-lg transition-all duration-300 ${
-                            isToday 
-                              ? 'bg-teal-600 dark:bg-teal-500' 
-                              : 'bg-teal-500 dark:bg-teal-400'
+                            isToday ? 'bg-primary' : 'bg-primary/70'
                           }`}
                           style={{ 
                             height: w.count > 0 ? `${Math.max(pct, 4)}%` : '0%',
@@ -968,8 +932,8 @@ function Dashboard() {
                       {/* Day label */}
                       <span className={`text-xs font-medium pb-1 ${
                         isToday 
-                          ? 'text-teal-600 dark:text-teal-400 font-bold border-b-2 border-teal-600 dark:border-teal-400' 
-                          : 'text-slate-600 dark:text-slate-400'
+                          ? 'text-primary font-bold border-b-2 border-primary' 
+                          : 'text-muted-foreground'
                       }`}>
                         {w.label}
                       </span>
@@ -980,8 +944,8 @@ function Dashboard() {
             </div>
 
             {/* ACHIEVEMENTS */}
-            <div className="mt-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-5 transition-colors duration-200">
-              <h2 className="font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+            <div className="mt-6 card-surface p-5 transition-colors duration-200">
+              <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
                 <Trophy className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                 Achievements
               </h2>
@@ -1025,19 +989,19 @@ function ProgressRing({ value, max, size = 72, stroke = 8 }: { value: number; ma
         stroke="currentColor" 
         strokeWidth={stroke} 
         fill="none" 
-        className="text-slate-200 dark:text-slate-700"
+        className="text-muted"
       />
       <circle
         cx={size / 2} 
         cy={size / 2} 
         r={r}
-        stroke="#009688" 
+        stroke="currentColor" 
         strokeWidth={stroke} 
         fill="none"
         strokeLinecap="round" 
         strokeDasharray={c} 
         strokeDashoffset={offset}
-        className="transition-all duration-300"
+        className="text-primary transition-all duration-300"
       />
     </svg>
   );
@@ -1065,60 +1029,60 @@ function GoalDialog({
                 
   return (
     <div role="dialog" aria-modal="true" aria-label="Edit daily goals"
-      className="fixed inset-0 z-50 grid place-items-center bg-slate-900/50 dark:bg-black/70 backdrop-blur-sm px-4"
+      className="fixed inset-0 z-50 grid place-items-center bg-black/50 backdrop-blur-sm px-4"
       onClick={onClose}
     >
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Daily Goals</h3>
-        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Set your daily goals for each study mode.</p>
+      <div className="card-surface p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-semibold text-foreground">Daily Goals</h3>
+        <p className="text-sm text-muted-foreground mt-1">Set your daily goals for each study mode.</p>
         
         <div className="mt-4 space-y-3">
           <div>
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+            <label className="text-sm font-medium text-foreground flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-primary" />
               Flashcards
             </label>
             <input
               type="number" min={1} max={500}
               value={flashcards} onChange={(e) => setFlashcards(e.target.value)}
-              className="mt-1 w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400 focus:border-transparent transition-colors"
+              className="mt-1 w-full px-3 py-2 border border-border rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
               aria-label="Flashcards daily goal"
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
-              <Bone className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+            <label className="text-sm font-medium text-foreground flex items-center gap-2">
+              <Bone className="w-4 h-4 text-primary" />
               Practical Mode
             </label>
             <input
               type="number" min={1} max={500}
               value={practical} onChange={(e) => setPractical(e.target.value)}
-              className="mt-1 w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400 focus:border-transparent transition-colors"
+              className="mt-1 w-full px-3 py-2 border border-border rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
               aria-label="Practical mode daily goal"
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
+            <label className="text-sm font-medium text-foreground flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               Clinical MCQs
             </label>
             <input
               type="number" min={1} max={500}
               value={mcq} onChange={(e) => setMcq(e.target.value)}
-              className="mt-1 w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500 dark:focus:ring-teal-400 focus:border-transparent transition-colors"
+              className="mt-1 w-full px-3 py-2 border border-border rounded-xl bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
               aria-label="MCQ daily goal"
             />
           </div>
         </div>
         
         <div className="mt-6 flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition font-medium">
+          <button onClick={onClose} className="btn-outline">
             Cancel
           </button>
           <button
             onClick={() => valid && onSave({ flashcards: nFlashcards, practical: nPractical, mcq: nMcq })}
             disabled={!valid || pending}
-            className="px-4 py-2 bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-primary"
           >
             {pending ? <Spinner className="h-4 w-4" /> : "Save"}
           </button>
