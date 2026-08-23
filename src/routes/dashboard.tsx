@@ -9,6 +9,22 @@ import { Achievements } from "@/components/Achievements";
 import { ExamCountdownCard } from "@/components/ExamCountdownCard";
 import { DailyFactCard } from "@/components/DailyFactCard";
 import { ReminderBanner } from "@/components/ReminderBanner";
+import { 
+  Target, 
+  Lock, 
+  Trophy, 
+  BookOpen, 
+  Bone, 
+  CheckCircle2, 
+  Flame, 
+  TrendingUp, 
+  Award,
+  Zap,
+  ChevronRight,
+  Menu,
+  X,
+  Settings
+} from "lucide-react";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -87,13 +103,13 @@ function initials(name: string | null, email: string | null) {
 }
 
 function accColor(acc: number) {
-  if (acc >= 80) return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300";
-  if (acc >= 65) return "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300";
-  return "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300";
+  if (acc >= 80) return "bg-emerald-50 text-emerald-700";
+  if (acc >= 65) return "bg-amber-50 text-amber-700";
+  return "bg-rose-50 text-rose-700";
 }
 
 function Skeleton({ className = "" }: { className?: string }) {
-  return <div className={`animate-pulse rounded-2xl bg-muted ${className}`} />;
+  return <div className={`animate-pulse rounded-2xl bg-slate-100 ${className}`} />;
 }
 
 function Dashboard() {
@@ -418,130 +434,136 @@ function Dashboard() {
 
   if (!authChecked) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-background">
-        <Spinner className="h-6 w-6 text-primary" />
+      <main className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Spinner className="h-6 w-6 text-indigo-600" />
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-slate-50">
       {/* HEADER */}
-      <header className="border-b border-border sticky top-0 bg-background/85 backdrop-blur z-50">
+      <header className="border-b border-slate-200/60 sticky top-0 bg-white/95 backdrop-blur z-50">
         <div ref={headerRef} className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 relative">
           
           {/* LOGO & BRANDING */}
           <Link to="/dashboard" onClick={closeMenu} className="flex items-center gap-3">
             <Logo size={32} />
-            <span className="font-semibold text-foreground">AnatomyAce</span>
+            <span className="font-semibold text-slate-900">AnatomyAce</span>
           </Link>
 
           {/* DESKTOP HEADER (Hidden on mobile) */}
-          <div className="hidden md:flex items-center gap-2">
-            <Link to="/study" className="btn-outline flex items-center px-3" style={{ minHeight: 40 }}>
-              Study
-            </Link>
-            <Link to="/bookmarks" className="btn-outline flex items-center px-3" style={{ minHeight: 40 }}>
-              Bookmarks
-            </Link> 
-            <Link to="/progress" className="btn-outline flex items-center px-3" style={{ minHeight: 40 }}>
-              Progress
-            </Link>
-            <Link to="/planner" className="btn-outline flex items-center px-3" style={{ minHeight: 40 }}>
-              Revision Planner
-            </Link>
-            <ThemeToggle />
-            <Link 
-              to="/profile" 
-              className="flex items-center gap-2 rounded-full border border-border pl-2 pr-3 py-1 hover:bg-muted transition" 
-              aria-label="Open profile"
-            >
-              {photo ? (
-                <img src={photo} alt="Your profile" className="h-8 w-8 rounded-full object-cover" />
-              ) : (
-                <span aria-hidden className="h-8 w-8 rounded-full bg-primary text-primary-foreground grid place-items-center text-sm font-semibold">
-                  {initials(displayName, user?.email ?? null)}
-                </span>
-              )}
-              <span className="text-sm text-foreground">Profile</span>
-            </Link>
-            <button onClick={onLogout} className="btn-outline px-3" style={{ minHeight: 40 }}>
-              Log out
-            </button>
+          <div className="hidden md:flex items-center gap-6">
+            <nav className="flex items-center gap-6">
+              <Link to="/study" className="text-slate-600 hover:text-slate-900 text-sm font-medium transition-colors">
+                Study
+              </Link>
+              <Link to="/bookmarks" className="text-slate-600 hover:text-slate-900 text-sm font-medium transition-colors">
+                Bookmarks
+              </Link>
+              <Link to="/progress" className="text-slate-600 hover:text-slate-900 text-sm font-medium transition-colors">
+                Progress
+              </Link>
+              <Link to="/planner" className="text-slate-600 hover:text-slate-900 text-sm font-medium transition-colors">
+                Revision Planner
+              </Link>
+            </nav>
+            
+            <div className="flex items-center gap-3">
+              <ThemeToggle />
+              <Link 
+                to="/profile" 
+                className="flex items-center gap-2 rounded-full border border-slate-200 pl-2 pr-3 py-1.5 hover:bg-slate-50 transition" 
+                aria-label="Open profile"
+              >
+                {photo ? (
+                  <img src={photo} alt="Your profile" className="h-8 w-8 rounded-full object-cover" />
+                ) : (
+                  <span aria-hidden className="h-8 w-8 rounded-full bg-indigo-600 text-white grid place-items-center text-sm font-semibold">
+                    {initials(displayName, user?.email ?? null)}
+                  </span>
+                )}
+                <span className="text-sm text-slate-700">Profile</span>
+              </Link>
+              <button 
+                onClick={onLogout} 
+                className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-slate-900 border border-slate-200 rounded-full hover:bg-slate-50 transition"
+              >
+                Log out
+              </button>
+            </div>
           </div>
 
           {/* MOBILE HAMBURGER BUTTON */}
           <div className="flex md:hidden items-center">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 rounded-md border border-border text-foreground hover:bg-muted transition focus:outline-none"
+              className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 transition focus:outline-none"
               aria-label="Toggle navigation menu"
               aria-expanded={isMobileMenuOpen}
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {isMobileMenuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
-                )}
-              </svg>
+              {isMobileMenuOpen ? (
+                <X className="w-6 h-6" />
+              ) : (
+                <Menu className="w-6 h-6" />
+              )}
             </button>
           </div>
 
           {/* MOBILE DROPDOWN MENU */}
           {isMobileMenuOpen && (
-            <div className="absolute top-full left-0 right-0 bg-background border-b border-border shadow-lg md:hidden z-50">
-              <nav className="flex flex-col p-4 space-y-2">
+            <div className="absolute top-full left-0 right-0 bg-white border-b border-slate-200 shadow-lg md:hidden z-50">
+              <nav className="flex flex-col p-4 space-y-1">
                 <Link
                   to="/dashboard"
                   onClick={closeMenu}
-                  className="px-3 py-2 rounded-md text-foreground hover:bg-muted transition font-medium text-sm"
+                  className="px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition font-medium text-sm"
                 >
                   Dashboard
                 </Link>
                 <Link
                   to="/study"
                   onClick={closeMenu}
-                  className="px-3 py-2 rounded-md text-foreground hover:bg-muted transition font-medium text-sm"
+                  className="px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition font-medium text-sm"
                 >
                   Study
                 </Link>
                 <Link
                   to="/bookmarks"
                   onClick={closeMenu}
-                  className="px-3 py-2 rounded-md text-foreground hover:bg-muted transition font-medium text-sm"
+                  className="px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition font-medium text-sm"
                 >
                   Bookmarks
                 </Link>
                 <Link
                   to="/progress"
                   onClick={closeMenu}
-                  className="px-3 py-2 rounded-md text-foreground hover:bg-muted transition font-medium text-sm"
+                  className="px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition font-medium text-sm"
                 >
                   Progress
                 </Link>
                 <Link
                   to="/planner"
                   onClick={closeMenu}
-                  className="px-3 py-2 rounded-md text-foreground hover:bg-muted transition font-medium text-sm"
+                  className="px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition font-medium text-sm"
                 >
                   Revision Planner
                 </Link>
 
-                <div className="border-t border-border my-2 pt-2 flex items-center justify-between px-3">
-                  <span className="text-foreground font-medium text-sm">Theme</span>
+                <div className="border-t border-slate-200 my-2 pt-2 flex items-center justify-between px-3">
+                  <span className="text-slate-700 font-medium text-sm">Theme</span>
                   <ThemeToggle />
                 </div>
 
                 <Link
                   to="/profile"
                   onClick={closeMenu}
-                  className="flex items-center gap-3 px-3 py-2 rounded-md text-foreground hover:bg-muted transition font-medium text-sm"
+                  className="flex items-center gap-3 px-3 py-2 text-slate-700 hover:bg-slate-50 rounded-lg transition font-medium text-sm"
                 >
                   {photo ? (
                     <img src={photo} alt="Your profile" className="h-7 w-7 rounded-full object-cover" />
                   ) : (
-                    <span aria-hidden className="h-7 w-7 rounded-full bg-primary text-primary-foreground grid place-items-center text-xs font-semibold">
+                    <span aria-hidden className="h-7 w-7 rounded-full bg-indigo-600 text-white grid place-items-center text-xs font-semibold">
                       {initials(displayName, user?.email ?? null)}
                     </span>
                   )}
@@ -553,7 +575,7 @@ function Dashboard() {
                     closeMenu();
                     onLogout();
                   }}
-                  className="w-full text-left px-3 py-2 rounded-md text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition font-medium text-sm"
+                  className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition font-medium text-sm"
                 >
                   Log out
                 </button>
@@ -569,16 +591,16 @@ function Dashboard() {
         {/* Header with Greeting and XP */}
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
               {greeting()}{displayName ? `, ${displayName.split(" ")[0]}` : ""}
             </h1>
-            <p className="mt-1 text-muted-foreground">Here's your study snapshot for today.</p>
+            <p className="mt-1 text-slate-600">Here's your study snapshot for today.</p>
           </div>
           {data?.xp && (
-            <div className="flex items-center gap-2 bg-primary/10 text-primary rounded-full px-4 py-2">
-              <span aria-hidden className="text-lg">⭐</span>
+            <div className="flex items-center gap-2 bg-indigo-50 text-indigo-700 rounded-full px-4 py-2 border border-indigo-100">
+              <Zap className="w-5 h-5" />
               <span className="font-semibold">Level {data.xp.level}</span>
-              <span className="text-muted-foreground">|</span>
+              <span className="text-slate-400">|</span>
               <span className="font-medium">{data.xp.total_xp} XP</span>
             </div>
           )}
@@ -595,9 +617,11 @@ function Dashboard() {
         )}
 
         {dashboardQuery.isError && (
-          <div className="mt-6 card-surface p-6 text-center">
-            <p className="text-foreground font-medium">Couldn't load your dashboard.</p>
-            <button onClick={() => dashboardQuery.refetch()} className="btn-primary mt-4">Tap to retry</button>
+          <div className="mt-6 bg-white border border-slate-200 rounded-xl shadow-sm p-6 text-center">
+            <p className="text-slate-900 font-medium">Couldn't load your dashboard.</p>
+            <button onClick={() => dashboardQuery.refetch()} className="mt-4 px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium">
+              Tap to retry
+            </button>
           </div>
         )}
 
@@ -610,14 +634,15 @@ function Dashboard() {
         {stats && data && (
           <>
             {/* HERO SECTION - Today's Study Progress */}
-            <div className="mt-6 bg-card-surface rounded-2xl p-6 sm:p-8">
+            <div className="mt-6 bg-white border border-slate-200 rounded-xl shadow-sm p-6 sm:p-8">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-foreground">Today's Study Progress</h2>
+                <h2 className="text-lg font-semibold text-slate-900">Today's Study Progress</h2>
                 <button
                   onClick={() => setGoalOpen(true)}
-                  className="text-sm text-primary hover:text-primary/80 transition"
+                  className="text-sm text-indigo-600 hover:text-indigo-700 transition flex items-center gap-1"
                   aria-label="Edit today's goals"
                 >
+                  <Settings className="w-4 h-4" />
                   Edit goals
                 </button>
               </div>
@@ -627,8 +652,8 @@ function Dashboard() {
                 <div className="relative flex-shrink-0">
                   <ProgressRing value={totalToday} max={totalGoal} size={140} stroke={12} />
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-3xl font-bold text-foreground">{totalToday}</span>
-                    <span className="text-sm text-muted-foreground">of {totalGoal}</span>
+                    <span className="text-3xl font-bold text-slate-900">{totalToday}</span>
+                    <span className="text-sm text-slate-600">of {totalGoal}</span>
                   </div>
                 </div>
                 
@@ -636,12 +661,12 @@ function Dashboard() {
                 <div className="flex-1 w-full space-y-4">
                   <div>
                     <div className="flex justify-between mb-2">
-                      <span className="text-sm font-medium text-foreground">Flashcards</span>
-                      <span className="text-sm text-muted-foreground">{todayFlashcards}/{stats.flashcards_daily_goal}</span>
+                      <span className="text-sm font-medium text-slate-700">Flashcards</span>
+                      <span className="text-sm text-slate-600">{todayFlashcards}/{stats.flashcards_daily_goal}</span>
                     </div>
-                    <div className="w-full bg-muted rounded-full h-2">
+                    <div className="w-full bg-slate-100 rounded-full h-2.5">
                       <div 
-                        className="bg-primary rounded-full h-2 transition-all"
+                        className="bg-indigo-600 rounded-full h-2.5 transition-all"
                         style={{ width: `${Math.min(100, (todayFlashcards / Math.max(1, stats.flashcards_daily_goal)) * 100)}%` }}
                       />
                     </div>
@@ -649,12 +674,12 @@ function Dashboard() {
                   
                   <div>
                     <div className="flex justify-between mb-2">
-                      <span className="text-sm font-medium text-foreground">Practical</span>
-                      <span className="text-sm text-muted-foreground">{todayPractical}/{stats.practical_daily_goal}</span>
+                      <span className="text-sm font-medium text-slate-700">Practical</span>
+                      <span className="text-sm text-slate-600">{todayPractical}/{stats.practical_daily_goal}</span>
                     </div>
-                    <div className="w-full bg-muted rounded-full h-2">
+                    <div className="w-full bg-slate-100 rounded-full h-2.5">
                       <div 
-                        className="bg-primary rounded-full h-2 transition-all"
+                        className="bg-indigo-600 rounded-full h-2.5 transition-all"
                         style={{ width: `${Math.min(100, (todayPractical / Math.max(1, stats.practical_daily_goal)) * 100)}%` }}
                       />
                     </div>
@@ -662,12 +687,12 @@ function Dashboard() {
                   
                   <div>
                     <div className="flex justify-between mb-2">
-                      <span className="text-sm font-medium text-foreground">MCQs</span>
-                      <span className="text-sm text-muted-foreground">{todayMcq}/{stats.mcq_daily_goal}</span>
+                      <span className="text-sm font-medium text-slate-700">MCQs</span>
+                      <span className="text-sm text-slate-600">{todayMcq}/{stats.mcq_daily_goal}</span>
                     </div>
-                    <div className="w-full bg-muted rounded-full h-2">
+                    <div className="w-full bg-slate-100 rounded-full h-2.5">
                       <div 
-                        className="bg-primary rounded-full h-2 transition-all"
+                        className="bg-indigo-600 rounded-full h-2.5 transition-all"
                         style={{ width: `${Math.min(100, (todayMcq / Math.max(1, stats.mcq_daily_goal)) * 100)}%` }}
                       />
                     </div>
@@ -677,20 +702,16 @@ function Dashboard() {
               
               {/* Primary CTA */}
               <div className="mt-6 flex justify-center">
-                <Link to="/study" className="btn-primary inline-flex items-center gap-2 px-6 py-3 text-base font-semibold">
+                <Link to="/study" className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-base font-semibold shadow-sm">
                   {stats.last_topic_studied ? (
                     <>
                       <span>Continue Studying</span>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                      </svg>
+                      <ChevronRight className="w-5 h-5" />
                     </>
                   ) : (
                     <>
                       <span>Start Studying</span>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                      </svg>
+                      <ChevronRight className="w-5 h-5" />
                     </>
                   )}
                 </Link>
@@ -699,48 +720,56 @@ function Dashboard() {
 
             {/* COMPACT METRICS GRID */}
             <div className="mt-6 grid gap-4 grid-cols-2 lg:grid-cols-4">
-              <div className="card-surface p-4">
+              <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4">
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl" aria-hidden>🔥</span>
+                  <div className="p-2 bg-orange-50 rounded-lg">
+                    <Flame className="w-6 h-6 text-orange-600" />
+                  </div>
                   <div>
-                    <p className="text-2xl font-bold text-foreground">{stats.current_streak}</p>
-                    <p className="text-xs text-muted-foreground">Day Streak</p>
+                    <p className="text-2xl font-bold text-slate-900">{stats.current_streak}</p>
+                    <p className="text-xs text-slate-600">Day Streak</p>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">Longest: {stats.longest_streak} days</p>
+                <p className="text-xs text-slate-500 mt-2">Longest: {stats.longest_streak} days</p>
               </div>
               
-              <div className="card-surface p-4">
+              <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4">
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl" aria-hidden>📚</span>
+                  <div className="p-2 bg-indigo-50 rounded-lg">
+                    <BookOpen className="w-6 h-6 text-indigo-600" />
+                  </div>
                   <div>
-                    <p className="text-2xl font-bold text-foreground">{stats.cards_studied_total}</p>
-                    <p className="text-xs text-muted-foreground">Flashcards Studied</p>
+                    <p className="text-2xl font-bold text-slate-900">{stats.cards_studied_total}</p>
+                    <p className="text-xs text-slate-600">Flashcards Studied</p>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">{stats.cards_studied_this_week} this week</p>
+                <p className="text-xs text-slate-500 mt-2">{stats.cards_studied_this_week} this week</p>
               </div>
               
-              <div className="card-surface p-4">
+              <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4">
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl" aria-hidden>🦴</span>
+                  <div className="p-2 bg-purple-50 rounded-lg">
+                    <Bone className="w-6 h-6 text-purple-600" />
+                  </div>
                   <div>
-                    <p className="text-2xl font-bold text-foreground">
+                    <p className="text-2xl font-bold text-slate-900">
                       {data.topics.filter(t => t.sources.includes('practical')).reduce((sum, t) => sum + t.reviews, 0)}
                     </p>
-                    <p className="text-xs text-muted-foreground">Practical Completed</p>
+                    <p className="text-xs text-slate-600">Practical Completed</p>
                   </div>
                 </div>
               </div>
               
-              <div className="card-surface p-4">
+              <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4">
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl" aria-hidden>✅</span>
+                  <div className="p-2 bg-emerald-50 rounded-lg">
+                    <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                  </div>
                   <div>
-                    <p className="text-2xl font-bold text-foreground">
+                    <p className="text-2xl font-bold text-slate-900">
                       {data.topics.filter(t => t.sources.includes('mcq')).reduce((sum, t) => sum + t.reviews, 0)}
                     </p>
-                    <p className="text-xs text-muted-foreground">MCQs Completed</p>
+                    <p className="text-xs text-slate-600">MCQs Completed</p>
                   </div>
                 </div>
               </div>
@@ -749,25 +778,28 @@ function Dashboard() {
             {/* MAIN ACTION AREA - Weak Subtopics & Continue Studying */}
             <div className="mt-6 grid gap-6 lg:grid-cols-2">
               {/* Weak Subtopics */}
-              <div className="card-surface p-5">
-                <h2 className="font-semibold text-foreground mb-4">Weak Subtopics</h2>
+              <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5">
+                <h2 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-rose-500" />
+                  Weak Subtopics
+                </h2>
                 {weakGroups.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No weak spots — nice work!</p>
+                  <p className="text-sm text-slate-600">No weak spots — nice work!</p>
                 ) : (
                   <div className="space-y-4">
                     {weakGroups.map((g) => (
                       <div key={g.topic_name}>
-                        <h3 className="text-sm font-semibold text-muted-foreground mb-2">{g.topic_name}</h3>
+                        <h3 className="text-sm font-semibold text-slate-600 mb-2">{g.topic_name}</h3>
                         <div className="space-y-2">
                           {g.items.slice(0, 3).map((s) => (
                             <div key={s.subtopic_id} className="flex items-center gap-3">
-                              <span className="text-sm text-foreground flex-1">
+                              <span className="text-sm text-slate-800 flex-1">
                                 {s.subtopic_name}
-                                <span className="text-muted-foreground text-xs ml-1">({s.category_name})</span>
+                                <span className="text-slate-500 text-xs ml-1">({s.category_name})</span>
                               </span>
-                              <div className="w-24 bg-muted rounded-full h-2">
+                              <div className="w-24 bg-slate-100 rounded-full h-2">
                                 <div 
-                                  className="bg-rose-400 rounded-full h-2"
+                                  className="bg-rose-500 rounded-full h-2"
                                   style={{ width: `${s.accuracy}%` }}
                                 />
                               </div>
@@ -782,19 +814,22 @@ function Dashboard() {
               </div>
               
               {/* Continue Studying */}
-              <div className="card-surface p-5 flex flex-col justify-between">
+              <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5 flex flex-col justify-between">
                 <div>
-                  <h2 className="font-semibold text-foreground mb-4">Continue Studying</h2>
+                  <h2 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                    <Target className="w-5 h-5 text-indigo-600" />
+                    Continue Studying
+                  </h2>
                   {stats.last_topic_studied ? (
                     <>
-                      <p className="text-lg font-semibold text-foreground">{stats.last_topic_studied}</p>
-                      <p className="text-sm text-muted-foreground mt-2">Pick up where you left off.</p>
+                      <p className="text-lg font-semibold text-slate-900">{stats.last_topic_studied}</p>
+                      <p className="text-sm text-slate-600 mt-2">Pick up where you left off.</p>
                     </>
                   ) : (
-                    <p className="text-sm text-muted-foreground">Start a session to see your last topic here.</p>
+                    <p className="text-sm text-slate-600">Start a session to see your last topic here.</p>
                   )}
                 </div>
-                <Link to="/study" className="btn-primary mt-4 w-full justify-center">
+                <Link to="/study" className="mt-4 w-full inline-flex justify-center items-center px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium">
                   {stats.last_topic_studied ? "Resume" : "Start"}
                 </Link>
               </div>
@@ -802,22 +837,25 @@ function Dashboard() {
 
             {/* STRONG SUBTOPICS */}
             {strongGroups.length > 0 && (
-              <div className="mt-6 card-surface p-5">
-                <h2 className="font-semibold text-foreground mb-4">Strong Subtopics</h2>
+              <div className="mt-6 bg-white border border-slate-200 rounded-xl shadow-sm p-5">
+                <h2 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                  <Award className="w-5 h-5 text-emerald-600" />
+                  Strong Subtopics
+                </h2>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {strongGroups.map((g) => (
                     <div key={g.topic_name}>
-                      <h3 className="text-sm font-semibold text-muted-foreground mb-2">{g.topic_name}</h3>
+                      <h3 className="text-sm font-semibold text-slate-600 mb-2">{g.topic_name}</h3>
                       <div className="space-y-2">
                         {g.items.slice(0, 3).map((s) => (
                           <div key={s.subtopic_id} className="flex items-center gap-3">
-                            <span className="text-sm text-foreground flex-1">
+                            <span className="text-sm text-slate-800 flex-1">
                               {s.subtopic_name}
-                              <span className="text-muted-foreground text-xs ml-1">({s.category_name})</span>
+                              <span className="text-slate-500 text-xs ml-1">({s.category_name})</span>
                             </span>
-                            <div className="w-20 bg-muted rounded-full h-2">
+                            <div className="w-20 bg-slate-100 rounded-full h-2">
                               <div 
-                                className="bg-emerald-400 rounded-full h-2"
+                                className="bg-emerald-500 rounded-full h-2"
                                 style={{ width: `${s.accuracy}%` }}
                               />
                             </div>
@@ -842,32 +880,40 @@ function Dashboard() {
             </div>
 
             {/* WEEKLY PROGRESS */}
-            <div className="mt-6 card-surface p-5">
+            <div className="mt-6 bg-white border border-slate-200 rounded-xl shadow-sm p-5">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="font-semibold text-foreground">Weekly Progress</h2>
-                <span className="text-xs text-muted-foreground">Last 7 days</span>
+                <h2 className="font-semibold text-slate-900">Weekly Progress</h2>
+                <span className="text-xs text-slate-500">Last 7 days</span>
               </div>
-                            <div className="flex items-stretch justify-between gap-3 h-48">
+              <div className="flex items-stretch justify-between gap-3 h-48">
                 {weekly.map((w) => {
                   const pct = (w.count / weeklyMax) * 100;
                   const isToday = w.date === new Date().toISOString().slice(0, 10);
                   return (
-                    <div key={w.date} className="flex-1 flex flex-col items-center gap-2">
-                      <span className={`text-xs font-medium ${isToday ? 'text-primary' : 'text-muted-foreground'}`}>
-                        {w.count}
-                      </span>
-                      <div className="w-full flex-1 flex items-end">
-                        <div
-                          className={`w-full rounded-t-lg transition-all ${
-                            isToday ? "bg-primary" : "bg-muted hover:bg-primary/60"
-                          }`}
-                          style={{ height: `${Math.max(pct, 4)}%` }}
-                          aria-label={`${w.count} items on ${w.date}`}
-                        />
+                    <div key={w.date} className="flex-1 flex flex-col items-center gap-2 relative">
+                      {/* Background track */}
+                      <div className="absolute inset-0 flex items-end justify-center pb-8">
+                        <div className="w-full h-full bg-slate-100 rounded-lg" />
                       </div>
-                      <span className={`text-xs ${isToday ? 'font-semibold text-primary' : 'text-muted-foreground'}`}>
-                        {w.label}
-                      </span>
+                      
+                      {/* Content */}
+                      <div className="relative z-10 flex flex-col items-center gap-2 h-full">
+                        <span className={`text-xs font-medium ${isToday ? 'text-indigo-600' : 'text-slate-600'}`}>
+                          {w.count}
+                        </span>
+                        <div className="w-full flex-1 flex items-end">
+                          <div
+                            className={`w-full rounded-t-lg transition-all ${
+                              isToday ? "bg-indigo-600" : "bg-indigo-400 hover:bg-indigo-500"
+                            }`}
+                            style={{ height: `${Math.max(pct, 4)}%` }}
+                            aria-label={`${w.count} items on ${w.date}`}
+                          />
+                        </div>
+                        <span className={`text-xs ${isToday ? 'font-semibold text-indigo-600' : 'text-slate-600'}`}>
+                          {w.label}
+                        </span>
+                      </div>
                     </div>
                   );
                 })}
@@ -875,8 +921,11 @@ function Dashboard() {
             </div>
 
             {/* ACHIEVEMENTS */}
-            <div className="mt-6 card-surface p-5">
-              <h2 className="font-semibold text-foreground mb-4">Achievements</h2>
+            <div className="mt-6 bg-white border border-slate-200 rounded-xl shadow-sm p-5">
+              <h2 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-amber-600" />
+                Achievements
+              </h2>
               <Achievements earned={data.earnedBadges} />
             </div>
           </>
@@ -910,10 +959,10 @@ function ProgressRing({ value, max, size = 72, stroke = 8 }: { value: number; ma
   
   return (
     <svg width={size} height={size} className="-rotate-90" aria-hidden>
-      <circle cx={size / 2} cy={size / 2} r={r} stroke="var(--color-muted)" strokeWidth={stroke} fill="none" />
+      <circle cx={size / 2} cy={size / 2} r={r} stroke="#E2E8F0" strokeWidth={stroke} fill="none" />
       <circle
         cx={size / 2} cy={size / 2} r={r}
-        stroke="var(--color-primary)" strokeWidth={stroke} fill="none"
+        stroke="#4F46E5" strokeWidth={stroke} fill="none"
         strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset}
         className="transition-all duration-300"
       />
@@ -943,49 +992,60 @@ function GoalDialog({
                 
   return (
     <div role="dialog" aria-modal="true" aria-label="Edit daily goals"
-      className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4"
+      className="fixed inset-0 z-50 grid place-items-center bg-slate-900/50 px-4"
       onClick={onClose}
     >
-      <div className="card-surface p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-semibold text-foreground">Daily Goals</h3>
-        <p className="text-sm text-muted-foreground mt-1">Set your daily goals for each study mode.</p>
+      <div className="bg-white border border-slate-200 rounded-xl shadow-lg p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-semibold text-slate-900">Daily Goals</h3>
+        <p className="text-sm text-slate-600 mt-1">Set your daily goals for each study mode.</p>
         
         <div className="mt-4 space-y-3">
           <div>
-            <label className="text-sm font-medium text-foreground">🗂️ Flashcards</label>
+            <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-indigo-600" />
+              Flashcards
+            </label>
             <input
               type="number" min={1} max={500}
               value={flashcards} onChange={(e) => setFlashcards(e.target.value)}
-              className="input-field mt-1"
+              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               aria-label="Flashcards daily goal"
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-foreground">🦴 Practical Mode</label>
+            <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+              <Bone className="w-4 h-4 text-purple-600" />
+              Practical Mode
+            </label>
             <input
               type="number" min={1} max={500}
               value={practical} onChange={(e) => setPractical(e.target.value)}
-              className="input-field mt-1"
+              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               aria-label="Practical mode daily goal"
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-foreground">✅ Clinical MCQs</label>
+            <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              Clinical MCQs
+            </label>
             <input
               type="number" min={1} max={500}
               value={mcq} onChange={(e) => setMcq(e.target.value)}
-              className="input-field mt-1"
+              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               aria-label="MCQ daily goal"
             />
           </div>
         </div>
         
         <div className="mt-6 flex justify-end gap-2">
-          <button onClick={onClose} className="btn-outline" style={{ minHeight: 44 }}>Cancel</button>
+          <button onClick={onClose} className="px-4 py-2 text-slate-700 hover:text-slate-900 border border-slate-200 rounded-lg hover:bg-slate-50 transition font-medium">
+            Cancel
+          </button>
           <button
             onClick={() => valid && onSave({ flashcards: nFlashcards, practical: nPractical, mcq: nMcq })}
             disabled={!valid || pending}
-            className="btn-primary" style={{ minHeight: 44 }}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {pending ? <Spinner className="h-4 w-4" /> : "Save"}
           </button>
