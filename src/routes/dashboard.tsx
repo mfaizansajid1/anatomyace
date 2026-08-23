@@ -10,8 +10,6 @@ import { ExamCountdownCard } from "@/components/ExamCountdownCard";
 import { DailyFactCard } from "@/components/DailyFactCard";
 import { ReminderBanner } from "@/components/ReminderBanner";
 
-
-
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
@@ -41,7 +39,6 @@ type UserStats = {
   exam_name: string | null;
   exam_date: string | null;
 };
-
 
 type SubtopicPerf = {
   subtopic_id: string;
@@ -323,7 +320,6 @@ function Dashboard() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["dashboard", user?.id] }),
   });
 
-
   async function onLogout() {
     await supabase.auth.signOut();
     navigate({ to: "/", replace: true });
@@ -570,20 +566,23 @@ function Dashboard() {
 
       {/* DASHBOARD CONTENT */}
       <section className="mx-auto max-w-6xl px-4 py-8 sm:py-10">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-            {greeting()}{displayName ? `, ${displayName.split(" ")[0]}` : ""} 👋
-          </h1>
+        {/* Header with Greeting and XP */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+              {greeting()}{displayName ? `, ${displayName.split(" ")[0]}` : ""}
+            </h1>
+            <p className="mt-1 text-muted-foreground">Here's your study snapshot for today.</p>
+          </div>
           {data?.xp && (
-            <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary to-teal-500 text-white px-4 py-1.5 text-sm font-bold shadow-md">
-              <span aria-hidden className="text-base">⭐</span>
-              <span>Level {data.xp.level}</span>
-              <span className="opacity-60">|</span>
-              <span className="font-medium opacity-90">{data.xp.total_xp} XP</span>
-            </span>
+            <div className="flex items-center gap-2 bg-primary/10 text-primary rounded-full px-4 py-2">
+              <span aria-hidden className="text-lg">⭐</span>
+              <span className="font-semibold">Level {data.xp.level}</span>
+              <span className="text-muted-foreground">|</span>
+              <span className="font-medium">{data.xp.total_xp} XP</span>
+            </div>
           )}
         </div>
-        <p className="mt-1 text-muted-foreground">Here's your study snapshot for today.</p>
 
         {stats && (
           <ReminderBanner
@@ -596,7 +595,6 @@ function Dashboard() {
         )}
 
         {dashboardQuery.isError && (
-
           <div className="mt-6 card-surface p-6 text-center">
             <p className="text-foreground font-medium">Couldn't load your dashboard.</p>
             <button onClick={() => dashboardQuery.refetch()} className="btn-primary mt-4">Tap to retry</button>
@@ -610,159 +608,278 @@ function Dashboard() {
         )}
 
         {stats && data && (
-          <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Today's Goal */}
-            <button
-              onClick={() => setGoalOpen(true)}
-              className="card-surface p-5 text-left hover:brightness-[1.02] transition"
-              aria-label="Edit today's goals"
-            >
-              <div className="flex items-center justify-between">
-                <h2 className="font-semibold text-foreground">Today's Goal</h2>
-                <span className="text-xs text-muted-foreground">Tap to edit</span>
+          <>
+            {/* HERO SECTION - Today's Study Progress */}
+            <div className="mt-6 bg-card-surface rounded-2xl p-6 sm:p-8">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-semibold text-foreground">Today's Study Progress</h2>
+                <button
+                  onClick={() => setGoalOpen(true)}
+                  className="text-sm text-primary hover:text-primary/80 transition"
+                  aria-label="Edit today's goals"
+                >
+                  Edit goals
+                </button>
               </div>
-              <div className="mt-4 flex items-center gap-4">
-                <ProgressRing value={totalToday} max={totalGoal} />
+              
+              <div className="flex flex-col lg:flex-row gap-8 items-center">
+                {/* Circular Progress */}
+                <div className="relative flex-shrink-0">
+                  <ProgressRing value={totalToday} max={totalGoal} size={140} stroke={12} />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-3xl font-bold text-foreground">{totalToday}</span>
+                    <span className="text-sm text-muted-foreground">of {totalGoal}</span>
+                  </div>
+                </div>
+                
+                {/* Category Progress */}
+                <div className="flex-1 w-full space-y-4">
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-sm font-medium text-foreground">Flashcards</span>
+                      <span className="text-sm text-muted-foreground">{todayFlashcards}/{stats.flashcards_daily_goal}</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div 
+                        className="bg-primary rounded-full h-2 transition-all"
+                        style={{ width: `${Math.min(100, (todayFlashcards / Math.max(1, stats.flashcards_daily_goal)) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-sm font-medium text-foreground">Practical</span>
+                      <span className="text-sm text-muted-foreground">{todayPractical}/{stats.practical_daily_goal}</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div 
+                        className="bg-primary rounded-full h-2 transition-all"
+                        style={{ width: `${Math.min(100, (todayPractical / Math.max(1, stats.practical_daily_goal)) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-sm font-medium text-foreground">MCQs</span>
+                      <span className="text-sm text-muted-foreground">{todayMcq}/{stats.mcq_daily_goal}</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div 
+                        className="bg-primary rounded-full h-2 transition-all"
+                        style={{ width: `${Math.min(100, (todayMcq / Math.max(1, stats.mcq_daily_goal)) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Primary CTA */}
+              <div className="mt-6 flex justify-center">
+                <Link to="/study" className="btn-primary inline-flex items-center gap-2 px-6 py-3 text-base font-semibold">
+                  {stats.last_topic_studied ? (
+                    <>
+                      <span>Continue Studying</span>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                      </svg>
+                    </>
+                  ) : (
+                    <>
+                      <span>Start Studying</span>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                      </svg>
+                    </>
+                  )}
+                </Link>
+              </div>
+            </div>
+
+            {/* COMPACT METRICS GRID */}
+            <div className="mt-6 grid gap-4 grid-cols-2 lg:grid-cols-4">
+              <div className="card-surface p-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl" aria-hidden>🔥</span>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{stats.current_streak}</p>
+                    <p className="text-xs text-muted-foreground">Day Streak</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">Longest: {stats.longest_streak} days</p>
+              </div>
+              
+              <div className="card-surface p-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl" aria-hidden>📚</span>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{stats.cards_studied_total}</p>
+                    <p className="text-xs text-muted-foreground">Flashcards Studied</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">{stats.cards_studied_this_week} this week</p>
+              </div>
+              
+              <div className="card-surface p-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl" aria-hidden>🦴</span>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">
+                      {data.topics.filter(t => t.sources.includes('practical')).reduce((sum, t) => sum + t.reviews, 0)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Practical Completed</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="card-surface p-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl" aria-hidden>✅</span>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">
+                      {data.topics.filter(t => t.sources.includes('mcq')).reduce((sum, t) => sum + t.reviews, 0)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">MCQs Completed</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* MAIN ACTION AREA - Weak Subtopics & Continue Studying */}
+            <div className="mt-6 grid gap-6 lg:grid-cols-2">
+              {/* Weak Subtopics */}
+              <div className="card-surface p-5">
+                <h2 className="font-semibold text-foreground mb-4">Weak Subtopics</h2>
+                {weakGroups.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No weak spots — nice work!</p>
+                ) : (
+                  <div className="space-y-4">
+                    {weakGroups.map((g) => (
+                      <div key={g.topic_name}>
+                        <h3 className="text-sm font-semibold text-muted-foreground mb-2">{g.topic_name}</h3>
+                        <div className="space-y-2">
+                          {g.items.slice(0, 3).map((s) => (
+                            <div key={s.subtopic_id} className="flex items-center gap-3">
+                              <span className="text-sm text-foreground flex-1">
+                                {s.subtopic_name}
+                                <span className="text-muted-foreground text-xs ml-1">({s.category_name})</span>
+                              </span>
+                              <div className="w-24 bg-muted rounded-full h-2">
+                                <div 
+                                  className="bg-rose-400 rounded-full h-2"
+                                  style={{ width: `${s.accuracy}%` }}
+                                />
+                              </div>
+                              <span className="text-xs font-semibold text-rose-600 w-10 text-right">{s.accuracy}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              {/* Continue Studying */}
+              <div className="card-surface p-5 flex flex-col justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-foreground">
-                    {totalToday} <span className="text-muted-foreground text-base font-medium">/ {totalGoal}</span>
-                  </p>
-                  <p className="text-sm text-muted-foreground">items today</p>
+                  <h2 className="font-semibold text-foreground mb-4">Continue Studying</h2>
+                  {stats.last_topic_studied ? (
+                    <>
+                      <p className="text-lg font-semibold text-foreground">{stats.last_topic_studied}</p>
+                      <p className="text-sm text-muted-foreground mt-2">Pick up where you left off.</p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Start a session to see your last topic here.</p>
+                  )}
+                </div>
+                <Link to="/study" className="btn-primary mt-4 w-full justify-center">
+                  {stats.last_topic_studied ? "Resume" : "Start"}
+                </Link>
+              </div>
+            </div>
+
+            {/* STRONG SUBTOPICS */}
+            {strongGroups.length > 0 && (
+              <div className="mt-6 card-surface p-5">
+                <h2 className="font-semibold text-foreground mb-4">Strong Subtopics</h2>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {strongGroups.map((g) => (
+                    <div key={g.topic_name}>
+                      <h3 className="text-sm font-semibold text-muted-foreground mb-2">{g.topic_name}</h3>
+                      <div className="space-y-2">
+                        {g.items.slice(0, 3).map((s) => (
+                          <div key={s.subtopic_id} className="flex items-center gap-3">
+                            <span className="text-sm text-foreground flex-1">
+                              {s.subtopic_name}
+                              <span className="text-muted-foreground text-xs ml-1">({s.category_name})</span>
+                            </span>
+                            <div className="w-20 bg-muted rounded-full h-2">
+                              <div 
+                                className="bg-emerald-400 rounded-full h-2"
+                                style={{ width: `${s.accuracy}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-semibold text-emerald-600 w-10 text-right">{s.accuracy}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <div className="mt-4 space-y-2 text-sm">
-                <p className="text-foreground">🗂️ Flashcards: {todayFlashcards}/{stats.flashcards_daily_goal}</p>
-                <p className="text-foreground">🦴 Practical: {todayPractical}/{stats.practical_daily_goal}</p>
-                <p className="text-foreground">✅ MCQs: {todayMcq}/{stats.mcq_daily_goal}</p>
-              </div>
-            </button>
+            )}
 
-            {/* Streak */}
-            <div className="card-surface p-5">
-              <h2 className="font-semibold text-foreground">Study Streak</h2>
-              <div className="mt-4 flex items-baseline gap-2">
-                <span aria-hidden className="text-3xl">🔥</span>
-                <p className="text-4xl font-bold text-foreground">{stats.current_streak}</p>
-                <span className="text-muted-foreground">days</span>
-              </div>
-              <p className="text-sm text-muted-foreground mt-2">Longest: {stats.longest_streak} days</p>
+            {/* EXAM COUNTDOWN & DAILY FACT */}
+            <div className="mt-6 grid gap-6 lg:grid-cols-2">
+              <ExamCountdownCard
+                settings={{ exam_name: stats.exam_name ?? null, exam_date: stats.exam_date ?? null }}
+                pending={updateExam.isPending}
+                onSave={(s) => updateExam.mutate(s)}
+              />
+              <DailyFactCard />
             </div>
 
-            {/* Items Studied */}
-            <div className="card-surface p-5">
-              <h2 className="font-semibold text-foreground">Items Studied</h2>
-              <div className="mt-4 space-y-2">
-                <p className="text-sm text-foreground">
-                  🗂️ <span className="font-semibold">{stats.cards_studied_total}</span>{" "}
-                  <span className="text-muted-foreground">flashcards</span>
-                </p>
-                <p className="text-sm text-foreground">
-                  🦴 <span className="font-semibold">{data.topics.reduce((sum, t) => sum + t.reviews, 0)}</span>{" "}
-                  <span className="text-muted-foreground">practical</span>
-                </p>
-                <p className="text-sm text-foreground">
-                  ✅ <span className="font-semibold">{data.topics.reduce((sum, t) => sum + t.reviews, 0)}</span>{" "}
-                  <span className="text-muted-foreground">MCQs</span>
-                </p>
-              </div>
-              <p className="mt-3 text-sm text-foreground">
-                <span className="font-semibold">{stats.cards_studied_this_week}</span>{" "}
-                <span className="text-muted-foreground">this week</span>
-              </p>
-            </div>
-
-            {/* Weak / Strong Subtopics */}
-            <div className="card-surface p-5 sm:col-span-2">
-              {(data.subtopics.length === 0) ? (
-                <div className="text-center py-6">
-                  <p className="font-semibold text-foreground">Ready to start your first study session?</p>
-                  <p className="text-sm text-muted-foreground mt-1">Your weak and strong subtopics will appear here.</p>
-                </div>
-              ) : (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <SubtopicGroups title="Weak Subtopics" groups={weakGroups} emptyText="No weak spots — nice!" />
-                  <SubtopicGroups title="Strong Subtopics" groups={strongGroups} emptyText="Study more to see strengths." />
-                </div>
-              )}
-            </div>
-
-            {/* Weak / Strong Topics */}
-            <div className="card-surface p-5 sm:col-span-2">
-              {(data.topics.length === 0) ? (
-                <div className="text-center py-6">
-                  <p className="font-semibold text-foreground">No topic data yet</p>
-                  <p className="text-sm text-muted-foreground mt-1">Complete practical mode or MCQs to see topic performance.</p>
-                </div>
-              ) : (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <TopicGroups title="Weak Topics" groups={weakTopicGroups} emptyText="No weak topics — nice!" />
-                  <TopicGroups title="Strong Topics" groups={strongTopicGroups} emptyText="Study more to see strengths." />
-                </div>
-              )}
-            </div>
-
-            {/* Exam Countdown */}
-            <ExamCountdownCard
-              settings={{ exam_name: stats.exam_name ?? null, exam_date: stats.exam_date ?? null }}
-              pending={updateExam.isPending}
-              onSave={(s) => updateExam.mutate(s)}
-            />
-
-            {/* Daily Anatomy Fact */}
-            <DailyFactCard />
-
-
-
-            {/* Continue Studying */}
-            <div className="card-surface p-5">
-              <h2 className="font-semibold text-foreground">Continue Studying</h2>
-              {stats.last_topic_studied ? (
-                <>
-                  <p className="mt-3 text-foreground">{stats.last_topic_studied}</p>
-                  <p className="text-sm text-muted-foreground">Pick up where you left off.</p>
-                  <Link to="/study" className="btn-primary mt-4 self-start">Resume</Link>
-                </>
-              ) : (
-                <p className="mt-3 text-sm text-muted-foreground">Start a session to see your last topic here.</p>
-              )}
-            </div>
-
-            {/* Weekly chart */}
-            <div className="card-surface p-5 sm:col-span-2 lg:col-span-3">
-              <div className="flex items-center justify-between">
-                <h2 className="font-semibold text-foreground">Progress Overview</h2>
+            {/* WEEKLY PROGRESS */}
+            <div className="mt-6 card-surface p-5">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="font-semibold text-foreground">Weekly Progress</h2>
                 <span className="text-xs text-muted-foreground">Last 7 days</span>
               </div>
-              <div className="mt-6 flex items-stretch justify-between gap-2 h-40">
+              <div className="flex items-end justify-between gap-3 h-48">
                 {weekly.map((w) => {
                   const pct = (w.count / weeklyMax) * 100;
                   const isToday = w.date === new Date().toISOString().slice(0, 10);
                   return (
                     <div key={w.date} className="flex-1 flex flex-col items-center gap-2">
-                      <span className="text-xs text-foreground font-medium">{w.count}</span>
+                      <span className={`text-xs font-medium ${isToday ? 'text-primary' : 'text-muted-foreground'}`}>
+                        {w.count}
+                      </span>
                       <div className="w-full flex-1 flex items-end">
                         <div
-                          className={`w-full rounded-t-lg transition-all ${isToday ? "bg-primary" : "bg-accent/60"}`}
+                          className={`w-full rounded-t-lg transition-all ${
+                            isToday ? "bg-primary" : "bg-muted hover:bg-primary/60"
+                          }`}
                           style={{ height: `${Math.max(pct, 4)}%` }}
                           aria-label={`${w.count} items on ${w.date}`}
                         />
                       </div>
-                      <span className="text-xs text-muted-foreground">{w.label}</span>
+                      <span className={`text-xs ${isToday ? 'font-semibold text-primary' : 'text-muted-foreground'}`}>
+                        {w.label}
+                      </span>
                     </div>
                   );
                 })}
               </div>
             </div>
 
-            {/* Achievements */}
-            <div className="card-surface p-5 sm:col-span-2 lg:col-span-3">
-              <div className="flex items-center justify-between">
-                <h2 className="font-semibold text-foreground">Achievements</h2>
-              </div>
+            {/* ACHIEVEMENTS */}
+            <div className="mt-6 card-surface p-5">
+              <h2 className="font-semibold text-foreground mb-4">Achievements</h2>
               <Achievements earned={data.earnedBadges} />
             </div>
-
-          </div>
+          </>
         )}
       </section>
 
@@ -785,80 +902,12 @@ function Dashboard() {
   );
 }
 
-function SubtopicGroups({ title, groups, emptyText }: { title: string; groups: GroupedPerf[]; emptyText: string }) {
-  return (
-    <div>
-      <h3 className="font-bold text-foreground text-lg">{title}</h3>
-      {groups.length === 0 ? (
-        <p className="mt-3 text-sm text-muted-foreground">{emptyText}</p>
-      ) : (
-        <div className="mt-3 space-y-4">
-          {groups.map((g) => (
-            <div key={g.topic_name}>
-              <h4 className="text-sm font-semibold text-muted-foreground mb-2">{g.topic_name}</h4>
-              <ul className="space-y-2">
-                {g.items.map((s) => (
-                  <li key={s.subtopic_id} className="flex items-center justify-between rounded-xl bg-muted/60 px-3 py-2">
-                    <span className="text-sm text-foreground">
-                      {s.subtopic_name}{" "}
-                      <span className="text-muted-foreground">({s.category_name})</span>
-                    </span>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${accColor(s.accuracy)}`}>
-                      {s.accuracy}%
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function TopicGroups({ title, groups, emptyText }: { title: string; groups: GroupedTopicPerf[]; emptyText: string }) {
-  return (
-    <div>
-      <h3 className="font-bold text-foreground text-lg">{title}</h3>
-      {groups.length === 0 ? (
-        <p className="mt-3 text-sm text-muted-foreground">{emptyText}</p>
-      ) : (
-        <div className="mt-3 space-y-4">
-          {groups.map((g) => (
-            <div key={g.topic_name}>
-              <h4 className="text-sm font-semibold text-muted-foreground mb-2">{g.topic_name}</h4>
-              <ul className="space-y-2">
-                {g.items.map((t) => (
-                  <li key={t.category_id} className="flex items-center justify-between rounded-xl bg-muted/60 px-3 py-2">
-                    <span className="text-sm text-foreground">
-                      {t.category_name}{" "}
-                      <span className="text-muted-foreground">
-                        {t.sources.includes('practical') && <span title="Practical Mode">🦴</span>}
-                        {t.sources.includes('mcq') && <span title="Clinical MCQs">✅</span>}
-                      </span>
-                    </span>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${accColor(t.accuracy)}`}>
-                      {t.accuracy}%
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ProgressRing({ value, max }: { value: number; max: number }) {
-  const size = 72;
-  const stroke = 8;
+function ProgressRing({ value, max, size = 72, stroke = 8 }: { value: number; max: number; size?: number; stroke?: number }) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const pct = Math.min(1, max > 0 ? value / max : 0);
   const offset = c * (1 - pct);
+  
   return (
     <svg width={size} height={size} className="-rotate-90" aria-hidden>
       <circle cx={size / 2} cy={size / 2} r={r} stroke="var(--color-muted)" strokeWidth={stroke} fill="none" />
@@ -866,6 +915,7 @@ function ProgressRing({ value, max }: { value: number; max: number }) {
         cx={size / 2} cy={size / 2} r={r}
         stroke="var(--color-primary)" strokeWidth={stroke} fill="none"
         strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset}
+        className="transition-all duration-300"
       />
     </svg>
   );
