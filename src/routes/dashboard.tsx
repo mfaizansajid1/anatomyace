@@ -786,7 +786,7 @@ function Dashboard() {
               </div>
             </div>
 
-            {/* MAIN ACTION AREA - Weak Subtopics & Continue Studying */}
+            {/* WEAK & STRONG SUBTOPICS SIDE BY SIDE */}
             <div className="mt-6 grid gap-6 lg:grid-cols-2">
               {/* Weak Subtopics */}
               <div className="card-surface p-5 transition-colors duration-200">
@@ -824,61 +824,42 @@ function Dashboard() {
                 )}
               </div>
               
-              {/* Continue Studying */}
-              <div className="card-surface p-5 flex flex-col justify-between transition-colors duration-200">
-                <div>
-                  <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                    <Target className="w-5 h-5 text-primary" />
-                    Continue Studying
-                  </h2>
-                  {stats.last_topic_studied ? (
-                    <>
-                      <p className="text-lg font-semibold text-foreground">{stats.last_topic_studied}</p>
-                      <p className="text-sm text-muted-foreground mt-2">Pick up where you left off.</p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Start a session to see your last topic here.</p>
-                  )}
-                </div>
-                <Link to="/study" className="mt-4 w-full btn-primary justify-center">
-                  {stats.last_topic_studied ? "Resume" : "Start"}
-                </Link>
-              </div>
-            </div>
-
-            {/* STRONG SUBTOPICS */}
-            {strongGroups.length > 0 && (
-              <div className="mt-6 card-surface p-5 transition-colors duration-200">
+              {/* Strong Subtopics */}
+              <div className="card-surface p-5 transition-colors duration-200">
                 <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
                   <Award className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                   Strong Subtopics
                 </h2>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {strongGroups.map((g) => (
-                    <div key={g.topic_name}>
-                      <h3 className="text-sm font-semibold text-foreground mb-2">{g.topic_name}</h3>
-                      <div className="space-y-2">
-                        {g.items.slice(0, 3).map((s) => (
-                          <div key={s.subtopic_id} className="flex items-center gap-3">
-                            <span className="text-sm text-foreground flex-1">
-                              {s.subtopic_name}
-                              <span className="text-muted-foreground text-xs ml-1">({s.category_name})</span>
-                            </span>
-                            <div className="w-20 bg-muted rounded-full h-2">
-                              <div 
-                                className="bg-emerald-500 rounded-full h-2"
-                                style={{ width: `${s.accuracy}%` }}
-                              />
+                {strongGroups.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Keep studying to build your strong areas!</p>
+                ) : (
+                  <div className="space-y-4">
+                    {strongGroups.map((g) => (
+                      <div key={g.topic_name}>
+                        <h3 className="text-sm font-semibold text-foreground mb-2">{g.topic_name}</h3>
+                        <div className="space-y-2">
+                          {g.items.slice(0, 3).map((s) => (
+                            <div key={s.subtopic_id} className="flex items-center gap-3">
+                              <span className="text-sm text-foreground flex-1">
+                                {s.subtopic_name}
+                                <span className="text-muted-foreground text-xs ml-1">({s.category_name})</span>
+                              </span>
+                              <div className="w-24 bg-muted rounded-full h-2">
+                                <div 
+                                  className="bg-emerald-500 rounded-full h-2"
+                                  style={{ width: `${s.accuracy}%` }}
+                                />
+                              </div>
+                              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 w-10 text-right">{s.accuracy}%</span>
                             </div>
-                            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 w-10 text-right">{s.accuracy}%</span>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
 
             {/* EXAM COUNTDOWN & DAILY FACT */}
             <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -890,7 +871,7 @@ function Dashboard() {
               <DailyFactCard />
             </div>
 
-            {/* WEEKLY PROGRESS - REDESIGNED */}
+            {/* WEEKLY PROGRESS */}
             <div className="mt-6 card-surface p-5 transition-colors duration-200">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="font-semibold text-foreground">Weekly Progress</h2>
@@ -911,8 +892,6 @@ function Dashboard() {
                       
                       {/* Bar container */}
                       <div className="w-full h-36 sm:h-40 md:h-44 relative flex items-end justify-center">
-                      
-                        
                         {/* Fill bar */}
                         <div
                           className={`relative w-3/4 max-w-[48px] rounded-t-lg transition-all duration-300 ${
