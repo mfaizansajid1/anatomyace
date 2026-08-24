@@ -297,13 +297,17 @@ function ProgressPage() {
             {/* 2. Study Activity Heatmap */}
             <div className="card-surface p-5">
               <h2 className="font-semibold text-foreground">Study Activity — Last 30 Days</h2>
-              <div className="mt-4 grid grid-cols-[repeat(30,minmax(0,1fr))] gap-1.5 overflow-x-auto">
-                {heatmapDays.map((d) => (
-                  <div
-                    key={d.date}
-                    title={`${d.count} cards on ${d.date}`}
-                    className={`aspect-square rounded-md ${heatColor(d.count)}`}
-                  />
+              <div className="mt-4 space-y-1.5">
+                {[0, 1, 2].map((row) => (
+                  <div key={row} className="grid grid-cols-10 gap-1.5">
+                    {heatmapDays.slice(row * 10, row * 10 + 10).map((d) => (
+                      <div
+                        key={d.date}
+                        title={`${d.count} cards on ${d.date}`}
+                        className={`aspect-square rounded-md ${heatColor(d.count)}`}
+                      />
+                    ))}
+                  </div>
                 ))}
               </div>
               <p className="mt-3 text-xs text-muted-foreground">
