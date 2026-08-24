@@ -6,6 +6,7 @@ import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
+import { checkCelebrations } from "@/lib/celebrate";
 
 export const Route = createFileRoute("/review")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -130,7 +131,7 @@ function StudyPage() {
 
   const qc = useQueryClient();
 
-const cardsQ = useQuery({
+  const cardsQ = useQuery({
     queryKey: ["study", "cards", subtopicId, examMode],
     enabled: signedIn && started && !!subtopicId,
     queryFn: async () => {
@@ -156,7 +157,7 @@ const cardsQ = useQuery({
         reviewMap = new Map((reviews ?? []).map((r) => [r.flashcard_id, r.next_review_date]));
       }
 
-     if (examMode) {
+      if (examMode) {
         return cards as Flashcard[];
       }
       const nowMs = Date.now();
@@ -181,7 +182,7 @@ const cardsQ = useQuery({
       setPrevBadges(new Set((badges ?? []).map((b) => b.badge_id)));
       setGoalCelebrated(false);
     })();
-  }, [started]);;
+  }, [started]);
 
   const cards = useMemo(() => cardsQ.data ?? [], [cardsQ.data]);
   const current = cards[index];
@@ -220,39 +221,7 @@ const cardsQ = useQuery({
       }
     });
 
-    const { data: u } = await supabase.auth.getUser();
-    if (!u.user) return;
-
-    const { data: stats } = await supabase
-      .from("user_stats")
-      .select("cards_studied_today, daily_goal")
-      .eq("user_id", u.user.id)
-      .maybeSingle();
-
-    if (stats && !goalCelebrated && stats.cards_studied_today >= stats.daily_goal) {
-      toast.success(`🎉 Daily goal complete! You've studied ${stats.cards_studied_today} cards today.`);
-      setGoalCelebrated(true);
-    }
-
-    const { data: badges } = await supabase
-      .from("user_achievements")
-      .select("badge_id")
-      .eq("user_id", u.user.id);
-
-    const badgeNames: Record<string, string> = {
-      first_session: "First Steps",
-      streak_7: "7-Day Streak",
-      century_100: "Century Club",
-      perfectionist_10: "Perfectionist",
-    };
-
-    const newBadges = (badges ?? []).filter((b) => !prevBadges.has(b.badge_id));
-    newBadges.forEach((b) => {
-      toast.success(`🏆 Achievement unlocked: ${badgeNames[b.badge_id] ?? b.badge_id}!`);
-    });
-    if (newBadges.length > 0) {
-      setPrevBadges(new Set((badges ?? []).map((b) => b.badge_id)));
-    }
+    await checkCelebrations(prevBadges, goalCelebrated, setGoalCelebrated, setPrevBadges);
   }
 
   function restartSession() {
