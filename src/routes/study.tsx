@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { BookOpen, Bone, ClipboardCheck } from "lucide-react";
 
 export const Route = createFileRoute("/study")({
   head: () => ({
@@ -70,7 +71,7 @@ function StudyHubPage() {
             className="card-surface p-6 flex flex-col gap-2 hover:shadow-lg transition"
             style={{ minHeight: 160 }}
           >
-            <span aria-hidden className="text-3xl">🗂️</span>
+            <BookOpen className="w-8 h-8 text-primary" aria-hidden="true" />
             <h2 className="text-lg font-semibold text-foreground">Flashcards</h2>
             <p className="text-sm text-muted-foreground">
               Spaced-repetition question and answer cards by subtopic.
@@ -82,19 +83,19 @@ function StudyHubPage() {
             className="card-surface p-6 flex flex-col gap-2 hover:shadow-lg transition"
             style={{ minHeight: 160 }}
           >
-            <span aria-hidden className="text-3xl">🦴</span>
+            <Bone className="w-8 h-8 text-primary" aria-hidden="true" />
             <h2 className="text-lg font-semibold text-foreground">Practical Mode</h2>
             <p className="text-sm text-muted-foreground">
               Identify structures from real specimen and diagram images.
             </p>
           </Link>
 
-                    <Link
+          <Link
             to="/mcq"
             className="card-surface p-6 flex flex-col gap-2 hover:shadow-lg transition"
             style={{ minHeight: 160 }}
           >
-            <span aria-hidden className="text-3xl">✅</span>
+            <ClipboardCheck className="w-8 h-8 text-primary" aria-hidden="true" />
             <h2 className="text-lg font-semibold text-foreground">Clinical MCQs</h2>
             <p className="text-sm text-muted-foreground">
               Exam-style clinical multiple-choice questions with instant feedback.
