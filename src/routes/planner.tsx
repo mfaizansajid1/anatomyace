@@ -38,13 +38,17 @@ type CategoryRow = {
 
 type StudyType = "flashcard" | "practical" | "mcq";
 
-type DraftDay = {
-  day_number: number;
-  plan_date: string;
+type DraftItem = {
   study_type: StudyType;
   subtopic_id: string;
   category_id: string;
   target_card_count: number;
+};
+
+type DraftDay = {
+  day_number: number;
+  plan_date: string;
+  items: DraftItem[];
 };
 
 function todayStr() {
@@ -68,6 +72,15 @@ const studyTypeMeta: Record<StudyType, { icon: string; label: string }> = {
   practical: { icon: "🦴", label: "Practical" },
   mcq: { icon: "✅", label: "MCQs" },
 };
+
+function createDefaultItem(): DraftItem {
+  return {
+    study_type: "flashcard",
+    subtopic_id: "",
+    category_id: "",
+    target_card_count: 10,
+  };
+}
 
 function PlannerPage() {
   const navigate = useNavigate();
@@ -303,61 +316,99 @@ function PlannerPage() {
     const start = todayStr();
     const days: DraftDay[] = [];
 
+    // Build a list of all study items to distribute
+    const allItems: DraftItem[] = [];
+    
     // Distribution: ~50% flashcards, 25% practical, 25% MCQ
     let flashcardIdx = 0;
     let practicalIdx = 0;
     let mcqIdx = 0;
-    let typeCounter = 0;
 
-    for (let i = 0; i < totalDays; i++) {
-      let studyType: StudyType;
-      let subtopicId = "";
-      let categoryId = "";
+    // Determine total number of items to create (aim for ~2 items per day)
+    const totalItemsTarget = Math.min(
+      totalDays * 2,
+      flashcardPool.length + practicalCats.length + mcqCats.length
+    );
 
-      // Determine type based on distribution pattern
-      const pattern = typeCounter % 4;
+    for (let i = 0; i < totalItemsTarget; i++) {
+      const pattern = i % 4;
       if (pattern < 2 && flashcardPool.length > 0) {
-        // Flashcard day (50%)
-        studyType = "flashcard";
-        subtopicId = flashcardPool[flashcardIdx % flashcardPool.length].id;
+        // Flashcard item (50%)
+        allItems.push({
+          study_type: "flashcard",
+          subtopic_id: flashcardPool[flashcardIdx % flashcardPool.length].id,
+          category_id: "",
+          target_card_count: 10,
+        });
         flashcardIdx++;
       } else if (pattern === 2 && practicalCats.length > 0) {
-        // Practical day (25%)
-        studyType = "practical";
-        categoryId = practicalCats[practicalIdx % practicalCats.length].id;
+        // Practical item (25%)
+        allItems.push({
+          study_type: "practical",
+          subtopic_id: "",
+          category_id: practicalCats[practicalIdx % practicalCats.length].id,
+          target_card_count: 10,
+        });
         practicalIdx++;
       } else if (pattern === 3 && mcqCats.length > 0) {
-        // MCQ day (25%)
-        studyType = "mcq";
-        categoryId = mcqCats[mcqIdx % mcqCats.length].id;
+        // MCQ item (25%)
+        allItems.push({
+          study_type: "mcq",
+          subtopic_id: "",
+          category_id: mcqCats[mcqIdx % mcqCats.length].id,
+          target_card_count: 10,
+        });
         mcqIdx++;
       } else {
         // Fallback: use whatever is available
         if (flashcardPool.length > 0) {
-          studyType = "flashcard";
-          subtopicId = flashcardPool[flashcardIdx % flashcardPool.length].id;
+          allItems.push({
+            study_type: "flashcard",
+            subtopic_id: flashcardPool[flashcardIdx % flashcardPool.length].id,
+            category_id: "",
+            target_card_count: 10,
+          });
           flashcardIdx++;
         } else if (practicalCats.length > 0) {
-          studyType = "practical";
-          categoryId = practicalCats[practicalIdx % practicalCats.length].id;
+          allItems.push({
+            study_type: "practical",
+            subtopic_id: "",
+            category_id: practicalCats[practicalIdx % practicalCats.length].id,
+            target_card_count: 10,
+          });
           practicalIdx++;
-        } else {
-          studyType = "mcq";
-          categoryId = mcqCats[mcqIdx % mcqCats.length].id;
+        } else if (mcqCats.length > 0) {
+          allItems.push({
+            study_type: "mcq",
+            subtopic_id: "",
+            category_id: mcqCats[mcqIdx % mcqCats.length].id,
+            target_card_count: 10,
+          });
           mcqIdx++;
         }
       }
+    }
 
+    // Distribute items across days
+    const itemsPerDay = Math.ceil(allItems.length / totalDays);
+    for (let dayIdx = 0; dayIdx < totalDays; dayIdx++) {
+      const dayItems = allItems.slice(dayIdx * itemsPerDay, (dayIdx + 1) * itemsPerDay);
+      if (dayItems.length > 0) {
+        days.push({
+          day_number: dayIdx + 1,
+          plan_date: addDays(start, dayIdx),
+          items: dayItems,
+        });
+      }
+    }
+
+    // Ensure at least one day exists
+    if (days.length === 0) {
       days.push({
-        day_number: i + 1,
-        plan_date: addDays(start, i),
-        study_type: studyType,
-        subtopic_id: subtopicId,
-        category_id: categoryId,
-        target_card_count: 20,
+        day_number: 1,
+        plan_date: start,
+        items: [createDefaultItem()],
       });
-
-      typeCounter++;
     }
 
     setDraft(days);
@@ -372,16 +423,55 @@ function PlannerPage() {
     const days: DraftDay[] = Array.from({ length: totalDays }, (_, i) => ({
       day_number: i + 1,
       plan_date: addDays(start, i),
-      study_type: "flashcard" as StudyType,
-      subtopic_id: "",
-      category_id: "",
-      target_card_count: 20,
+      items: [createDefaultItem()],
     }));
     setDraft(days);
   }
 
   function updateDraftDay(i: number, patch: Partial<DraftDay>) {
     setDraft((d) => (d ? d.map((x, idx) => (idx === i ? { ...x, ...patch } : x)) : d));
+  }
+
+  function updateDraftItem(dayIdx: number, itemIdx: number, patch: Partial<DraftItem>) {
+    setDraft((d) => {
+      if (!d) return d;
+      return d.map((day, idx) => {
+        if (idx !== dayIdx) return day;
+        const items = day.items.map((item, itemIdx2) => {
+          if (itemIdx2 !== itemIdx) return item;
+          return { ...item, ...patch };
+        });
+        return { ...day, items };
+      });
+    });
+  }
+
+  function addDraftItem(dayIdx: number) {
+    setDraft((d) => {
+      if (!d) return d;
+      return d.map((day, idx) => {
+        if (idx !== dayIdx) return day;
+        return { ...day, items: [...day.items, createDefaultItem()] };
+      });
+    });
+  }
+
+  function removeDraftItem(dayIdx: number, itemIdx: number) {
+    setDraft((d) => {
+      if (!d) return d;
+      const day = d[dayIdx];
+      if (!day) return d;
+      const items = day.items.filter((_, idx) => idx !== itemIdx);
+      if (items.length === 0) {
+        // Remove the entire day if it has no items left
+        return d.filter((_, idx) => idx !== dayIdx).map((x, idx) => ({
+          ...x,
+          day_number: idx + 1,
+          plan_date: addDays(todayStr(), idx),
+        }));
+      }
+      return d.map((x, idx) => (idx === dayIdx ? { ...x, items } : x));
+    });
   }
 
   function removeDraftDay(i: number) {
@@ -414,10 +504,7 @@ function PlannerPage() {
         {
           day_number: list.length + 1,
           plan_date: addDays(start, list.length),
-          study_type: "flashcard" as StudyType,
-          subtopic_id: "",
-          category_id: "",
-          target_card_count: 20,
+          items: [createDefaultItem()],
         },
       ];
     });
@@ -425,15 +512,30 @@ function PlannerPage() {
 
   async function savePlan() {
     if (!draft || draft.length === 0) return;
-    const filled = draft.filter((d) => 
-      (d.study_type === "mcq" && d.category_id) || 
-      (d.study_type === "practical" && d.category_id) || 
-      (d.study_type === "flashcard" && d.subtopic_id)
+    
+    // Flatten the nested structure for saving
+    const flatRows = draft.flatMap((day) => 
+      day.items
+        .filter((item) => 
+          (item.study_type === "mcq" && item.category_id) || 
+          (item.study_type === "practical" && item.category_id) || 
+          (item.study_type === "flashcard" && item.subtopic_id)
+        )
+        .map((item) => ({
+          day_number: day.day_number,
+          plan_date: day.plan_date,
+          study_type: item.study_type,
+          subtopic_id: item.study_type === "flashcard" ? item.subtopic_id : null,
+          category_id: (item.study_type === "practical" || item.study_type === "mcq") ? item.category_id : null,
+          target_card_count: item.target_card_count,
+        }))
     );
-    if (filled.length === 0) {
+
+    if (flatRows.length === 0) {
       toast.error("Pick at least one study area for your plan.");
       return;
     }
+
     setSaving(true);
     try {
       const { data: u } = await supabase.auth.getUser();
@@ -454,14 +556,14 @@ function PlannerPage() {
       if (error) throw error;
 
       const { error: dErr } = await supabase.from("revision_plan_days").insert(
-        filled.map((d, i) => ({
+        flatRows.map((row) => ({
           plan_id: plan.id,
-          day_number: i + 1,
-          plan_date: addDays(start, i),
-          study_type: d.study_type,
-          subtopic_id: d.study_type === "flashcard" ? d.subtopic_id : null,
-          category_id: (d.study_type === "practical" || d.study_type === "mcq") ? d.category_id : null,
-          target_card_count: d.target_card_count,
+          day_number: row.day_number,
+          plan_date: row.plan_date,
+          study_type: row.study_type,
+          subtopic_id: row.subtopic_id,
+          category_id: row.category_id,
+          target_card_count: row.target_card_count,
         })),
       );
       if (dErr) throw dErr;
@@ -496,11 +598,11 @@ function PlannerPage() {
 
   const existing = planQ.data;
 
-  // Helper function to render the appropriate picker for each draft day
-  function renderDayPicker(d: DraftDay, i: number) {
-    if (d.study_type === "flashcard") {
+  // Helper function to render the appropriate picker for each draft item
+  function renderItemPicker(item: DraftItem, dayIdx: number, itemIdx: number) {
+    if (item.study_type === "flashcard") {
       // 3-level picker: Chapter → Topic → Subtopic (storing subtopic_id)
-      const subtopic = d.subtopic_id ? subMap.get(d.subtopic_id) : undefined;
+      const subtopic = item.subtopic_id ? subMap.get(item.subtopic_id) : undefined;
       const topicId = subtopic?.topic_id ?? "";
       const categoryId = subtopic?.category_id ?? "";
       
@@ -510,9 +612,9 @@ function PlannerPage() {
             className="input-field w-full"
             value={topicId}
             onChange={(e) => {
-              updateDraftDay(i, { subtopic_id: "" });
+              updateDraftItem(dayIdx, itemIdx, { subtopic_id: "" });
             }}
-            aria-label={`Chapter for day ${d.day_number}`}
+            aria-label={`Chapter for day ${dayIdx + 1}, item ${itemIdx + 1}`}
           >
             <option value="">Select a chapter…</option>
             {Array.from(new Set(subtopics.map((s) => s.topic_id))).map((tid) => {
@@ -528,9 +630,9 @@ function PlannerPage() {
             className="input-field w-full"
             value={categoryId}
             onChange={(e) => {
-              updateDraftDay(i, { subtopic_id: "" });
+              updateDraftItem(dayIdx, itemIdx, { subtopic_id: "" });
             }}
-            aria-label={`Topic for day ${d.day_number}`}
+            aria-label={`Topic for day ${dayIdx + 1}, item ${itemIdx + 1}`}
           >
             <option value="">Select a topic…</option>
             {subtopics
@@ -549,9 +651,9 @@ function PlannerPage() {
           </select>
           <select
             className="input-field w-full"
-            value={d.subtopic_id}
-            onChange={(e) => updateDraftDay(i, { subtopic_id: e.target.value })}
-            aria-label={`Subtopic for day ${d.day_number}`}
+            value={item.subtopic_id}
+            onChange={(e) => updateDraftItem(dayIdx, itemIdx, { subtopic_id: e.target.value })}
+            aria-label={`Subtopic for day ${dayIdx + 1}, item ${itemIdx + 1}`}
           >
             <option value="">Select a subtopic…</option>
             {subtopics
@@ -566,16 +668,16 @@ function PlannerPage() {
       );
     } else {
       // 2-level picker: Chapter → Topic (storing category_id) for both practical and mcq
-      const topicId = d.category_id ? catMap.get(d.category_id)?.topic_id ?? "" : "";
+      const topicId = item.category_id ? catMap.get(item.category_id)?.topic_id ?? "" : "";
       return (
         <>
           <select
             className="input-field w-full"
             value={topicId}
             onChange={(e) => {
-              updateDraftDay(i, { category_id: "" });
+              updateDraftItem(dayIdx, itemIdx, { category_id: "" });
             }}
-            aria-label={`Chapter for day ${d.day_number}`}
+            aria-label={`Chapter for day ${dayIdx + 1}, item ${itemIdx + 1}`}
           >
             <option value="">Select a chapter…</option>
             {Array.from(new Set(categories.map((c) => c.topic_id))).map((tid) => {
@@ -589,9 +691,9 @@ function PlannerPage() {
           </select>
           <select
             className="input-field w-full"
-            value={d.category_id}
-            onChange={(e) => updateDraftDay(i, { category_id: e.target.value })}
-            aria-label={`Topic for day ${d.day_number}`}
+            value={item.category_id}
+            onChange={(e) => updateDraftItem(dayIdx, itemIdx, { category_id: e.target.value })}
+            aria-label={`Topic for day ${dayIdx + 1}, item ${itemIdx + 1}`}
           >
             <option value="">Select a topic…</option>
             {categories
@@ -653,14 +755,29 @@ function PlannerPage() {
                 <button
                   className="btn-outline"
                   onClick={() => {
-                    if (existing.plan.mode === "auto") {
-                      generateAuto();
-                    } else {
-                      generateManual();
-                    }
+                    // Load existing plan back into draft for editing
+                    const daysMap = new Map<number, DraftDay>();
+                    existing.days.forEach((d: any) => {
+                      const dayNum = d.day_number;
+                      if (!daysMap.has(dayNum)) {
+                        daysMap.set(dayNum, {
+                          day_number: dayNum,
+                          plan_date: d.plan_date,
+                          items: [],
+                        });
+                      }
+                      const day = daysMap.get(dayNum)!;
+                      day.items.push({
+                        study_type: d.study_type,
+                        subtopic_id: d.subtopic_id || "",
+                        category_id: d.category_id || "",
+                        target_card_count: d.target_card_count,
+                      });
+                    });
+                    setDraft(Array.from(daysMap.values()).sort((a, b) => a.day_number - b.day_number));
                   }}
                 >
-                  Regenerate
+                  Edit plan
                 </button>
                 <button className="btn-outline" onClick={() => deletePlan(existing.plan.id)}>
                   Delete plan
@@ -830,30 +947,30 @@ function PlannerPage() {
             </div>
 
             <ul className="space-y-2">
-              {draft.map((d, i) => (
-                <li key={i} className="rounded-xl border border-border p-3 space-y-2">
+              {draft.map((day, dayIdx) => (
+                <li key={dayIdx} className="rounded-xl border border-border p-3 space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-medium text-foreground">
-                      Day {d.day_number} · {prettyDate(d.plan_date)}
+                      Day {day.day_number} · {prettyDate(day.plan_date)}
                     </span>
                     <div className="flex gap-1">
                       <button
                         className="h-8 w-8 rounded-lg hover:bg-muted text-foreground"
-                        onClick={() => moveDraftDay(i, -1)}
+                        onClick={() => moveDraftDay(dayIdx, -1)}
                         aria-label="Move up"
                       >
                         ↑
                       </button>
                       <button
                         className="h-8 w-8 rounded-lg hover:bg-muted text-foreground"
-                        onClick={() => moveDraftDay(i, 1)}
+                        onClick={() => moveDraftDay(dayIdx, 1)}
                         aria-label="Move down"
                       >
                         ↓
                       </button>
                       <button
                         className="h-8 w-8 rounded-lg hover:bg-muted text-foreground"
-                        onClick={() => removeDraftDay(i)}
+                        onClick={() => removeDraftDay(dayIdx)}
                         aria-label="Remove day"
                       >
                         ✕
@@ -861,43 +978,69 @@ function PlannerPage() {
                     </div>
                   </div>
 
-                  {/* Study type selector */}
-                  <div className="flex gap-2 flex-wrap">
-                    {(Object.keys(studyTypeMeta) as StudyType[]).map((type) => (
-                      <button
-                        key={type}
-                        type="button"
-                        className={d.study_type === type ? "btn-primary" : "btn-outline"}
-                        onClick={() =>
-                          updateDraftDay(i, {
-                            study_type: type,
-                            subtopic_id: "",
-                            category_id: "",
-                          })
-                        }
-                      >
-                        {studyTypeMeta[type].icon} {studyTypeMeta[type].label}
-                      </button>
-                    ))}
-                  </div>
+                  {/* Render each item in the day */}
+                  {day.items.map((item, itemIdx) => (
+                    <div key={itemIdx} className="space-y-2 border-t border-border pt-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          Item {itemIdx + 1}
+                        </span>
+                        <button
+                          className="text-xs text-muted-foreground hover:text-foreground"
+                          onClick={() => removeDraftItem(dayIdx, itemIdx)}
+                          aria-label={`Remove item ${itemIdx + 1} from day ${day.day_number}`}
+                        >
+                          Remove
+                        </button>
+                      </div>
 
-                  <div className="grid sm:grid-cols-[1fr_auto] gap-2">
-                    <div className="space-y-2">
-                      {renderDayPicker(d, i)}
+                      {/* Study type selector for this item */}
+                      <div className="flex gap-2 flex-wrap">
+                        {(Object.keys(studyTypeMeta) as StudyType[]).map((type) => (
+                          <button
+                            key={type}
+                            type="button"
+                            className={item.study_type === type ? "btn-primary" : "btn-outline"}
+                            onClick={() =>
+                              updateDraftItem(dayIdx, itemIdx, {
+                                study_type: type,
+                                subtopic_id: "",
+                                category_id: "",
+                              })
+                            }
+                          >
+                            {studyTypeMeta[type].icon} {studyTypeMeta[type].label}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="grid sm:grid-cols-[1fr_auto] gap-2">
+                        <div className="space-y-2">
+                          {renderItemPicker(item, dayIdx, itemIdx)}
+                        </div>
+                        <input
+                          type="number"
+                          min={1}
+                          className="input-field w-full sm:w-28"
+                          value={item.target_card_count}
+                          onChange={(e) =>
+                            updateDraftItem(dayIdx, itemIdx, {
+                              target_card_count: Math.max(1, Number(e.target.value) || 1),
+                            })
+                          }
+                          aria-label={`Target items for day ${day.day_number}, item ${itemIdx + 1}`}
+                        />
+                      </div>
                     </div>
-                    <input
-                      type="number"
-                      min={1}
-                      className="input-field w-full sm:w-28"
-                      value={d.target_card_count}
-                      onChange={(e) =>
-                        updateDraftDay(i, {
-                          target_card_count: Math.max(1, Number(e.target.value) || 1),
-                        })
-                      }
-                      aria-label={`Target items for day ${d.day_number}`}
-                    />
-                  </div>
+                  ))}
+
+                  {/* Add item button */}
+                  <button
+                    className="btn-outline w-full"
+                    onClick={() => addDraftItem(dayIdx)}
+                  >
+                    + Add item to this day
+                  </button>
                 </li>
               ))}
             </ul>
