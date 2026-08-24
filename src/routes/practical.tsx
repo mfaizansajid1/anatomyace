@@ -7,6 +7,7 @@ import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ChapterTopicPicker, type ChapterTopicSelection } from "@/components/ChapterTopicPicker";
 import { toast } from "sonner";
+import { checkCelebrations } from "@/lib/celebrate";
 
 export const Route = createFileRoute("/practical")({
   head: () => ({
@@ -47,6 +48,8 @@ function PracticalPage() {
   const [result, setResult] = useState<null | { correct: boolean }>(null);
   const [score, setScore] = useState(0);
   const [answered, setAnswered] = useState(0);
+  const [prevBadges, setPrevBadges] = useState<Set<string>>(new Set());
+  const [goalCelebrated, setGoalCelebrated] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -56,6 +59,20 @@ function PracticalPage() {
       setAuthChecked(true);
     })();
   }, [navigate]);
+
+  useEffect(() => {
+    if (!started) return;
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return;
+      const { data: badges } = await supabase
+        .from("user_achievements")
+        .select("badge_id")
+        .eq("user_id", u.user.id);
+      setPrevBadges(new Set((badges ?? []).map((b) => b.badge_id)));
+      setGoalCelebrated(false);
+    })();
+  }, [started]);
 
   const itemsQ = useQuery({
     queryKey: ["practical", "items", sel.categoryId],
@@ -114,6 +131,8 @@ function PracticalPage() {
       return;
     }
     qc.invalidateQueries({ queryKey: ["dashboard"] });
+
+    await checkCelebrations(prevBadges, goalCelebrated, setGoalCelebrated, setPrevBadges);
   }
 
   function next() {
