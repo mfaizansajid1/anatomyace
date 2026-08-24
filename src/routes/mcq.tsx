@@ -7,6 +7,7 @@ import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ChapterTopicPicker, type ChapterTopicSelection } from "@/components/ChapterTopicPicker";
+import { checkCelebrations } from "@/lib/celebrate";
 
 export const Route = createFileRoute("/mcq")({
   head: () => ({
@@ -45,6 +46,8 @@ function McqPage() {
   const [mode, setMode] = useState<"auto" | "manual">("auto");
   const [manualSeconds, setManualSeconds] = useState<number | null>(null);
   const [session, setSession] = useState<{ items: Mcq[]; seconds: number } | null>(null);
+  const [prevBadges, setPrevBadges] = useState<Set<string>>(new Set());
+  const [goalCelebrated, setGoalCelebrated] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -53,6 +56,20 @@ function McqPage() {
       setReady(true);
     })();
   }, [navigate]);
+
+  useEffect(() => {
+    if (!session) return;
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return;
+      const { data: badges } = await supabase
+        .from("user_achievements")
+        .select("badge_id")
+        .eq("user_id", u.user.id);
+      setPrevBadges(new Set((badges ?? []).map((b) => b.badge_id)));
+      setGoalCelebrated(false);
+    })();
+  }, [session]);
 
   const settingsQ = useQuery({
     queryKey: ["mcq-timer-settings"],
@@ -121,6 +138,10 @@ function McqPage() {
             items={session.items}
             seconds={session.seconds}
             onExit={() => setSession(null)}
+            prevBadges={prevBadges}
+            goalCelebrated={goalCelebrated}
+            setPrevBadges={setPrevBadges}
+            setGoalCelebrated={setGoalCelebrated}
           />
         ) : (
           <div className="card-surface p-5 space-y-4">
@@ -172,7 +193,23 @@ function McqPage() {
   );
 }
 
-function McqSession({ items, seconds, onExit }: { items: Mcq[]; seconds: number; onExit: () => void }) {
+function McqSession({ 
+  items, 
+  seconds, 
+  onExit, 
+  prevBadges, 
+  goalCelebrated, 
+  setPrevBadges, 
+  setGoalCelebrated 
+}: { 
+  items: Mcq[]; 
+  seconds: number; 
+  onExit: () => void; 
+  prevBadges: Set<string>; 
+  goalCelebrated: boolean; 
+  setPrevBadges: (v: Set<string>) => void; 
+  setGoalCelebrated: (v: boolean) => void; 
+}) {
   const [index, setIndex] = useState(0);
   const [picked, setPicked] = useState<OptKey | null>(null);
   const [timedOut, setTimedOut] = useState(false);
@@ -186,8 +223,12 @@ function McqSession({ items, seconds, onExit }: { items: Mcq[]; seconds: number;
 
   const record = useCallback(async (mcqId: string, isCorrect: boolean) => {
     const { error } = await supabase.rpc("record_mcq_answer", { _mcq_id: mcqId, _is_correct: isCorrect });
-    if (error) toast.error(error.message);
-  }, []);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    await checkCelebrations(prevBadges, goalCelebrated, setGoalCelebrated, setPrevBadges);
+  }, [prevBadges, goalCelebrated, setGoalCelebrated, setPrevBadges]);
 
   useEffect(() => {
     answeredRef.current = false;
