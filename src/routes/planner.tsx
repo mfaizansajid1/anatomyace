@@ -6,6 +6,16 @@ import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
+import { 
+  ChevronUp, 
+  ChevronDown, 
+  Trash2, 
+  Layers, 
+  Bone, 
+  ListChecks, 
+  Plus,
+  GripVertical
+} from "lucide-react";
 
 export const Route = createFileRoute("/planner")({
   head: () => ({
@@ -67,10 +77,10 @@ function prettyDate(d: string) {
   return new Date(d + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 }
 
-const studyTypeMeta: Record<StudyType, { icon: string; label: string }> = {
-  flashcard: { icon: "🗂️", label: "Flashcards" },
-  practical: { icon: "🦴", label: "Practical" },
-  mcq: { icon: "✅", label: "MCQs" },
+const studyTypeMeta: Record<StudyType, { icon: React.ReactNode; label: string }> = {
+  flashcard: { icon: <Layers size={18} />, label: "Flashcards" },
+  practical: { icon: <Bone size={18} />, label: "Practical" },
+  mcq: { icon: <ListChecks size={18} />, label: "MCQs" },
 };
 
 function createDefaultItem(): DraftItem {
@@ -80,6 +90,35 @@ function createDefaultItem(): DraftItem {
     category_id: "",
     target_card_count: 10,
   };
+}
+
+function SelectWithIcon({
+  value,
+  onChange,
+  ariaLabel,
+  children,
+}: {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  ariaLabel: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="relative">
+      <select
+        className="input-field w-full appearance-none pr-8"
+        value={value}
+        onChange={onChange}
+        aria-label={ariaLabel}
+      >
+        {children}
+      </select>
+      <ChevronDown
+        size={16}
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+      />
+    </div>
+  );
 }
 
 function PlannerPage() {
@@ -242,10 +281,6 @@ function PlannerPage() {
   const subMap = useMemo(() => new Map(subtopics.map((s) => [s.id, s])), [subtopics]);
   const catMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
 
-  // ===== AUTO MODE GENERATION LOGIC =====
-  // This section is structured so that if/when practical and MCQ accuracy tracking
-  // becomes available, only the "pick weak areas" functions need to change.
-
   /**
    * Pick weak flashcard subtopics based on card_reviews accuracy.
    * Returns ordered list: weakest first, then unseen, then strong.
@@ -265,9 +300,6 @@ function PlannerPage() {
    * Pick practical categories evenly/round-robin.
    * Currently no accuracy tracking exists for practical mode, so this
    * returns all available categories in display order.
-   * 
-   * TODO: When practical accuracy tracking is available, replace this
-   * with weakness-based ordering similar to pickWeakFlashcardSubtopics.
    */
   function pickPracticalCategories(practicalCatIds: Set<string>): CategoryRow[] {
     return categories.filter((c) => practicalCatIds.has(c.id));
@@ -277,9 +309,6 @@ function PlannerPage() {
    * Pick MCQ categories evenly/round-robin.
    * Currently no accuracy tracking exists for MCQ mode, so this
    * returns all available categories in display order.
-   * 
-   * TODO: When MCQ accuracy tracking is available, replace this
-   * with weakness-based ordering similar to pickWeakFlashcardSubtopics.
    */
   function pickMcqCategories(mcqCatIds: Set<string>): CategoryRow[] {
     return categories.filter((c) => mcqCatIds.has(c.id));
@@ -299,16 +328,13 @@ function PlannerPage() {
     const practicalCatIds = practicalCategoriesQ.data ?? new Set<string>();
     const mcqCatIds = mcqCategoriesQ.data ?? new Set<string>();
 
-    // Get weak-ordered lists for each type
     const flashcardSubtopics = pickWeakFlashcardSubtopics(acc);
     const practicalCats = pickPracticalCategories(practicalCatIds);
     const mcqCats = pickMcqCategories(mcqCatIds);
 
-    // Build prioritized pool with weights
-    // Flashcard subtopics: weight by weakness (weak appear twice)
     const flashcardPool: SubtopicRow[] = [
       ...flashcardSubtopics.filter((s) => acc.has(s.id) && acc.get(s.id)! < 60),
-      ...flashcardSubtopics.filter((s) => acc.has(s.id) && acc.get(s.id)! < 60), // double weak
+      ...flashcardSubtopics.filter((s) => acc.has(s.id) && acc.get(s.id)! < 60),
       ...flashcardSubtopics.filter((s) => !acc.has(s.id)),
       ...flashcardSubtopics.filter((s) => acc.has(s.id) && acc.get(s.id)! >= 60),
     ];
@@ -316,15 +342,12 @@ function PlannerPage() {
     const start = todayStr();
     const days: DraftDay[] = [];
 
-    // Build a list of all study items to distribute
     const allItems: DraftItem[] = [];
     
-    // Distribution: ~50% flashcards, 25% practical, 25% MCQ
     let flashcardIdx = 0;
     let practicalIdx = 0;
     let mcqIdx = 0;
 
-    // Determine total number of items to create (aim for ~2 items per day)
     const totalItemsTarget = Math.min(
       totalDays * 2,
       flashcardPool.length + practicalCats.length + mcqCats.length
@@ -333,7 +356,6 @@ function PlannerPage() {
     for (let i = 0; i < totalItemsTarget; i++) {
       const pattern = i % 4;
       if (pattern < 2 && flashcardPool.length > 0) {
-        // Flashcard item (50%)
         allItems.push({
           study_type: "flashcard",
           subtopic_id: flashcardPool[flashcardIdx % flashcardPool.length].id,
@@ -342,7 +364,6 @@ function PlannerPage() {
         });
         flashcardIdx++;
       } else if (pattern === 2 && practicalCats.length > 0) {
-        // Practical item (25%)
         allItems.push({
           study_type: "practical",
           subtopic_id: "",
@@ -351,7 +372,6 @@ function PlannerPage() {
         });
         practicalIdx++;
       } else if (pattern === 3 && mcqCats.length > 0) {
-        // MCQ item (25%)
         allItems.push({
           study_type: "mcq",
           subtopic_id: "",
@@ -360,7 +380,6 @@ function PlannerPage() {
         });
         mcqIdx++;
       } else {
-        // Fallback: use whatever is available
         if (flashcardPool.length > 0) {
           allItems.push({
             study_type: "flashcard",
@@ -389,7 +408,6 @@ function PlannerPage() {
       }
     }
 
-    // Distribute items across days
     const itemsPerDay = Math.ceil(allItems.length / totalDays);
     for (let dayIdx = 0; dayIdx < totalDays; dayIdx++) {
       const dayItems = allItems.slice(dayIdx * itemsPerDay, (dayIdx + 1) * itemsPerDay);
@@ -402,7 +420,6 @@ function PlannerPage() {
       }
     }
 
-    // Ensure at least one day exists
     if (days.length === 0) {
       days.push({
         day_number: 1,
@@ -463,7 +480,6 @@ function PlannerPage() {
       if (!day) return d;
       const items = day.items.filter((_, idx) => idx !== itemIdx);
       if (items.length === 0) {
-        // Remove the entire day if it has no items left
         return d.filter((_, idx) => idx !== dayIdx).map((x, idx) => ({
           ...x,
           day_number: idx + 1,
@@ -513,7 +529,6 @@ function PlannerPage() {
   async function savePlan() {
     if (!draft || draft.length === 0) return;
     
-    // Flatten the nested structure for saving
     const flatRows = draft.flatMap((day) => 
       day.items
         .filter((item) => 
@@ -598,23 +613,18 @@ function PlannerPage() {
 
   const existing = planQ.data;
 
-  // Helper function to render the appropriate picker for each draft item
   function renderItemPicker(item: DraftItem, dayIdx: number, itemIdx: number) {
     if (item.study_type === "flashcard") {
-      // 3-level picker: Chapter → Topic → Subtopic (storing subtopic_id)
       const subtopic = item.subtopic_id ? subMap.get(item.subtopic_id) : undefined;
       const topicId = subtopic?.topic_id ?? "";
       const categoryId = subtopic?.category_id ?? "";
       
       return (
         <>
-          <select
-            className="input-field w-full"
+          <SelectWithIcon
             value={topicId}
-            onChange={(e) => {
-              updateDraftItem(dayIdx, itemIdx, { subtopic_id: "" });
-            }}
-            aria-label={`Chapter for day ${dayIdx + 1}, item ${itemIdx + 1}`}
+            onChange={() => updateDraftItem(dayIdx, itemIdx, { subtopic_id: "" })}
+            ariaLabel={`Chapter for day ${dayIdx + 1}, item ${itemIdx + 1}`}
           >
             <option value="">Select a chapter…</option>
             {Array.from(new Set(subtopics.map((s) => s.topic_id))).map((tid) => {
@@ -625,14 +635,11 @@ function PlannerPage() {
                 </option>
               );
             })}
-          </select>
-          <select
-            className="input-field w-full"
+          </SelectWithIcon>
+          <SelectWithIcon
             value={categoryId}
-            onChange={(e) => {
-              updateDraftItem(dayIdx, itemIdx, { subtopic_id: "" });
-            }}
-            aria-label={`Topic for day ${dayIdx + 1}, item ${itemIdx + 1}`}
+            onChange={() => updateDraftItem(dayIdx, itemIdx, { subtopic_id: "" })}
+            ariaLabel={`Topic for day ${dayIdx + 1}, item ${itemIdx + 1}`}
           >
             <option value="">Select a topic…</option>
             {subtopics
@@ -648,12 +655,11 @@ function PlannerPage() {
                   {catName}
                 </option>
               ))}
-          </select>
-          <select
-            className="input-field w-full"
+          </SelectWithIcon>
+          <SelectWithIcon
             value={item.subtopic_id}
             onChange={(e) => updateDraftItem(dayIdx, itemIdx, { subtopic_id: e.target.value })}
-            aria-label={`Subtopic for day ${dayIdx + 1}, item ${itemIdx + 1}`}
+            ariaLabel={`Subtopic for day ${dayIdx + 1}, item ${itemIdx + 1}`}
           >
             <option value="">Select a subtopic…</option>
             {subtopics
@@ -663,21 +669,17 @@ function PlannerPage() {
                   {s.name}
                 </option>
               ))}
-          </select>
+          </SelectWithIcon>
         </>
       );
     } else {
-      // 2-level picker: Chapter → Topic (storing category_id) for both practical and mcq
       const topicId = item.category_id ? catMap.get(item.category_id)?.topic_id ?? "" : "";
       return (
         <>
-          <select
-            className="input-field w-full"
+          <SelectWithIcon
             value={topicId}
-            onChange={(e) => {
-              updateDraftItem(dayIdx, itemIdx, { category_id: "" });
-            }}
-            aria-label={`Chapter for day ${dayIdx + 1}, item ${itemIdx + 1}`}
+            onChange={() => updateDraftItem(dayIdx, itemIdx, { category_id: "" })}
+            ariaLabel={`Chapter for day ${dayIdx + 1}, item ${itemIdx + 1}`}
           >
             <option value="">Select a chapter…</option>
             {Array.from(new Set(categories.map((c) => c.topic_id))).map((tid) => {
@@ -688,12 +690,11 @@ function PlannerPage() {
                 </option>
               );
             })}
-          </select>
-          <select
-            className="input-field w-full"
+          </SelectWithIcon>
+          <SelectWithIcon
             value={item.category_id}
             onChange={(e) => updateDraftItem(dayIdx, itemIdx, { category_id: e.target.value })}
-            aria-label={`Topic for day ${dayIdx + 1}, item ${itemIdx + 1}`}
+            ariaLabel={`Topic for day ${dayIdx + 1}, item ${itemIdx + 1}`}
           >
             <option value="">Select a topic…</option>
             {categories
@@ -703,7 +704,7 @@ function PlannerPage() {
                   {c.name}
                 </option>
               ))}
-          </select>
+          </SelectWithIcon>
         </>
       );
     }
@@ -755,7 +756,6 @@ function PlannerPage() {
                 <button
                   className="btn-outline"
                   onClick={() => {
-                    // Load existing plan back into draft for editing
                     const daysMap = new Map<number, DraftDay>();
                     existing.days.forEach((d: any) => {
                       const dayNum = d.day_number;
@@ -841,7 +841,7 @@ function PlannerPage() {
                   >
                     <div className="min-w-0">
                       <div className="text-sm font-medium text-foreground truncate">
-                        Day {d.day_number} — {meta.icon} {label}{" "}
+                        Day {d.day_number} — <span className="inline-flex items-center gap-1">{meta.icon} {label}</span>{" "}
                         <span className="text-muted-foreground font-normal">({d.target_card_count} items)</span>
                       </div>
                       <div className="text-xs text-muted-foreground">{prettyDate(d.plan_date)}</div>
@@ -946,110 +946,132 @@ function PlannerPage() {
               </div>
             </div>
 
-            <ul className="space-y-2">
+            <ul className="space-y-3">
               {draft.map((day, dayIdx) => (
-                <li key={dayIdx} className="rounded-xl border border-border p-3 space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium text-foreground">
-                      Day {day.day_number} · {prettyDate(day.plan_date)}
-                    </span>
-                    <div className="flex gap-1">
+                <li key={dayIdx} className="rounded-xl border border-border bg-card p-4 space-y-4">
+                  {/* Day header with controls */}
+                  <div className="flex items-center justify-between gap-3 pb-3 border-b border-border">
+                    <div className="flex items-center gap-3">
+                      <GripVertical size={16} className="text-muted-foreground/50 shrink-0" />
+                      <div>
+                        <span className="text-sm font-semibold text-foreground block">
+                          Day {day.day_number}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {prettyDate(day.plan_date)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-0.5 mr-2">
+                        <button
+                          className="h-7 w-7 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"
+                          onClick={() => moveDraftDay(dayIdx, -1)}
+                          disabled={dayIdx === 0}
+                          aria-label="Move day up"
+                        >
+                          <ChevronUp size={16} />
+                        </button>
+                        <button
+                          className="h-7 w-7 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"
+                          onClick={() => moveDraftDay(dayIdx, 1)}
+                          disabled={dayIdx === draft.length - 1}
+                          aria-label="Move day down"
+                        >
+                          <ChevronDown size={16} />
+                        </button>
+                      </div>
                       <button
-                        className="h-8 w-8 rounded-lg hover:bg-muted text-foreground"
-                        onClick={() => moveDraftDay(dayIdx, -1)}
-                        aria-label="Move up"
-                      >
-                        ↑
-                      </button>
-                      <button
-                        className="h-8 w-8 rounded-lg hover:bg-muted text-foreground"
-                        onClick={() => moveDraftDay(dayIdx, 1)}
-                        aria-label="Move down"
-                      >
-                        ↓
-                      </button>
-                      <button
-                        className="h-8 w-8 rounded-lg hover:bg-muted text-foreground"
+                        className="h-7 w-7 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors flex items-center justify-center"
                         onClick={() => removeDraftDay(dayIdx)}
                         aria-label="Remove day"
                       >
-                        ✕
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </div>
 
                   {/* Render each item in the day */}
-                  {day.items.map((item, itemIdx) => (
-                    <div key={itemIdx} className="space-y-2 border-t border-border pt-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-medium text-muted-foreground">
-                          Item {itemIdx + 1}
-                        </span>
-                        <button
-                          className="text-xs text-muted-foreground hover:text-foreground"
-                          onClick={() => removeDraftItem(dayIdx, itemIdx)}
-                          aria-label={`Remove item ${itemIdx + 1} from day ${day.day_number}`}
-                        >
-                          Remove
-                        </button>
-                      </div>
-
-                      {/* Study type selector for this item */}
-                      <div className="flex gap-2 flex-wrap">
-                        {(Object.keys(studyTypeMeta) as StudyType[]).map((type) => (
+                  <div className="space-y-4">
+                    {day.items.map((item, itemIdx) => (
+                      <div 
+                        key={itemIdx} 
+                        className={`space-y-3 ${itemIdx > 0 ? 'pt-3 border-t border-border/50' : ''}`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            Item {itemIdx + 1}
+                          </span>
                           <button
-                            key={type}
-                            type="button"
-                            className={item.study_type === type ? "btn-primary" : "btn-outline"}
-                            onClick={() =>
+                            className="text-xs text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1"
+                            onClick={() => removeDraftItem(dayIdx, itemIdx)}
+                            aria-label={`Remove item ${itemIdx + 1} from day ${day.day_number}`}
+                          >
+                            <Trash2 size={14} />
+                            Remove
+                          </button>
+                        </div>
+
+                        {/* Study type selector for this item */}
+                        <div className="flex gap-2 flex-wrap">
+                          {(Object.keys(studyTypeMeta) as StudyType[]).map((type) => (
+                            <button
+                              key={type}
+                              type="button"
+                              className={`${item.study_type === type ? "btn-primary" : "btn-outline"} inline-flex items-center gap-2`}
+                              onClick={() =>
+                                updateDraftItem(dayIdx, itemIdx, {
+                                  study_type: type,
+                                  subtopic_id: "",
+                                  category_id: "",
+                                })
+                              }
+                            >
+                              {studyTypeMeta[type].icon}
+                              {studyTypeMeta[type].label}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="grid sm:grid-cols-[1fr_auto] gap-3">
+                          <div className="space-y-2">
+                            {renderItemPicker(item, dayIdx, itemIdx)}
+                          </div>
+                          <input
+                            type="number"
+                            min={1}
+                            className="input-field w-full sm:w-28"
+                            value={item.target_card_count}
+                            onChange={(e) =>
                               updateDraftItem(dayIdx, itemIdx, {
-                                study_type: type,
-                                subtopic_id: "",
-                                category_id: "",
+                                target_card_count: Math.max(1, Number(e.target.value) || 1),
                               })
                             }
-                          >
-                            {studyTypeMeta[type].icon} {studyTypeMeta[type].label}
-                          </button>
-                        ))}
-                      </div>
-
-                      <div className="grid sm:grid-cols-[1fr_auto] gap-2">
-                        <div className="space-y-2">
-                          {renderItemPicker(item, dayIdx, itemIdx)}
+                            aria-label={`Target items for day ${day.day_number}, item ${itemIdx + 1}`}
+                          />
                         </div>
-                        <input
-                          type="number"
-                          min={1}
-                          className="input-field w-full sm:w-28"
-                          value={item.target_card_count}
-                          onChange={(e) =>
-                            updateDraftItem(dayIdx, itemIdx, {
-                              target_card_count: Math.max(1, Number(e.target.value) || 1),
-                            })
-                          }
-                          aria-label={`Target items for day ${day.day_number}, item ${itemIdx + 1}`}
-                        />
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
 
                   {/* Add item button */}
                   <button
-                    className="btn-outline w-full"
+                    className="btn-outline w-full inline-flex items-center justify-center gap-2"
                     onClick={() => addDraftItem(dayIdx)}
                   >
-                    + Add item to this day
+                    <Plus size={16} />
+                    Add item to this day
                   </button>
                 </li>
               ))}
             </ul>
 
             <div className="flex flex-wrap gap-2">
-              <button className="btn-outline" onClick={addDraftDay}>
-                + Add day
+              <button className="btn-outline inline-flex items-center gap-2" onClick={addDraftDay}>
+                <Plus size={16} />
+                Add day
               </button>
-              <button className="btn-primary flex-1" onClick={savePlan} disabled={saving}>
+              <button className="btn-primary flex-1 inline-flex items-center justify-center gap-2" onClick={savePlan} disabled={saving}>
                 {saving ? <Spinner /> : "Save plan"}
               </button>
             </div>
