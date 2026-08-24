@@ -6,6 +6,7 @@ import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { StudyInsights } from "@/components/StudyInsights";
+import { Clock, Calendar, TrendingDown, TrendingUp, AlertTriangle } from "lucide-react";
 
 import {
   ResponsiveContainer,
@@ -128,7 +129,6 @@ function ProgressPage() {
           mcq: { total: mcqTotal, accuracy: mcqAccuracy },
         },
       };
-
     },
   });
 
@@ -166,19 +166,51 @@ function ProgressPage() {
     return days;
   }, [data]);
 
+  // Filter trend data to only show up to the last date with actual data
+  const filteredTrend = useMemo(() => {
+    // Find the last index where accuracy is not null
+    let lastDataIndex = -1;
+    for (let i = trend.length - 1; i >= 0; i--) {
+      if (trend[i].accuracy !== null) {
+        lastDataIndex = i;
+        break;
+      }
+    }
+    // If no data at all, return empty array
+    if (lastDataIndex === -1) return [];
+    // Return data up to and including the last data point
+    return trend.slice(0, lastDataIndex + 1);
+  }, [trend]);
+
   function heatColor(count: number) {
-    if (count === 0) return "bg-muted/40";
+    if (count === 0) return "bg-muted/20";
     const ratio = count / maxDay;
     if (ratio > 0.75) return "bg-primary";
-    if (ratio > 0.5) return "bg-primary/70";
-    if (ratio > 0.25) return "bg-primary/40";
-    return "bg-primary/20";
+    if (ratio > 0.5) return "bg-primary/75";
+    if (ratio > 0.25) return "bg-primary/50";
+    return "bg-primary/30";
   }
 
   function accColor(acc: number) {
     if (acc >= 80) return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300";
-    if (acc >= 65) return "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300";
+    if (acc >= 60) return "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300";
     return "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300";
+  }
+
+  function barColor(acc: number) {
+    if (acc >= 80) return "bg-emerald-500";
+    if (acc >= 60) return "bg-amber-500";
+    return "bg-rose-500";
+  }
+
+  function textColor(acc: number) {
+    if (acc >= 80) return "text-emerald-600 dark:text-emerald-400";
+    if (acc >= 60) return "text-amber-600 dark:text-amber-400";
+    return "text-rose-600 dark:text-rose-400";
+  }
+
+  function notStartedBadge() {
+    return "bg-muted/50 text-muted-foreground";
   }
 
   return (
@@ -210,6 +242,7 @@ function ProgressPage() {
           </div>
         ) : (
           <>
+            {/* 1. By Study Mode */}
             <div className="card-surface p-5">
               <h2 className="font-semibold text-foreground">By Study Mode</h2>
               <div className="mt-4 space-y-3">
@@ -217,40 +250,59 @@ function ProgressPage() {
                   <span className="text-sm text-foreground">🗂️ Flashcards</span>
                   <div className="flex items-center gap-3">
                     <span className="text-sm text-muted-foreground">{data?.modeStats.flashcards.total} reviews</span>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${accColor(data?.modeStats.flashcards.accuracy ?? 0)}`}>
-                      {data?.modeStats.flashcards.accuracy}%
-                    </span>
+                    {data?.modeStats.flashcards.total === 0 ? (
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${notStartedBadge()}`}>
+                        Not started
+                      </span>
+                    ) : (
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${accColor(data?.modeStats.flashcards.accuracy ?? 0)}`}>
+                        {data?.modeStats.flashcards.accuracy}%
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center justify-between rounded-xl bg-muted/60 px-3 py-2">
                   <span className="text-sm text-foreground">🦴 Practical Mode</span>
                   <div className="flex items-center gap-3">
                     <span className="text-sm text-muted-foreground">{data?.modeStats.practical.total} answers</span>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${accColor(data?.modeStats.practical.accuracy ?? 0)}`}>
-                      {data?.modeStats.practical.accuracy}%
-                    </span>
+                    {data?.modeStats.practical.total === 0 ? (
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${notStartedBadge()}`}>
+                        Not started
+                      </span>
+                    ) : (
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${accColor(data?.modeStats.practical.accuracy ?? 0)}`}>
+                        {data?.modeStats.practical.accuracy}%
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center justify-between rounded-xl bg-muted/60 px-3 py-2">
                   <span className="text-sm text-foreground">✅ Clinical MCQs</span>
                   <div className="flex items-center gap-3">
                     <span className="text-sm text-muted-foreground">{data?.modeStats.mcq.total} answers</span>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${accColor(data?.modeStats.mcq.accuracy ?? 0)}`}>
-                      {data?.modeStats.mcq.accuracy}%
-                    </span>
+                    {data?.modeStats.mcq.total === 0 ? (
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${notStartedBadge()}`}>
+                        Not started
+                      </span>
+                    ) : (
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${accColor(data?.modeStats.mcq.accuracy ?? 0)}`}>
+                        {data?.modeStats.mcq.accuracy}%
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
 
+            {/* 2. Study Activity Heatmap */}
             <div className="card-surface p-5">
               <h2 className="font-semibold text-foreground">Study Activity — Last 30 Days</h2>
-              <div className="mt-4 grid grid-cols-[repeat(30,minmax(0,1fr))] gap-1 overflow-x-auto">
+              <div className="mt-4 grid grid-cols-[repeat(30,minmax(0,1fr))] gap-1.5 overflow-x-auto">
                 {heatmapDays.map((d) => (
                   <div
                     key={d.date}
                     title={`${d.count} cards on ${d.date}`}
-                    className={`aspect-square rounded-sm ${heatColor(d.count)}`}
+                    className={`aspect-square rounded-md ${heatColor(d.count)}`}
                   />
                 ))}
               </div>
@@ -259,11 +311,41 @@ function ProgressPage() {
               </p>
             </div>
 
+            {/* 3. Topic Mastery */}
+            <div className="card-surface p-5">
+              <h2 className="font-semibold text-foreground">Topic Mastery</h2>
+              {(!data?.topics || data.topics.length === 0) ? (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Study a few cards to see your topic breakdown here.
+                </p>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  {data.topics.map((t) => (
+                    <div key={t.topic_name}>
+                      <div className="flex items-center justify-between text-sm mb-1">
+                        <span className="text-foreground font-medium">{t.topic_name}</span>
+                        <span className={`font-semibold ${textColor(t.accuracy_percentage)}`}>
+                          {t.accuracy_percentage}%
+                        </span>
+                      </div>
+                      <div className="h-2 rounded-full bg-muted/40 overflow-hidden">
+                        <div
+                          className={`h-full ${barColor(t.accuracy_percentage)} rounded-full`}
+                          style={{ width: `${t.accuracy_percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 4. Accuracy Trend */}
             <div className="card-surface p-5">
               <h2 className="font-semibold text-foreground">Accuracy Trend — Last 30 Days</h2>
               <div className="mt-4 h-56">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={trend}>
+                  <LineChart data={filteredTrend}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                     <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                     <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} unit="%" />
@@ -282,38 +364,12 @@ function ProgressPage() {
               </div>
             </div>
 
-            <div className="card-surface p-5">
-              <h2 className="font-semibold text-foreground">Topic Mastery</h2>
-              {(!data?.topics || data.topics.length === 0) ? (
-                <p className="mt-3 text-sm text-muted-foreground">
-                  Study a few cards to see your topic breakdown here.
-                </p>
-              ) : (
-                <div className="mt-4 space-y-3">
-                  {data.topics.map((t) => (
-                    <div key={t.topic_name}>
-                      <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="text-foreground font-medium">{t.topic_name}</span>
-                        <span className="text-muted-foreground">{t.accuracy_percentage}%</span>
-                      </div>
-                      <div className="h-2 rounded-full bg-muted/40 overflow-hidden">
-                        <div
-                          className="h-full bg-primary rounded-full"
-                          style={{ width: `${t.accuracy_percentage}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
+            {/* 5. Study Insights */}
             <StudyInsights
               events={data?.insightEvents ?? []}
               activity={data?.activity ?? []}
             />
           </>
-
         )}
       </main>
     </div>
