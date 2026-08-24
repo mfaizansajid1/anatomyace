@@ -29,18 +29,16 @@ export function pickReminder({
   if (currentStreak > 0 && cardsStudiedToday === 0 && hour >= 20) {
     return { id: "streak-risk", message: `Don't lose your ${currentStreak}-day streak — study today!` };
   }
-  if (cardsDue > 0 && cardsStudiedToday === 0) {
-    return { id: "cards-due", message: `You have ${cardsDue} card${cardsDue === 1 ? "" : "s"} ready for review today.` };
-  }
+    // (removed: cards-due reminder no longer applies across mixed study modes)
   if (lastStudyDate) {
     const away = daysSince(lastStudyDate);
     if (away >= 2) {
       return { id: "away", message: `You haven't studied in ${away} days — jump back in!` };
     }
   }
-  if (cardsStudiedToday > 0 && cardsStudiedToday < dailyGoal) {
+    if (cardsStudiedToday > 0 && cardsStudiedToday < dailyGoal) {
     const left = dailyGoal - cardsStudiedToday;
-    return { id: "goal", message: `${left} more card${left === 1 ? "" : "s"} to hit today's goal.` };
+    return { id: "goal", message: `${left} more item${left === 1 ? "" : "s"} to hit today's goal.` };
   }
   return null;
 }
