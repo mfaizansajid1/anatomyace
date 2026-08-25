@@ -821,4 +821,318 @@ function FlashcardForm({
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs text-muted-foreground">
+              <label className="mb-1 block text-xs text-muted-foreground">Category</label>
+              <select className="w-full rounded-lg border border-border bg-background p-1.5 text-sm" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+                {(categoriesQ.data ?? []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-muted-foreground">Subtopic</label>
+              <select className="w-full rounded-lg border border-border bg-background p-1.5 text-sm" value={subtopicId} onChange={(e) => setSubtopicId(e.target.value)}>
+                {(subtopicsQ.data ?? []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-muted-foreground">Question</label>
+            <textarea
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              rows={3}
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-muted-foreground">Answer</label>
+            <textarea
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+              rows={4}
+              value={answer}
+              onChange={(e) => setAnswer(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-muted-foreground">Difficulty</label>
+            <select
+              className="w-full rounded-lg border border-border bg-background p-1.5 text-sm"
+              value={difficulty}
+              onChange={(e) => setDifficulty(e.target.value as "Easy" | "Medium" | "Hard")}
+            >
+              <option value="Easy">Easy</option>
+              <option value="Medium">Medium</option>
+              <option value="Hard">Hard</option>
+            </select>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button className="btn-outline px-4 py-2 text-sm" onClick={onClose}>Cancel</button>
+            <button className="btn-primary px-4 py-2 text-sm" onClick={() => save.mutate()} disabled={save.isPending}>
+              {save.isPending ? "Saving..." : "Save"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- RFC 4180 CSV Parser & Bulk Import ---------- */
+
+function parseCSV(text: string): string[][] {
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
+  let currentCell = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i + 1];
+
+    if (inQuotes) {
+      if (char === '"' && nextChar === '"') {
+        currentCell += '"';
+        i++;
+      } else if (char === '"') {
+        inQuotes = false;
+      } else {
+        currentCell += char;
+      }
+    } else {
+      if (char === '"') {
+        inQuotes = true;
+      } else if (char === ",") {
+        currentRow.push(currentCell.trim());
+        currentCell = "";
+      } else if (char === "\r") {
+        // Ignore carriage return
+      } else if (char === "\n") {
+        currentRow.push(currentCell.trim());
+        if (currentRow.some((cell) => cell.length > 0)) {
+          rows.push(currentRow);
+        }
+        currentRow = [];
+        currentCell = "";
+      } else {
+        currentCell += char;
+      }
+    }
+  }
+
+  if (currentCell.length > 0 || currentRow.length > 0) {
+    currentRow.push(currentCell.trim());
+    if (currentRow.some((cell) => cell.length > 0)) {
+      rows.push(currentRow);
+    }
+  }
+
+  return rows;
+}
+
+function CsvImportPanel({ onDone }: { onDone: () => void }) {
+  const [importing, setImporting] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const rows = parseCSV(text);
+      if (rows.length < 2) {
+        throw new Error("CSV must contain a header row and at least one data row.");
+      }
+
+      // Fetch all reference data upfront for efficient lookups
+      const { data: topics, error: tErr } = await supabase.from("topics").select("id, name");
+      if (tErr) throw tErr;
+
+      const { data: categories, error: cErr } = await supabase.from("categories").select("id, topic_id, name");
+      if (cErr) throw cErr;
+
+      const { data: subtopics, error: sErr } = await supabase.from("subtopics").select("id, category_id, name");
+      if (sErr) throw sErr;
+
+      // Create lookup maps for efficient hierarchical resolution
+      const topicMap = new Map<string, { id: string; name: string }>();
+      (topics ?? []).forEach((t) => {
+        topicMap.set(t.name.trim().toLowerCase(), t);
+      });
+
+      // Group categories by topic_id for hierarchical lookup
+      const categoriesByTopic = new Map<string, Array<{ id: string; name: string; topic_id: string }>>();
+      (categories ?? []).forEach((c) => {
+        const list = categoriesByTopic.get(c.topic_id) || [];
+        list.push(c);
+        categoriesByTopic.set(c.topic_id, list);
+      });
+
+      // Group subtopics by category_id for hierarchical lookup
+      const subtopicsByCategory = new Map<string, Array<{ id: string; name: string; category_id: string }>>();
+      (subtopics ?? []).forEach((s) => {
+        const list = subtopicsByCategory.get(s.category_id) || [];
+        list.push(s);
+        subtopicsByCategory.set(s.category_id, list);
+      });
+
+      const flashcardsToInsert: Array<{
+        topic_id: string;
+        subtopic_id: string;
+        question: string;
+        answer: string;
+        difficulty: "Easy" | "Medium" | "Hard";
+        is_published: boolean;
+      }> = [];
+
+      const skippedRows: Array<{ row: number; reason: string }> = [];
+
+      // Row 0 is header, start at Row 1
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (row.length < 7) {
+          skippedRows.push({
+            row: i + 1,
+            reason: `Row has insufficient columns (found ${row.length}, expected at least 7)`,
+          });
+          continue;
+        }
+
+        // Sequence: Question [0], Answer [1], [Blank] [2], Difficulty [3], Topic [4], Category [5], Subtopic [6]
+        const rowQuestion = row[0];
+        const rowAnswer = row[1];
+        const rawDiff = row[3];
+        const rowTopic = row[4];
+        const rowCategory = row[5];
+        const rowSubtopic = row[6];
+
+        // Validate required fields
+        if (!rowQuestion || !rowAnswer || !rowTopic || !rowCategory || !rowSubtopic) {
+          skippedRows.push({
+            row: i + 1,
+            reason: `Missing required fields (Question: "${rowQuestion || 'empty'}", Answer: "${rowAnswer || 'empty'}", Topic: "${rowTopic || 'empty'}", Category: "${rowCategory || 'empty'}", Subtopic: "${rowSubtopic || 'empty'}")`,
+          });
+          continue;
+        }
+
+        // Parse difficulty with fallback to Medium
+        let rowDiff: "Easy" | "Medium" | "Hard" = "Medium";
+        if (rawDiff) {
+          const formatted = rawDiff.charAt(0).toUpperCase() + rawDiff.slice(1).toLowerCase();
+          if (formatted === "Easy" || formatted === "Medium" || formatted === "Hard") {
+            rowDiff = formatted;
+          }
+        }
+
+        // Step 1: Find Topic by name (case-insensitive)
+        const topicMatch = topicMap.get(rowTopic.trim().toLowerCase());
+        if (!topicMatch) {
+          skippedRows.push({
+            row: i + 1,
+            reason: `Topic "${rowTopic}" does not exist in the database`,
+          });
+          continue;
+        }
+
+        // Step 2: Find Category by BOTH topic_id AND category name (hierarchical resolution)
+        const topicCategories = categoriesByTopic.get(topicMatch.id) || [];
+        const categoryMatch = topicCategories.find(
+          (c) => c.name.trim().toLowerCase() === rowCategory.trim().toLowerCase()
+        );
+
+        if (!categoryMatch) {
+          skippedRows.push({
+            row: i + 1,
+            reason: `Category "${rowCategory}" does not exist under Topic "${topicMatch.name}"`,
+          });
+          continue;
+        }
+
+        // Step 3: Find Subtopic by BOTH category_id AND subtopic name (hierarchical resolution)
+        const categorySubtopics = subtopicsByCategory.get(categoryMatch.id) || [];
+        const subtopicMatch = categorySubtopics.find(
+          (s) => s.name.trim().toLowerCase() === rowSubtopic.trim().toLowerCase()
+        );
+
+        if (!subtopicMatch) {
+          skippedRows.push({
+            row: i + 1,
+            reason: `Subtopic "${rowSubtopic}" does not exist under Category "${categoryMatch.name}" (Topic: "${topicMatch.name}")`,
+          });
+          continue;
+        }
+
+        // Step 4: Add flashcard with resolved IDs
+        flashcardsToInsert.push({
+          topic_id: topicMatch.id,
+          subtopic_id: subtopicMatch.id,
+          question: rowQuestion,
+          answer: rowAnswer,
+          difficulty: rowDiff,
+          is_published: true,
+        });
+      }
+
+      // Handle results
+      if (flashcardsToInsert.length === 0) {
+        const skipSummary = skippedRows.length > 0
+          ? `\n\nSkipped rows:\n${skippedRows.map((s) => `Row ${s.row}: ${s.reason}`).join("\n")}`
+          : "";
+        throw new Error(`No valid flashcards found to import.${skipSummary}`);
+      }
+
+      // Insert all valid flashcards in a single batch
+      const { error: insertErr } = await supabase.from("flashcards").insert(flashcardsToInsert);
+      if (insertErr) throw insertErr;
+
+      // Report success with details about skipped rows
+      if (skippedRows.length > 0) {
+        const skipSummary = skippedRows
+          .map((s) => `Row ${s.row}: ${s.reason}`)
+          .join("\n");
+        toast.warning(
+          `Imported ${flashcardsToInsert.length} flashcards successfully.\n\nSkipped ${skippedRows.length} row(s):\n${skipSummary}`,
+          { duration: 8000 }
+        );
+      } else {
+        toast.success(`Successfully imported ${flashcardsToInsert.length} flashcards.`);
+      }
+
+      onDone();
+
+    } catch (err) {
+      const error = err as Error;
+      toast.error(error.message || "Failed to parse CSV");
+    } finally {
+      setImporting(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4">
+      <h3 className="mb-2 text-base font-semibold">Bulk Import Flashcards</h3>
+      <p className="mb-4 text-xs text-muted-foreground">
+        Upload a CSV file containing: <code>Question, Answer, [Blank], Difficulty, Topic, Category, Subtopic</code>
+      </p>
+      <div className="flex items-center gap-3">
+        <input
+          type="file"
+          accept=".csv"
+          ref={fileRef}
+          onChange={handleImport}
+          className="hidden"
+          id="csv-upload"
+          disabled={importing}
+        />
+        <label
+          htmlFor="csv-upload"
+          className={`cursor-pointer rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+            importing ? "bg-muted text-muted-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+          }`}
+        >
+          {importing ? "Importing..." : "Choose CSV File"}
+        </label>
+      </div>
+    </div>
+  );
+}
