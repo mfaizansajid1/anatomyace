@@ -32,6 +32,17 @@ type PracticalItem = {
   explanation: string | null;
 };
 
+type PracticalQuestion = {
+  id: string;
+  image_url: string;
+  structure_type: string;
+  labels: Array<{
+    id: string;
+    correct_answer: string;
+    explanation: string | null;
+  }>;
+};
+
 function normalize(s: string) {
   return s.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ");
 }
@@ -44,12 +55,13 @@ function PracticalPage() {
   const [sel, setSel] = useState<ChapterTopicSelection>({ topicId: "", categoryId: "" });
   const [started, setStarted] = useState(false);
   const [index, setIndex] = useState(0);
-  const [guess, setGuess] = useState("");
-  const [result, setResult] = useState<null | { correct: boolean }>(null);
+  const [guesses, setGuesses] = useState<Record<string, string>>({});
+  const [results, setResults] = useState<Record<string, boolean>>({});
   const [score, setScore] = useState(0);
   const [answered, setAnswered] = useState(0);
   const [prevBadges, setPrevBadges] = useState<Set<string>>(new Set());
   const [goalCelebrated, setGoalCelebrated] = useState(false);
+  const [labelsPerQuestion, setLabelsPerQuestion] = useState(5); // Default 5
 
   useEffect(() => {
     (async () => {
@@ -74,6 +86,31 @@ function PracticalPage() {
     })();
   }, [started]);
 
+  // Fetch labels per question setting
+  const labelsPerQuestionQ = useQuery({
+    queryKey: ["practical", "settings", sel.categoryId],
+    enabled: signedIn && !!sel.categoryId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("practical_settings")
+        .select("labels_per_question")
+        .eq("category_id", sel.categoryId)
+        .single();
+      if (error) {
+        // If no settings found, return default
+        if (error.code === 'PGRST116') return 5;
+        throw error;
+      }
+      return data?.labels_per_question ?? 5;
+    },
+  });
+
+  useEffect(() => {
+    if (labelsPerQuestionQ.data) {
+      setLabelsPerQuestion(labelsPerQuestionQ.data);
+    }
+  }, [labelsPerQuestionQ.data]);
+
   const itemsQ = useQuery({
     queryKey: ["practical", "items", sel.categoryId],
     enabled: signedIn && started && !!sel.categoryId,
@@ -89,15 +126,38 @@ function PracticalPage() {
     },
   });
 
-  const items = useMemo(() => itemsQ.data ?? [], [itemsQ.data]);
-  const current = items[index];
-  const total = items.length;
+  // Group items into questions based on labelsPerQuestion
+  const questions = useMemo(() => {
+    const items = itemsQ.data ?? [];
+    const grouped: PracticalQuestion[] = [];
+    
+    for (let i = 0; i < items.length; i += labelsPerQuestion) {
+      const groupItems = items.slice(i, i + labelsPerQuestion);
+      if (groupItems.length > 0) {
+        grouped.push({
+          id: `q-${i}`,
+          image_url: groupItems[0].image_url, // Use first image as main image
+          structure_type: groupItems[0].structure_type,
+          labels: groupItems.map(item => ({
+            id: item.id,
+            correct_answer: item.correct_answer,
+            explanation: item.explanation,
+          })),
+        });
+      }
+    }
+    
+    return grouped;
+  }, [itemsQ.data, labelsPerQuestion]);
+
+  const currentQuestion = questions[index];
+  const total = questions.length;
 
   function begin() {
     if (!sel.categoryId) return;
     setIndex(0);
-    setGuess("");
-    setResult(null);
+    setGuesses({});
+    setResults({});
     setScore(0);
     setAnswered(0);
     setStarted(true);
@@ -105,8 +165,8 @@ function PracticalPage() {
 
   function reset(pickNew: boolean) {
     setIndex(0);
-    setGuess("");
-    setResult(null);
+    setGuesses({});
+    setResults({});
     setScore(0);
     setAnswered(0);
     if (pickNew) {
@@ -115,15 +175,18 @@ function PracticalPage() {
     }
   }
 
-  async function submit() {
-    if (!current || result) return;
-    const isCorrect = normalize(guess) === normalize(current.correct_answer);
-    setResult({ correct: isCorrect });
-    setAnswered((a) => a + 1);
-    if (isCorrect) setScore((s) => s + 1);
+  async function submitLabel(labelId: string, correctAnswer: string) {
+    if (!currentQuestion || results[labelId] !== undefined) return;
+    
+    const guess = guesses[labelId] || "";
+    const isCorrect = normalize(guess) === normalize(correctAnswer);
+    
+    setResults(prev => ({ ...prev, [labelId]: isCorrect }));
+    setAnswered(a => a + 1);
+    if (isCorrect) setScore(s => s + 1);
 
     const { error } = await supabase.rpc("record_practical_answer", {
-      _practical_item_id: current.id,
+      _practical_item_id: labelId,
       _is_correct: isCorrect,
     });
     if (error) {
@@ -131,13 +194,28 @@ function PracticalPage() {
       return;
     }
     qc.invalidateQueries({ queryKey: ["dashboard"] });
+  }
 
+  async function submitAll() {
+    if (!currentQuestion) return;
+    
+    // Submit all labels that have answers
+    for (const label of currentQuestion.labels) {
+      if (results[label.id] === undefined && guesses[label.id]?.trim()) {
+        await submitLabel(label.id, label.correct_answer);
+      }
+    }
+    
     await checkCelebrations(prevBadges, goalCelebrated, setGoalCelebrated, setPrevBadges);
   }
 
+  function allAnswered() {
+    return currentQuestion?.labels.every(label => results[label.id] !== undefined) ?? false;
+  }
+
   function next() {
-    setGuess("");
-    setResult(null);
+    setGuesses({});
+    setResults({});
     setIndex((i) => i + 1);
   }
 
@@ -172,11 +250,18 @@ function PracticalPage() {
             <div>
               <h1 className="text-2xl font-bold text-foreground">Practical Mode</h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Pick a chapter, topic, and subtopic, then identify each structure shown.
+                Pick a chapter, topic, and subtopic, then identify the structures shown.
               </p>
             </div>
 
             <ChapterTopicPicker value={sel} onChange={setSel} />
+
+            {sel.categoryId && labelsPerQuestionQ.data && (
+              <div className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-3">
+                <span className="font-medium text-foreground">Session format:</span>{" "}
+                {labelsPerQuestionQ.data} labels per question
+              </div>
+            )}
 
             <button className="btn-primary w-full" onClick={begin} disabled={!sel.categoryId}>
               Start practical session
@@ -195,12 +280,12 @@ function PracticalPage() {
           </div>
         )}
 
-        {started && !itemsQ.isLoading && total > 0 && current && (
+        {started && !itemsQ.isLoading && total > 0 && currentQuestion && (
           <div className="space-y-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <span>Item {index + 1} of {total}</span>
-                <span className="capitalize">Type: {current.structure_type}</span>
+                <span>Question {index + 1} of {total}</span>
+                <span className="capitalize">Type: {currentQuestion.structure_type}</span>
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                 <div
@@ -214,59 +299,104 @@ function PracticalPage() {
               </div>
             </div>
 
-            <div className="card-surface p-6 space-y-5">
+            <div className="card-surface p-6 space-y-6">
               <img
-                src={current.image_url}
-                alt={`Identify the ${current.structure_type} shown in this specimen`}
+                src={currentQuestion.image_url}
+                alt={`Identify the structures shown in this specimen`}
                 className="w-full max-h-[380px] rounded-xl object-contain bg-muted"
                 loading="lazy"
               />
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground" htmlFor="practical-guess">
-                  Name the marked structure
-                </label>
-                <input
-                  id="practical-guess"
-                  className="input-field w-full"
-                  value={guess}
-                  disabled={!!result}
-                  placeholder="Type your answer…"
-                  onChange={(e) => setGuess(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
-                />
-              </div>
-
-              {!result ? (
-                <button className="btn-primary w-full" onClick={submit} disabled={!guess.trim()}>
-                  Submit answer
-                </button>
-              ) : (
-                <div className="space-y-4">
-                  <div
-                    className={`rounded-xl p-4 ${result.correct ? "bg-primary/10 text-foreground" : "bg-destructive/10 text-foreground"}`}
-                    role="status"
-                  >
-                    <div className="font-semibold">
-                      {result.correct ? "✅ Correct!" : "❌ Not quite."}
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">
+                    Identify the marked structures
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {currentQuestion.labels.length} {currentQuestion.labels.length === 1 ? 'label' : 'labels'} to identify
+                  </p>
+                </div>
+                
+                {currentQuestion.labels.map((label, labelIndex) => (
+                  <div key={label.id} className="space-y-2 p-4 rounded-lg border border-border">
+                    <label className="text-sm font-medium text-foreground" htmlFor={`label-${label.id}`}>
+                      Label {labelIndex + 1}:
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        id={`label-${label.id}`}
+                        className="input-field w-full"
+                        value={guesses[label.id] || ""}
+                        disabled={results[label.id] !== undefined}
+                        placeholder={`Type answer for label ${labelIndex + 1}…`}
+                        onChange={(e) => setGuesses(prev => ({ ...prev, [label.id]: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && guesses[label.id]?.trim() && results[label.id] === undefined) {
+                            submitLabel(label.id, label.correct_answer);
+                          }
+                        }}
+                      />
+                      {results[label.id] === undefined ? (
+                        <button 
+                          className="btn-primary px-4 whitespace-nowrap"
+                          onClick={() => submitLabel(label.id, label.correct_answer)}
+                          disabled={!guesses[label.id]?.trim()}
+                        >
+                          Check
+                        </button>
+                      ) : (
+                        <div className={`px-4 py-2 rounded-lg flex items-center ${results[label.id] ? "bg-primary/10" : "bg-destructive/10"}`}>
+                          <span className="text-lg">{results[label.id] ? "✅" : "❌"}</span>
+                        </div>
+                      )}
                     </div>
-                    <div className="text-sm mt-1">
-                      Correct answer: <span className="font-medium">{current.correct_answer}</span>
-                    </div>
-                    {current.explanation && (
-                      <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">{current.explanation}</p>
+                    
+                    {results[label.id] !== undefined && (
+                      <div className={`rounded-lg p-3 ${results[label.id] ? "bg-primary/10" : "bg-destructive/10"}`}>
+                        <div className="text-sm">
+                          <span className="font-medium">
+                            {results[label.id] ? "Correct!" : "Incorrect"}
+                          </span>
+                          {!results[label.id] && (
+                            <span className="ml-2">
+                              Correct answer: <span className="font-medium">{label.correct_answer}</span>
+                            </span>
+                          )}
+                        </div>
+                        {label.explanation && (
+                          <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">
+                            {label.explanation}
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
+                ))}
+
+                {!allAnswered() ? (
+                  <div className="space-y-2">
+                    <button 
+                      className="btn-primary w-full" 
+                      onClick={submitAll}
+                      disabled={!currentQuestion.labels.some(label => guesses[label.id]?.trim() && results[label.id] === undefined)}
+                    >
+                      Submit All Answers
+                    </button>
+                    <p className="text-xs text-center text-muted-foreground">
+                      You can submit individual labels or submit all at once
+                    </p>
+                  </div>
+                ) : (
                   <button className="btn-primary w-full" onClick={next}>
-                    {index + 1 >= total ? "Finish session" : "Next"}
+                    {index + 1 >= total ? "Finish session" : "Next question"}
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         )}
 
-        {started && !itemsQ.isLoading && total > 0 && !current && (
+        {started && !itemsQ.isLoading && total > 0 && !currentQuestion && (
           <div className="card-surface p-8 text-center space-y-4">
             <h2 className="text-2xl font-bold text-foreground">Session Complete 🎉</h2>
             <div className="text-muted-foreground space-y-1">
