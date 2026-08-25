@@ -1,336 +1,552 @@
-import { useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ChapterTopicPicker, type ChapterTopicSelection } from "@/components/ChapterTopicPicker";
-import { parseCSV } from "@/lib/csv";
-
-const STRUCTURE_TYPES = ["bone", "muscle", "nerve", "artery", "vein"] as const;
+import { toast } from "sonner";
+import { Spinner } from "@/components/Spinner";
 
 type PracticalItem = {
   id: string;
-  category_id: string | null;
+  category_id: string;
   structure_type: string;
   image_url: string;
   correct_answer: string;
   explanation: string | null;
   is_published: boolean;
+  created_at: string;
+};
+
+type Category = {
+  id: string;
+  topic_id: string;
+  name: string;
+  display_order: number;
+};
+
+type Topic = {
+  id: string;
+  name: string;
+  subject: string;
+  display_order: number;
 };
 
 export function PracticalAdminPanel() {
   const qc = useQueryClient();
-  const [sel, setSel] = useState<ChapterTopicSelection>({ topicId: "", categoryId: "" });
-  const [structureType, setStructureType] = useState<string>("bone");
-  const [imageUrl, setImageUrl] = useState("");
-  const [answer, setAnswer] = useState("");
-  const [explanation, setExplanation] = useState("");
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedTopic, setSelectedTopic] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingItem, setEditingItem] = useState<PracticalItem | null>(null);
 
+  // Fetch topics
+  const topicsQ = useQuery({
+    queryKey: ["admin", "topics"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("topics")
+        .select("*")
+        .order("display_order");
+      if (error) throw error;
+      return data as Topic[];
+    },
+  });
+
+  // Fetch categories for selected topic
+  const categoriesQ = useQuery({
+    enabled: !!selectedTopic,
+    queryKey: ["admin", "categories", selectedTopic],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .eq("topic_id", selectedTopic)
+        .order("display_order");
+      if (error) throw error;
+      return data as Category[];
+    },
+  });
+
+  // Fetch practical items for selected category
   const itemsQ = useQuery({
-    enabled: !!sel.categoryId,
-    queryKey: ["admin", "practical", sel.categoryId],
+    enabled: !!selectedCategory,
+    queryKey: ["admin", "practical-items", selectedCategory],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("practical_items")
-        .select("id, category_id, structure_type, image_url, correct_answer, explanation, is_published")
-        .eq("category_id", sel.categoryId)
+        .select("*")
+        .eq("category_id", selectedCategory)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as PracticalItem[];
     },
   });
 
-  function clearForm() {
-    setEditingId(null);
-    setStructureType("bone");
-    setImageUrl("");
-    setAnswer("");
-    setExplanation("");
-  }
-
-  const save = useMutation({
-    mutationFn: async () => {
-      if (!sel.categoryId) throw new Error("Pick a chapter and topic first");
-      if (!imageUrl.trim()) throw new Error("Image URL is required");
-      if (!answer.trim()) throw new Error("Correct answer is required");
-      const payload = {
-        category_id: sel.categoryId,
-        structure_type: structureType,
-        image_url: imageUrl.trim(),
-        correct_answer: answer.trim(),
-        explanation: explanation.trim() || null,
-      };
-      if (editingId) {
-        const { error } = await supabase.from("practical_items").update(payload).eq("id", editingId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("practical_items").insert(payload);
-        if (error) throw error;
-      }
+  // Delete item mutation
+  const deleteItem = useMutation({
+    mutationFn: async (id: string) => {
+      if (!confirm("Delete this practical item?")) throw new Error("cancelled");
+      const { error } = await supabase
+        .from("practical_items")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
     },
     onSuccess: () => {
-      toast.success(editingId ? "Practical item updated" : "Practical item added");
-      clearForm();
-      qc.invalidateQueries({ queryKey: ["admin", "practical"] });
+      toast.success("Item deleted");
+      qc.invalidateQueries({ queryKey: ["admin", "practical-items", selectedCategory] });
+    },
+    onError: (err: Error) => {
+      if (err.message !== "cancelled") toast.error(err.message);
+    },
+  });
+
+  // Toggle publish mutation
+  const togglePublish = useMutation({
+    mutationFn: async (item: PracticalItem) => {
+      const { error } = await supabase
+        .from("practical_items")
+        .update({ is_published: !item.is_published })
+        .eq("id", item.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Status updated");
+      qc.invalidateQueries({ queryKey: ["admin", "practical-items", selectedCategory] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const remove = useMutation({
-    mutationFn: async (id: string) => {
-      if (!confirm("Delete this practical item?")) throw new Error("cancelled");
-      const { error } = await supabase.from("practical_items").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Practical item deleted");
-      qc.invalidateQueries({ queryKey: ["admin", "practical"] });
-    },
-    onError: (err: Error) => { if (err.message !== "cancelled") toast.error(err.message); },
-  });
-
-  function startEdit(item: PracticalItem) {
-    setEditingId(item.id);
-    setStructureType(item.structure_type);
-    setImageUrl(item.image_url);
-    setAnswer(item.correct_answer);
-    setExplanation(item.explanation ?? "");
-  }
-
   return (
-    <div className="space-y-4">
-      <div className="space-y-4 rounded-2xl border border-border bg-card p-4">
-        <h2 className="text-sm font-semibold">Add new practical item</h2>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <ChapterTopicPicker idPrefix="pr" value={sel} onChange={(v) => { setSel(v); clearForm(); }} />
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="pr-type">Structure type</label>
+    <div className="space-y-6">
+      {/* Topic and Category Selection */}
+      <div className="rounded-2xl border border-border bg-card p-6">
+        <h2 className="text-lg font-semibold mb-4">Practical Mode Management</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Select Topic</label>
             <select
-              id="pr-type"
-              className="input-field w-full"
-              value={structureType}
-              onChange={(e) => setStructureType(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2"
+              value={selectedTopic}
+              onChange={(e) => {
+                setSelectedTopic(e.target.value);
+                setSelectedCategory("");
+              }}
             >
-              {STRUCTURE_TYPES.map((t) => (
-                <option key={t} value={t} className="capitalize">{t}</option>
+              <option value="">Select a topic...</option>
+              {topicsQ.data?.map((topic) => (
+                <option key={topic.id} value={topic.id}>
+                  {topic.name}
+                </option>
               ))}
             </select>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="pr-answer">Correct answer</label>
-            <input
-              id="pr-answer"
-              className="input-field w-full"
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              placeholder="e.g. Femur"
-            />
+          <div>
+            <label className="block text-sm font-medium mb-2">Select Category</label>
+            <select
+              className="w-full rounded-lg border border-border bg-background px-3 py-2"
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              disabled={!selectedTopic}
+            >
+              <option value="">Select a category...</option>
+              {categoriesQ.data?.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
-
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground" htmlFor="pr-image">Image URL</label>
-          <input
-            id="pr-image"
-            className="input-field w-full"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            placeholder="https://…"
-          />
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-muted-foreground" htmlFor="pr-expl">Explanation (optional)</label>
-          <textarea
-            id="pr-expl"
-            className="input-field w-full"
-            rows={2}
-            value={explanation}
-            onChange={(e) => setExplanation(e.target.value)}
-          />
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <button className="btn-primary px-3 py-2 text-sm" disabled={save.isPending || !sel.categoryId} onClick={() => save.mutate()}>
-            {save.isPending ? "Saving…" : editingId ? "Save changes" : "Add item"}
-          </button>
-          {editingId && (
-            <button className="btn-outline px-3 py-2 text-sm" onClick={clearForm}>Cancel</button>
-          )}
-        </div>
       </div>
 
-      <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
-        <h2 className="text-sm font-semibold">Existing practical items</h2>
-        {!sel.categoryId ? (
-          <p className="text-xs text-muted-foreground">Pick a chapter and topic to see its items.</p>
-        ) : itemsQ.isLoading ? (
-          <p className="text-xs text-muted-foreground">Loading…</p>
-        ) : (itemsQ.data ?? []).length === 0 ? (
-          <p className="text-xs text-muted-foreground">No practical items yet.</p>
-        ) : (
-          <ul className="space-y-2">
-            {itemsQ.data!.map((item) => (
-              <li key={item.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border p-2">
-                <img src={item.image_url} alt="" className="h-12 w-12 rounded-lg object-cover bg-muted" loading="lazy" />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">{item.correct_answer}</div>
-                  <div className="truncate text-xs capitalize text-muted-foreground">{item.structure_type}</div>
+      {selectedCategory && (
+        <>
+          {/* Settings Panel */}
+          <PracticalSettingsPanel categoryId={selectedCategory} />
+
+          {/* Add Item Button */}
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">
+              Practical Items ({itemsQ.data?.length || 0})
+            </h3>
+            <button
+              className="btn-primary px-4 py-2"
+              onClick={() => {
+                setEditingItem(null);
+                setShowAddForm(true);
+              }}
+            >
+              + Add Single Label
+            </button>
+          </div>
+
+          {/* Items List */}
+          {itemsQ.isLoading ? (
+            <div className="flex justify-center p-8">
+              <Spinner />
+            </div>
+          ) : itemsQ.data?.length === 0 ? (
+            <div className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground">
+              No practical items added yet. Click "Add Single Label" to create your first item.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+              {itemsQ.data?.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-2xl border border-border bg-card p-4"
+                >
+                  <div className="flex gap-4">
+                    {item.image_url && (
+                      <img
+                        src={item.image_url}
+                        alt={item.correct_answer}
+                        className="w-32 h-32 object-cover rounded-lg bg-muted"
+                      />
+                    )}
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h4 className="font-medium">{item.correct_answer}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Type: {item.structure_type}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            className={`px-2 py-1 text-xs rounded-full ${
+                              item.is_published
+                                ? "bg-primary/10 text-primary"
+                                : "bg-muted text-muted-foreground"
+                            }`}
+                            onClick={() => togglePublish.mutate(item)}
+                          >
+                            {item.is_published ? "Published" : "Draft"}
+                          </button>
+                          <button
+                            className="text-xs text-primary hover:underline"
+                            onClick={() => {
+                              setEditingItem(item);
+                              setShowAddForm(true);
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="text-xs text-rose-500 hover:underline"
+                            onClick={() => deleteItem.mutate(item.id)}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                      {item.explanation && (
+                        <p className="text-sm text-muted-foreground">
+                          {item.explanation}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <button className="text-xs text-primary hover:underline" onClick={() => startEdit(item)}>Edit</button>
-                <button className="text-xs text-red-500 hover:underline" onClick={() => remove.mutate(item.id)}>Delete</button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
 
-      <PracticalCsvImport onDone={() => qc.invalidateQueries({ queryKey: ["admin", "practical"] })} />
+          {/* Add/Edit Form Modal */}
+          {showAddForm && (
+            <PracticalItemForm
+              categoryId={selectedCategory}
+              item={editingItem}
+              onClose={() => {
+                setShowAddForm(false);
+                setEditingItem(null);
+              }}
+              onSaved={() => {
+                setShowAddForm(false);
+                setEditingItem(null);
+                qc.invalidateQueries({
+                  queryKey: ["admin", "practical-items", selectedCategory],
+                });
+              }}
+            />
+          )}
+        </>
+      )}
     </div>
   );
 }
 
-function PracticalCsvImport({ onDone }: { onDone: () => void }) {
-  const [importing, setImporting] = useState(false);
-  const [summary, setSummary] = useState<{ created: number; failures: { row: number; reason: string }[] } | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+// Practical Settings Panel Component
+function PracticalSettingsPanel({ categoryId }: { categoryId: string }) {
+  const [labelsPerQuestion, setLabelsPerQuestion] = useState(5);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setImporting(true);
-    setSummary(null);
-    try {
-      const rows = parseCSV(await file.text());
-      if (rows.length < 2) throw new Error("CSV must contain a header row and at least one data row.");
+  useEffect(() => {
+    if (!categoryId) return;
 
-      const header = rows[0].map((h) => h.trim().toLowerCase());
-      const col = (name: string) => header.indexOf(name);
-      const iChapter = col("chapter");
-      const iTopic = col("topic");
-      const iType = col("structure_type");
-      const iImage = col("image_url");
-      const iAnswer = col("correct_answer");
-      const iExpl = col("explanation");
-      if (iChapter < 0 || iTopic < 0 || iImage < 0 || iAnswer < 0) {
-        throw new Error("CSV header must include: chapter, topic, structure_type, image_url, correct_answer, explanation");
+    const fetchSettings = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("practical_settings")
+        .select("labels_per_question")
+        .eq("category_id", categoryId)
+        .single();
+
+      if (!error && data) {
+        setLabelsPerQuestion(data.labels_per_question);
       }
+      setLoading(false);
+    };
 
-      const { data: chapters, error: tErr } = await supabase.from("topics").select("id, name");
-      if (tErr) throw tErr;
-      const { data: topics, error: cErr } = await supabase.from("categories").select("id, name, topic_id");
-      if (cErr) throw cErr;
+    fetchSettings();
+  }, [categoryId]);
 
-      // Chapter is the parent that disambiguates topics with the same name.
-      const chapterIdsByName = new Map<string, string[]>();
-      (chapters ?? []).forEach((t) => {
-        const key = t.name.trim().toLowerCase();
-        chapterIdsByName.set(key, [...(chapterIdsByName.get(key) ?? []), t.id]);
-      });
-      const topicByPair = new Map<string, string[]>();
-      (topics ?? []).forEach((c) => {
-        const key = `${c.topic_id}::${c.name.trim().toLowerCase()}`;
-        topicByPair.set(key, [...(topicByPair.get(key) ?? []), c.id]);
-      });
+  const saveSettings = async () => {
+    if (!categoryId) return;
 
-      const failures: { row: number; reason: string }[] = [];
-      const inserts: {
-        category_id: string;
-        structure_type: string;
-        image_url: string;
-        correct_answer: string;
-        explanation: string | null;
-      }[] = [];
+    setSaving(true);
+    const { error } = await supabase.rpc("update_practical_settings", {
+      p_category_id: categoryId,
+      p_labels_per_question: labelsPerQuestion,
+    });
 
-      for (let r = 1; r < rows.length; r++) {
-        const row = rows[r];
-        const chapterName = (row[iChapter] ?? "").trim();
-        const topicName = (row[iTopic] ?? "").trim();
-        const imageUrl = (row[iImage] ?? "").trim();
-        const correct = (row[iAnswer] ?? "").trim();
-        const structureType = (iType >= 0 ? (row[iType] ?? "").trim().toLowerCase() : "") || "bone";
-        const explanation = iExpl >= 0 ? (row[iExpl] ?? "").trim() : "";
-
-        if (!chapterName || !topicName) { failures.push({ row: r + 1, reason: "Missing chapter or topic." }); continue; }
-        if (!imageUrl) { failures.push({ row: r + 1, reason: "Missing image_url." }); continue; }
-        if (!correct) { failures.push({ row: r + 1, reason: "Missing correct_answer." }); continue; }
-        if (!STRUCTURE_TYPES.includes(structureType as (typeof STRUCTURE_TYPES)[number])) {
-          failures.push({ row: r + 1, reason: `Invalid structure_type "${structureType}". Use bone, muscle, nerve, artery or vein.` });
-          continue;
-        }
-
-        const chapterIds = chapterIdsByName.get(chapterName.toLowerCase()) ?? [];
-        if (chapterIds.length === 0) {
-          failures.push({ row: r + 1, reason: `No chapter "${chapterName}" found.` });
-          continue;
-        }
-        const matches = chapterIds.flatMap((cid) => topicByPair.get(`${cid}::${topicName.toLowerCase()}`) ?? []);
-        if (matches.length === 0) {
-          failures.push({ row: r + 1, reason: `No topic "${topicName}" found under chapter "${chapterName}".` });
-          continue;
-        }
-
-        inserts.push({
-          category_id: matches[0],
-          structure_type: structureType,
-          image_url: imageUrl,
-          correct_answer: correct,
-          explanation: explanation || null,
-        });
-      }
-
-      let created = 0;
-      if (inserts.length > 0) {
-        const { error } = await supabase.from("practical_items").insert(inserts);
-        if (error) throw error;
-        created = inserts.length;
-      }
-
-      setSummary({ created, failures });
-      toast.success(`${created} items created, ${failures.length} items failed`);
-      onDone();
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setImporting(false);
-      if (fileRef.current) fileRef.current.value = "";
+    if (error) {
+      toast.error("Failed to save settings");
+      console.error("Error saving settings:", error);
+    } else {
+      toast.success("Settings saved successfully");
     }
+    setSaving(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-4">
+        <div className="text-sm text-muted-foreground">Loading settings...</div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
-      <h2 className="text-sm font-semibold">Bulk CSV import</h2>
-      <p className="text-xs text-muted-foreground">
-        Columns, in order: <code>chapter, topic, structure_type, image_url, correct_answer, explanation</code>.
-        Each row is matched on the exact chapter + topic pair, so the same topic name may repeat under different chapters.
-      </p>
-      <input
-        ref={fileRef}
-        type="file"
-        accept=".csv,text/csv"
-        onChange={handleImport}
-        disabled={importing}
-        className="w-full text-sm"
-        aria-label="Choose a practical items CSV file"
-      />
-      {importing && <p className="text-xs text-muted-foreground">Importing…</p>}
-      {summary && (
-        <div className="space-y-1 text-xs">
-          <p className="font-medium">{summary.created} items created, {summary.failures.length} items failed</p>
-          {summary.failures.length > 0 && (
-            <ul className="list-disc space-y-0.5 pl-4 text-red-500">
-              {summary.failures.map((f) => (
-                <li key={f.row}>Row {f.row}: {f.reason}</li>
-              ))}
-            </ul>
-          )}
+    <div className="rounded-2xl border border-border bg-card p-6">
+      <h3 className="text-lg font-semibold mb-4">Practical Mode Settings</h3>
+
+      <div className="space-y-2">
+        <label
+          className="text-sm font-medium text-foreground"
+          htmlFor="labels-per-question"
+        >
+          Labels per question (3-8)
+        </label>
+        <input
+          id="labels-per-question"
+          type="number"
+          min={3}
+          max={8}
+          value={labelsPerQuestion}
+          onChange={(e) => {
+            const value = parseInt(e.target.value) || 5;
+            setLabelsPerQuestion(Math.min(8, Math.max(3, value)));
+          }}
+          className="w-full rounded-lg border border-border bg-background px-3 py-2"
+        />
+        <p className="text-xs text-muted-foreground">
+          Students will see this many labels to identify in each practical question.
+        </p>
+      </div>
+
+      <button
+        className="btn-primary w-full mt-4"
+        onClick={saveSettings}
+        disabled={saving}
+      >
+        {saving ? "Saving..." : "Save Settings"}
+      </button>
+    </div>
+  );
+}
+
+// Practical Item Form Component
+function PracticalItemForm({
+  categoryId,
+  item,
+  onClose,
+  onSaved,
+}: {
+  categoryId: string;
+  item: PracticalItem | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [structureType, setStructureType] = useState(item?.structure_type || "");
+  const [imageUrl, setImageUrl] = useState(item?.image_url || "");
+  const [correctAnswer, setCorrectAnswer] = useState(item?.correct_answer || "");
+  const [explanation, setExplanation] = useState(item?.explanation || "");
+  const [isPublished, setIsPublished] = useState(item?.is_published ?? true);
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    // Validation
+    if (!structureType.trim()) {
+      toast.error("Structure type is required");
+      return;
+    }
+    if (!imageUrl.trim()) {
+      toast.error("Image URL is required");
+      return;
+    }
+    if (!correctAnswer.trim()) {
+      toast.error("Correct answer is required");
+      return;
+    }
+
+    setSaving(true);
+
+    const payload = {
+      category_id: categoryId,
+      structure_type: structureType.trim(),
+      image_url: imageUrl.trim(),
+      correct_answer: correctAnswer.trim(),
+      explanation: explanation.trim() || null,
+      is_published: isPublished,
+    };
+
+    try {
+      if (item?.id) {
+        // Update existing item
+        const { error } = await supabase
+          .from("practical_items")
+          .update(payload)
+          .eq("id", item.id);
+        if (error) throw error;
+        toast.success("Practical item updated successfully");
+      } else {
+        // Insert new item
+        const { error } = await supabase
+          .from("practical_items")
+          .insert(payload);
+        if (error) throw error;
+        toast.success("Practical item added successfully");
+      }
+      onSaved();
+    } catch (error) {
+      const err = error as Error;
+      toast.error(err.message || "Failed to save practical item");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg rounded-2xl bg-card p-6 shadow-xl max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-lg font-semibold mb-4">
+          {item ? "Edit Practical Item" : "Add Single Label"}
+        </h3>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Structure Type
+            </label>
+            <input
+              type="text"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2"
+              placeholder="e.g., Bone, Muscle, Nerve, Artery"
+              value={structureType}
+              onChange={(e) => setStructureType(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Image URL
+            </label>
+            <input
+              type="url"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2"
+              placeholder="https://example.com/image.jpg"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+            />
+            {imageUrl && (
+              <div className="mt-2">
+                <img
+                  src={imageUrl}
+                  alt="Preview"
+                  className="w-full h-40 object-contain rounded-lg bg-muted"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Correct Answer
+            </label>
+            <input
+              type="text"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2"
+              placeholder="e.g., Femur, Biceps Brachii"
+              value={correctAnswer}
+              onChange={(e) => setCorrectAnswer(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Explanation (optional)
+            </label>
+            <textarea
+              className="w-full rounded-lg border border-border bg-background px-3 py-2"
+              rows={3}
+              placeholder="Add explanation or additional information..."
+              value={explanation}
+              onChange={(e) => setExplanation(e.target.value)}
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="is-published"
+              checked={isPublished}
+              onChange={(e) => setIsPublished(e.target.checked)}
+              className="rounded border-border"
+            />
+            <label htmlFor="is-published" className="text-sm">
+              Publish immediately
+            </label>
+          </div>
         </div>
-      )}
+
+        <div className="flex justify-end gap-2 mt-6">
+          <button
+            className="btn-outline px-4 py-2"
+            onClick={onClose}
+            disabled={saving}
+          >
+            Cancel
+          </button>
+          <button
+            className="btn-primary px-4 py-2"
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? "Saving..." : item ? "Update" : "Add Item"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
