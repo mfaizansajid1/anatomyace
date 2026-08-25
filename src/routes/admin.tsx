@@ -255,7 +255,7 @@ function AdminShell() {
               onDone={() => { invalidate("flashcards"); }}
             />
           </section>
-                </main>
+        </main>
       ) : tab === "practical" ? (
         <main className="mx-auto max-w-6xl px-4 py-6">
           <PracticalAdminPanel />
@@ -613,6 +613,93 @@ function SubtopicPanel({
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+/* ---------- Practical Settings Panel ---------- */
+
+function PracticalSettingsPanel({ categoryId }: { categoryId: string }) {
+  const [labelsPerQuestion, setLabelsPerQuestion] = useState(5);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!categoryId) return;
+    
+    const fetchSettings = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("practical_settings")
+        .select("labels_per_question")
+        .eq("category_id", categoryId)
+        .single();
+      
+      if (!error && data) {
+        setLabelsPerQuestion(data.labels_per_question);
+      }
+      setLoading(false);
+    };
+    
+    fetchSettings();
+  }, [categoryId]);
+
+  const saveSettings = async () => {
+    if (!categoryId) return;
+    
+    setSaving(true);
+    const { error } = await supabase.rpc("update_practical_settings", {
+      p_category_id: categoryId,
+      p_labels_per_question: labelsPerQuestion,
+    });
+    
+    if (error) {
+      toast.error("Failed to save settings");
+      console.error("Error saving settings:", error);
+    } else {
+      toast.success("Settings saved successfully");
+    }
+    setSaving(false);
+  };
+
+  if (loading) {
+    return <div className="text-sm text-muted-foreground">Loading settings...</div>;
+  }
+
+  return (
+    <div className="space-y-4 p-4 border border-border rounded-lg">
+      <h3 className="text-lg font-semibold text-foreground">
+        Practical Mode Settings
+      </h3>
+      
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-foreground" htmlFor="labels-per-question">
+          Labels per question (3-8)
+        </label>
+        <input
+          id="labels-per-question"
+          type="number"
+          min={3}
+          max={8}
+          value={labelsPerQuestion}
+          onChange={(e) => {
+            const value = parseInt(e.target.value) || 5;
+            setLabelsPerQuestion(Math.min(8, Math.max(3, value)));
+          }}
+          className="input-field w-full"
+        />
+        <p className="text-xs text-muted-foreground">
+          Students will see this many labels to identify in each practical question.
+        </p>
+      </div>
+      
+      <button 
+        className="btn-primary w-full" 
+        onClick={saveSettings}
+        disabled={saving}
+      >
+        {saving ? "Saving..." : "Save Settings"}
+      </button>
     </div>
   );
 }
