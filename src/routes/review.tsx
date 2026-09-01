@@ -7,6 +7,7 @@ import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { checkCelebrations } from "@/lib/celebrate";
+import { ArrowLeft, PartyPopper, RotateCcw } from "lucide-react";
 
 export const Route = createFileRoute("/review")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -216,7 +217,7 @@ function StudyPage() {
     qc.invalidateQueries({ queryKey: ["dashboard"] });
     markPlannerProgress(subtopicId).then((done) => {
       if (done) {
-        toast.success("✅ Plan day completed!");
+        toast.success("Plan day completed!");
         qc.invalidateQueries({ queryKey: ["planner"] });
       }
     });
@@ -257,8 +258,9 @@ function StudyPage() {
           </Link>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
-              ← Dashboard
+            <Link to="/dashboard" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+              <ArrowLeft aria-hidden className="h-4 w-4" />
+              Dashboard
             </Link>
           </div>
         </div>
@@ -374,8 +376,9 @@ function StudyPage() {
                 />
               </div>
               <div className="flex justify-end">
-                <button className="text-xs text-muted-foreground hover:text-foreground underline" onClick={restartSession}>
-                  ↻ Restart session
+                <button className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground underline" onClick={restartSession}>
+                  <RotateCcw aria-hidden className="h-3.5 w-3.5" />
+                  Restart session
                 </button>
               </div>
             </div>
@@ -416,10 +419,10 @@ function StudyPage() {
 
         {started && !cardsQ.isLoading && cards.length > 0 && !current && (
           <div className="card-surface p-8 text-center space-y-4">
-            <h2 className="text-2xl font-bold text-foreground">Session Complete 🎉</h2>
+            <h2 className="flex items-center justify-center gap-2 text-2xl font-bold text-foreground"><PartyPopper aria-hidden className="h-6 w-6 text-primary" />Session Complete</h2>
             <p className="text-muted-foreground">You reviewed {reviewed} card{reviewed === 1 ? "" : "s"}.</p>
             <div className="flex flex-wrap gap-2 justify-center">
-              <button className="btn-outline" onClick={restartSession}>↻ Restart session</button>
+              <button className="btn-outline" onClick={restartSession}><RotateCcw aria-hidden className="h-4 w-4" />Restart session</button>
               <button className="btn-outline" onClick={pickAnother}>Study another subtopic</button>
               <Link to="/dashboard" className="btn-primary">Back to Dashboard</Link>
             </div>

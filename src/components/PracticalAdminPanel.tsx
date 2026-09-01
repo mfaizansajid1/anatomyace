@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Spinner } from "@/components/Spinner";
+import { Pencil, Plus, Trash2, Upload, X } from "lucide-react";
 
 type PracticalItem = {
   id: string;
@@ -178,7 +179,8 @@ export function PracticalAdminPanel() {
                   setShowAddForm(false);
                 }}
               >
-                📦 Bulk Import CSV
+                <Upload aria-hidden className="h-4 w-4" />
+                Bulk Import CSV
               </button>
               <button
                 className="btn-primary px-4 py-2"
@@ -188,7 +190,8 @@ export function PracticalAdminPanel() {
                   setShowBulkImport(false);
                 }}
               >
-                + Add Single Label
+                <Plus aria-hidden className="h-4 w-4" />
+                Add Single Label
               </button>
             </div>
           </div>
@@ -254,19 +257,21 @@ export function PracticalAdminPanel() {
                             {item.is_published ? "Published" : "Draft"}
                           </button>
                           <button
-                            className="text-xs text-primary hover:underline"
+                            className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
                             onClick={() => {
                               setEditingItem(item);
                               setShowAddForm(true);
                               setShowBulkImport(false);
                             }}
                           >
+                            <Pencil aria-hidden className="h-3.5 w-3.5" />
                             Edit
                           </button>
                           <button
-                            className="text-xs text-rose-500 hover:underline"
+                            className="inline-flex items-center gap-1 text-xs text-rose-500 hover:underline"
                             onClick={() => deleteItem.mutate(item.id)}
                           >
+                            <Trash2 aria-hidden className="h-3.5 w-3.5" />
                             Delete
                           </button>
                         </div>
@@ -561,10 +566,11 @@ function PracticalBulkImport({
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold">Bulk Import Practical Items</h3>
         <button
-          className="text-sm text-muted-foreground hover:text-foreground"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
           onClick={onClose}
         >
-          ✕ Close
+          <X aria-hidden className="h-4 w-4" />
+          Close
         </button>
       </div>
 

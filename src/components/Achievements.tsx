@@ -1,15 +1,17 @@
+import { Flame, Lock, Medal, Star, Target, type LucideIcon } from "lucide-react";
+
 type Badge = {
   id: string;
   label: string;
   description: string;
-  icon: string;
+  Icon: LucideIcon;
 };
 
 const BADGES: Badge[] = [
-  { id: "first_session", label: "First Steps", description: "Complete your first study session", icon: "🎯" },
-  { id: "streak_7", label: "7-Day Streak", description: "Study 7 days in a row", icon: "🔥" },
-  { id: "century_100", label: "Century Club", description: "Study 100 cards total", icon: "💯" },
-  { id: "perfectionist_10", label: "Perfectionist", description: "10 correct in a row", icon: "⭐" },
+  { id: "first_session", label: "First Steps", description: "Complete your first study session", Icon: Target },
+  { id: "streak_7", label: "7-Day Streak", description: "Study 7 days in a row", Icon: Flame },
+  { id: "century_100", label: "Century Club", description: "Study 100 cards total", Icon: Medal },
+  { id: "perfectionist_10", label: "Perfectionist", description: "10 correct in a row", Icon: Star },
 ];
 
 export function Achievements({ earned }: { earned: Set<string> }) {
@@ -17,6 +19,7 @@ export function Achievements({ earned }: { earned: Set<string> }) {
     <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
       {BADGES.map((badge) => {
         const isEarned = earned.has(badge.id);
+        const Icon = isEarned ? badge.Icon : Lock;
         return (
           <div
             key={badge.id}
@@ -27,10 +30,11 @@ export function Achievements({ earned }: { earned: Set<string> }) {
             }`}
             title={badge.description}
           >
-            <div className="text-2xl" aria-hidden="true">
-              {isEarned ? badge.icon : "🔒"}
-            </div>
-            <div className="mt-1 text-xs font-medium text-foreground">
+            <Icon
+              aria-hidden
+              className={`mx-auto h-6 w-6 ${isEarned ? "text-primary" : "text-muted-foreground"}`}
+            />
+            <div className="mt-1.5 text-xs font-medium text-foreground">
               {badge.label}
             </div>
             <div className="mt-0.5 text-[11px] text-muted-foreground">

@@ -8,6 +8,7 @@ import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ChapterTopicPicker, type ChapterTopicSelection } from "@/components/ChapterTopicPicker";
 import { checkCelebrations } from "@/lib/celebrate";
+import { ArrowLeft } from "lucide-react";
 
 export const Route = createFileRoute("/mcq")({
   head: () => ({
@@ -122,7 +123,7 @@ function McqPage() {
           </Link>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Link to="/study" className="text-sm text-muted-foreground hover:text-foreground">← Study Hub</Link>
+            <Link to="/study" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft aria-hidden className="h-4 w-4" />Study Hub</Link>
           </div>
         </div>
       </header>

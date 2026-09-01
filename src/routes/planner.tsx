@@ -6,16 +6,7 @@ import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
-import { 
-  ChevronUp, 
-  ChevronDown, 
-  Trash2, 
-  Layers, 
-  Bone, 
-  ListChecks, 
-  Plus,
-  GripVertical
-} from "lucide-react";
+import { ArrowLeft, Bone, CheckCircle2, ChevronDown, ChevronUp, GripVertical, Layers, ListChecks, Plus, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/planner")({
   head: () => ({
@@ -720,8 +711,9 @@ function PlannerPage() {
           </Link>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
-              ← Dashboard
+            <Link to="/dashboard" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+              <ArrowLeft aria-hidden className="h-4 w-4" />
+              Dashboard
             </Link>
           </div>
         </div>
@@ -847,7 +839,7 @@ function PlannerPage() {
                       <div className="text-xs text-muted-foreground">{prettyDate(d.plan_date)}</div>
                     </div>
                     {d.completed ? (
-                      <span className="text-xs font-medium text-primary shrink-0">✓ Completed</span>
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-primary shrink-0"><CheckCircle2 aria-hidden className="h-4 w-4" />Completed</span>
                     ) : (
                       startLink
                     )}

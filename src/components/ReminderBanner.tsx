@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { Bell, X } from "lucide-react";
 
 type Props = {
   currentStreak: number;
@@ -63,7 +64,7 @@ export function ReminderBanner(props: Props) {
       role="status"
       className="mt-6 card-surface p-4 flex items-center gap-3 border-l-4 border-l-primary bg-primary/5"
     >
-      <span aria-hidden className="text-xl">🔔</span>
+      <Bell aria-hidden className="h-5 w-5 shrink-0 text-primary" />
       <p className="flex-1 text-sm font-medium text-foreground">{reminder.message}</p>
       <Link to="/study" className="btn-primary text-sm shrink-0" style={{ minHeight: 40 }}>
         Study now
@@ -81,9 +82,7 @@ export function ReminderBanner(props: Props) {
           }
         }}
       >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-          <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        </svg>
+        <X aria-hidden className="h-4 w-4" />
       </button>
     </div>
   );

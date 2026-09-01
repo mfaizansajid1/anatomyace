@@ -6,7 +6,7 @@ import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { StudyInsights } from "@/components/StudyInsights";
-import { Clock, Calendar, TrendingDown, TrendingUp, AlertTriangle } from "lucide-react";
+import { AlertTriangle, Bone, Calendar, Clock, Layers, ListChecks, TrendingDown, TrendingUp } from "lucide-react";
 
 import {
   ResponsiveContainer,
@@ -247,7 +247,7 @@ function ProgressPage() {
               <h2 className="font-semibold text-foreground">By Study Mode</h2>
               <div className="mt-4 space-y-3">
                 <div className="flex items-center justify-between rounded-xl bg-muted/60 px-3 py-2">
-                  <span className="text-sm text-foreground">🗂️ Flashcards</span>
+                  <span className="flex items-center gap-2 text-sm text-foreground"><Layers aria-hidden className="h-4 w-4 text-muted-foreground" />Flashcards</span>
                   <div className="flex items-center gap-3">
                     <span className="text-sm text-muted-foreground">{data?.modeStats.flashcards.total} reviews</span>
                     {data?.modeStats.flashcards.total === 0 ? (
@@ -262,7 +262,7 @@ function ProgressPage() {
                   </div>
                 </div>
                 <div className="flex items-center justify-between rounded-xl bg-muted/60 px-3 py-2">
-                  <span className="text-sm text-foreground">🦴 Practical Mode</span>
+                  <span className="flex items-center gap-2 text-sm text-foreground"><Bone aria-hidden className="h-4 w-4 text-muted-foreground" />Practical Mode</span>
                   <div className="flex items-center gap-3">
                     <span className="text-sm text-muted-foreground">{data?.modeStats.practical.total} answers</span>
                     {data?.modeStats.practical.total === 0 ? (
@@ -277,7 +277,7 @@ function ProgressPage() {
                   </div>
                 </div>
                 <div className="flex items-center justify-between rounded-xl bg-muted/60 px-3 py-2">
-                  <span className="text-sm text-foreground">✅ Clinical MCQs</span>
+                  <span className="flex items-center gap-2 text-sm text-foreground"><ListChecks aria-hidden className="h-4 w-4 text-muted-foreground" />Clinical MCQs</span>
                   <div className="flex items-center gap-3">
                     <span className="text-sm text-muted-foreground">{data?.modeStats.mcq.total} answers</span>
                     {data?.modeStats.mcq.total === 0 ? (

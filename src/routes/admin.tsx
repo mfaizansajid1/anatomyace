@@ -8,6 +8,7 @@ import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PracticalAdminPanel } from "@/components/PracticalAdminPanel";
 import { McqAdminPanel } from "@/components/McqAdminPanel";
+import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -173,8 +174,9 @@ function AdminShell() {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Link to="/dashboard" className="text-sm text-primary hover:underline">
-              ← Back to dashboard
+            <Link to="/dashboard" className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline">
+              <ArrowLeft aria-hidden className="h-4 w-4" />
+              Back to dashboard
             </Link>
           </div>
         </div>
@@ -321,8 +323,9 @@ function TopicSidebar({
     <div className="space-y-2">
       <div className="flex items-center justify-between px-1">
         <h2 className="text-sm font-semibold">Topics</h2>
-        <button className="text-xs text-primary hover:underline" onClick={() => { setAdding(true); setName(""); }}>
-          + Add
+        <button className="text-xs text-primary hover:underline inline-flex items-center gap-1" onClick={() => { setAdding(true); setName(""); }}>
+          <Plus aria-hidden className="h-3.5 w-3.5" />
+          Add
         </button>
       </div>
       {adding && (
@@ -429,7 +432,7 @@ function CategoryPanel({
         .select("*", { count: "exact", head: true })
         .eq("category_id", id);
       const warning = count && count > 0
-        ? `⚠️ This category has ${count} subtopic${count === 1 ? "" : "s"} (and all their flashcards). Delete everything?`
+        ? `This category has ${count} subtopic${count === 1 ? "" : "s"} (and all their flashcards). Delete everything?`
         : "Delete this category?";
       if (!confirm(warning)) throw new Error("cancelled");
       const { error } = await supabase.from("categories").delete().eq("id", id);
