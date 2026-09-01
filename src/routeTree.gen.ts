@@ -18,6 +18,7 @@ import { Route as ProgressRouteImport } from './routes/progress'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PracticalRouteImport } from './routes/practical'
 import { Route as PlannerRouteImport } from './routes/planner'
+import { Route as McqRouteImport } from './routes/mcq'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -70,6 +71,11 @@ const PlannerRoute = PlannerRouteImport.update({
   path: '/planner',
   getParentRoute: () => rootRouteImport,
 } as any)
+const McqRoute = McqRouteImport.update({
+  id: '/mcq',
+  path: '/mcq',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/mcq': typeof McqRoute
   '/planner': typeof PlannerRoute
   '/practical': typeof PracticalRoute
   '/profile': typeof ProfileRoute
@@ -125,6 +132,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/mcq': typeof McqRoute
   '/planner': typeof PlannerRoute
   '/practical': typeof PracticalRoute
   '/profile': typeof ProfileRoute
@@ -143,6 +151,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/mcq': typeof McqRoute
   '/planner': typeof PlannerRoute
   '/practical': typeof PracticalRoute
   '/profile': typeof ProfileRoute
@@ -162,6 +171,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forgot-password'
     | '/login'
+    | '/mcq'
     | '/planner'
     | '/practical'
     | '/profile'
@@ -179,6 +189,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forgot-password'
     | '/login'
+    | '/mcq'
     | '/planner'
     | '/practical'
     | '/profile'
@@ -196,6 +207,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forgot-password'
     | '/login'
+    | '/mcq'
     | '/planner'
     | '/practical'
     | '/profile'
@@ -214,6 +226,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
+  McqRoute: typeof McqRoute
   PlannerRoute: typeof PlannerRoute
   PracticalRoute: typeof PracticalRoute
   ProfileRoute: typeof ProfileRoute
@@ -290,6 +303,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlannerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mcq': {
+      id: '/mcq'
+      path: '/mcq'
+      fullPath: '/mcq'
+      preLoaderRoute: typeof McqRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -342,6 +362,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
+  McqRoute: McqRoute,
   PlannerRoute: PlannerRoute,
   PracticalRoute: PracticalRoute,
   ProfileRoute: ProfileRoute,
