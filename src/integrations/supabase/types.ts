@@ -250,6 +250,48 @@ export type Database = {
           },
         ]
       }
+      mcq_answers: {
+        Row: {
+          answered_at: string
+          category_id: string | null
+          id: string
+          is_correct: boolean
+          mcq_id: string
+          user_id: string
+        }
+        Insert: {
+          answered_at?: string
+          category_id?: string | null
+          id?: string
+          is_correct: boolean
+          mcq_id: string
+          user_id: string
+        }
+        Update: {
+          answered_at?: string
+          category_id?: string | null
+          id?: string
+          is_correct?: boolean
+          mcq_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcq_answers_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mcq_answers_mcq_id_fkey"
+            columns: ["mcq_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_mcqs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mcq_timer_settings: {
         Row: {
           auto_default_seconds: number
@@ -273,6 +315,48 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      practical_answers: {
+        Row: {
+          answered_at: string
+          category_id: string | null
+          id: string
+          is_correct: boolean
+          practical_item_id: string
+          user_id: string
+        }
+        Insert: {
+          answered_at?: string
+          category_id?: string | null
+          id?: string
+          is_correct: boolean
+          practical_item_id: string
+          user_id: string
+        }
+        Update: {
+          answered_at?: string
+          category_id?: string | null
+          id?: string
+          is_correct?: boolean
+          practical_item_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practical_answers_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practical_answers_practical_item_id_fkey"
+            columns: ["practical_item_id"]
+            isOneToOne: false
+            referencedRelation: "practical_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       practical_items: {
         Row: {
@@ -328,6 +412,30 @@ export type Database = {
           },
         ]
       }
+      practical_settings: {
+        Row: {
+          category_id: string
+          created_at: string | null
+          id: string
+          labels_per_question: number
+          updated_at: string | null
+        }
+        Insert: {
+          category_id: string
+          created_at?: string | null
+          id?: string
+          labels_per_question?: number
+          updated_at?: string | null
+        }
+        Update: {
+          category_id?: string
+          created_at?: string | null
+          id?: string
+          labels_per_question?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       review_events: {
         Row: {
           flashcard_id: string
@@ -362,39 +470,52 @@ export type Database = {
       }
       revision_plan_days: {
         Row: {
+          category_id: string | null
           completed: boolean
           created_at: string
           day_number: number
           id: string
           plan_date: string
           plan_id: string
+          study_type: string
           subtopic_id: string | null
           target_card_count: number
           updated_at: string
         }
         Insert: {
+          category_id?: string | null
           completed?: boolean
           created_at?: string
           day_number: number
           id?: string
           plan_date: string
           plan_id: string
+          study_type?: string
           subtopic_id?: string | null
           target_card_count?: number
           updated_at?: string
         }
         Update: {
+          category_id?: string | null
           completed?: boolean
           created_at?: string
           day_number?: number
           id?: string
           plan_date?: string
           plan_id?: string
+          study_type?: string
           subtopic_id?: string | null
           target_card_count?: number
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "revision_plan_days_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "revision_plan_days_plan_id_fkey"
             columns: ["plan_id"]
@@ -450,6 +571,7 @@ export type Database = {
           created_at: string
           id: string
           study_date: string
+          study_type: string
           user_id: string
         }
         Insert: {
@@ -457,6 +579,7 @@ export type Database = {
           created_at?: string
           id?: string
           study_date: string
+          study_type?: string
           user_id: string
         }
         Update: {
@@ -464,6 +587,7 @@ export type Database = {
           created_at?: string
           id?: string
           study_date?: string
+          study_type?: string
           user_id?: string
         }
         Relationships: []
@@ -622,9 +746,12 @@ export type Database = {
           daily_goal: number
           exam_date: string | null
           exam_name: string | null
+          flashcards_daily_goal: number
           last_study_date: string | null
           last_topic_studied: string | null
           longest_streak: number
+          mcq_daily_goal: number
+          practical_daily_goal: number
           updated_at: string
           user_id: string
         }
@@ -637,9 +764,12 @@ export type Database = {
           daily_goal?: number
           exam_date?: string | null
           exam_name?: string | null
+          flashcards_daily_goal?: number
           last_study_date?: string | null
           last_topic_studied?: string | null
           longest_streak?: number
+          mcq_daily_goal?: number
+          practical_daily_goal?: number
           updated_at?: string
           user_id: string
         }
@@ -652,9 +782,12 @@ export type Database = {
           daily_goal?: number
           exam_date?: string | null
           exam_name?: string | null
+          flashcards_daily_goal?: number
           last_study_date?: string | null
           last_topic_studied?: string | null
           longest_streak?: number
+          mcq_daily_goal?: number
+          practical_daily_goal?: number
           updated_at?: string
           user_id?: string
         }
@@ -741,6 +874,10 @@ export type Database = {
       }
       record_practical_answer: {
         Args: { _is_correct: boolean; _practical_item_id: string }
+        Returns: undefined
+      }
+      update_practical_settings: {
+        Args: { p_category_id: string; p_labels_per_question: number }
         Returns: undefined
       }
     }
