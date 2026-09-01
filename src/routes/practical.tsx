@@ -8,6 +8,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { ChapterTopicPicker, type ChapterTopicSelection } from "@/components/ChapterTopicPicker";
 import { toast } from "sonner";
 import { checkCelebrations } from "@/lib/celebrate";
+import { ArrowLeft, CheckCircle2, CircleAlert, PartyPopper, RotateCcw } from "lucide-react";
 
 export const Route = createFileRoute("/practical")({
   head: () => ({
@@ -159,8 +160,9 @@ function PracticalPage() {
           </Link>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Link to="/study" className="text-sm text-muted-foreground hover:text-foreground">
-              ← Study Hub
+            <Link to="/study" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+              <ArrowLeft aria-hidden className="h-4 w-4" />
+              Study Hub
             </Link>
           </div>
         </div>
@@ -247,8 +249,13 @@ function PracticalPage() {
                     className={`rounded-xl p-4 ${result.correct ? "bg-primary/10 text-foreground" : "bg-destructive/10 text-foreground"}`}
                     role="status"
                   >
-                    <div className="font-semibold">
-                      {result.correct ? "✅ Correct!" : "❌ Not quite."}
+                    <div className="flex items-center gap-2 font-semibold">
+                      {result.correct ? (
+                        <CheckCircle2 aria-hidden className="h-5 w-5 text-primary" />
+                      ) : (
+                        <CircleAlert aria-hidden className="h-5 w-5 text-destructive" />
+                      )}
+                      {result.correct ? "Correct!" : "Not quite."}
                     </div>
                     <div className="text-sm mt-1">
                       Correct answer: <span className="font-medium">{current.correct_answer}</span>
@@ -268,14 +275,14 @@ function PracticalPage() {
 
         {started && !itemsQ.isLoading && total > 0 && !current && (
           <div className="card-surface p-8 text-center space-y-4">
-            <h2 className="text-2xl font-bold text-foreground">Session Complete 🎉</h2>
+            <h2 className="flex items-center justify-center gap-2 text-2xl font-bold text-foreground"><PartyPopper aria-hidden className="h-6 w-6 text-primary" />Session Complete</h2>
             <div className="text-muted-foreground space-y-1">
               <p>Score: <span className="font-medium text-foreground">{score} / {answered}</span></p>
               <p>Correct: <span className="font-medium text-foreground">{score}</span> · Incorrect: <span className="font-medium text-foreground">{answered - score}</span></p>
               <p>Accuracy: <span className="font-medium text-foreground">{answered > 0 ? Math.round((score / answered) * 100) : 0}%</span></p>
             </div>
             <div className="flex flex-wrap gap-2 justify-center">
-              <button className="btn-outline" onClick={() => reset(false)}>↻ Restart session</button>
+              <button className="btn-outline" onClick={() => reset(false)}><RotateCcw aria-hidden className="h-4 w-4" />Restart session</button>
               <button className="btn-outline" onClick={() => reset(true)}>Try another subtopic</button>
               <Link to="/dashboard" className="btn-primary">Back to Dashboard</Link>
             </div>

@@ -38,7 +38,7 @@ export async function checkCelebrations(
     (stats?.mcq_daily_goal ?? 0);
 
   if (stats && !goalCelebrated && totalToday >= totalGoal && totalGoal > 0) {
-    toast.success(`🎉 Daily goal complete! You've studied ${totalToday} items today.`);
+    toast.success(`Daily goal complete! You've studied ${totalToday} items today.`);
     setGoalCelebrated(true);
   }
 
@@ -49,7 +49,7 @@ export async function checkCelebrations(
 
   const newBadges = (badges ?? []).filter((b) => !prevBadges.has(b.badge_id));
   newBadges.forEach((b) => {
-    toast.success(`🏆 Achievement unlocked: ${badgeNames[b.badge_id] ?? b.badge_id}!`);
+    toast.success(`Achievement unlocked: ${badgeNames[b.badge_id] ?? b.badge_id}!`);
   });
   if (newBadges.length > 0) {
     setPrevBadges(new Set((badges ?? []).map((b) => b.badge_id)));

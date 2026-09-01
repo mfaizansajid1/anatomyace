@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ChapterTopicPicker, type ChapterTopicSelection } from "@/components/ChapterTopicPicker";
 import { parseCSV } from "@/lib/csv";
+import { Pencil, Trash2 } from "lucide-react";
 
 type Mcq = {
   id: string;
@@ -196,8 +197,8 @@ export function McqAdminPanel() {
                     Correct: {m.correct_option.toUpperCase()}
                   </div>
                 </div>
-                <button className="text-xs text-primary hover:underline" onClick={() => startEdit(m)}>Edit</button>
-                <button className="text-xs text-red-500 hover:underline" onClick={() => remove.mutate(m.id)}>Delete</button>
+                <button className="inline-flex items-center gap-1 text-xs text-primary hover:underline" onClick={() => startEdit(m)}><Pencil aria-hidden className="h-3.5 w-3.5" />Edit</button>
+                <button className="inline-flex items-center gap-1 text-xs text-red-500 hover:underline" onClick={() => remove.mutate(m.id)}><Trash2 aria-hidden className="h-3.5 w-3.5" />Delete</button>
               </li>
             ))}
           </ul>

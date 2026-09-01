@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { Lightbulb } from "lucide-react";
 
 export type InsightEvent = { rating: string; reviewed_at: string; topic_name: string | null };
 export type InsightActivity = { study_date: string; cards_studied: number };
@@ -121,7 +122,7 @@ export function StudyInsights({
         <ul className="mt-4 space-y-3">
           {insights.map((text) => (
             <li key={text} className="flex gap-3 rounded-xl bg-primary/5 p-3">
-              <span aria-hidden className="text-base">💡</span>
+              <Lightbulb aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
               <span className="text-sm text-foreground">{text}</span>
             </li>
           ))}

@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { BookOpen, Bone, ClipboardCheck } from "lucide-react";
+import { ArrowLeft, Bone, BookOpen, ClipboardCheck } from "lucide-react";
 
 export const Route = createFileRoute("/study")({
   head: () => ({
@@ -51,8 +51,9 @@ function StudyHubPage() {
           </Link>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
-              ← Dashboard
+            <Link to="/dashboard" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+              <ArrowLeft aria-hidden className="h-4 w-4" />
+              Dashboard
             </Link>
           </div>
         </div>
