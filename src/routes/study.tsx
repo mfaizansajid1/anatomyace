@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { ArrowLeft, Bone, BookOpen, ClipboardCheck } from "lucide-react";
+import { ArrowLeft, Bone, BookOpen, ClipboardCheck, Timer } from "lucide-react";
 
 export const Route = createFileRoute("/study")({
   head: () => ({
@@ -100,6 +100,19 @@ function StudyHubPage() {
             <h2 className="text-lg font-semibold text-foreground">Clinical MCQs</h2>
             <p className="text-sm text-muted-foreground">
               Exam-style clinical multiple-choice questions with instant feedback.
+            </p>
+          </Link>
+
+          <Link
+            to="/test"
+            search={{ plan: undefined, day: undefined }}
+            className="card-surface p-6 flex flex-col gap-2 hover:shadow-lg transition"
+            style={{ minHeight: 160 }}
+          >
+            <Timer className="w-8 h-8 text-primary" aria-hidden="true" />
+            <h2 className="text-lg font-semibold text-foreground">Test Mode</h2>
+            <p className="text-sm text-muted-foreground">
+              Combine all three formats into one timed, exam-style test.
             </p>
           </Link>
         </div>
