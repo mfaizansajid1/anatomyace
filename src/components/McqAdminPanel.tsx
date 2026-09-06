@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ChapterTopicPicker, type ChapterTopicSelection } from "@/components/ChapterTopicPicker";
 import { parseCSV } from "@/lib/csv";
 import { Pencil, Trash2 } from "lucide-react";
+import { TestTimerSettingsPanel } from "@/components/TestTimerSettingsPanel";
 
 type Mcq = {
   id: string;
