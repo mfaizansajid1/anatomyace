@@ -102,6 +102,19 @@ function StudyHubPage() {
               Exam-style clinical multiple-choice questions with instant feedback.
             </p>
           </Link>
+
+          <Link
+            to="/test"
+            search={{ plan: undefined, day: undefined }}
+            className="card-surface p-6 flex flex-col gap-2 hover:shadow-lg transition"
+            style={{ minHeight: 160 }}
+          >
+            <Timer className="w-8 h-8 text-primary" aria-hidden="true" />
+            <h2 className="text-lg font-semibold text-foreground">Test Mode</h2>
+            <p className="text-sm text-muted-foreground">
+              Combine all three formats into one timed, exam-style test.
+            </p>
+          </Link>
         </div>
       </section>
     </main>
