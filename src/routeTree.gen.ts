@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
+import { Route as TestRouteImport } from './routes/test'
 import { Route as StudyRouteImport } from './routes/study'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ReviewRouteImport } from './routes/review'
@@ -29,6 +30,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TestRoute = TestRouteImport.update({
+  id: '/test',
+  path: '/test',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StudyRoute = StudyRouteImport.update({
@@ -123,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/review': typeof ReviewRoute
   '/signup': typeof SignupRoute
   '/study': typeof StudyRoute
+  '/test': typeof TestRoute
   '/verify-email': typeof VerifyEmailRoute
 }
 export interface FileRoutesByTo {
@@ -141,6 +148,7 @@ export interface FileRoutesByTo {
   '/review': typeof ReviewRoute
   '/signup': typeof SignupRoute
   '/study': typeof StudyRoute
+  '/test': typeof TestRoute
   '/verify-email': typeof VerifyEmailRoute
 }
 export interface FileRoutesById {
@@ -160,6 +168,7 @@ export interface FileRoutesById {
   '/review': typeof ReviewRoute
   '/signup': typeof SignupRoute
   '/study': typeof StudyRoute
+  '/test': typeof TestRoute
   '/verify-email': typeof VerifyEmailRoute
 }
 export interface FileRouteTypes {
@@ -180,6 +189,7 @@ export interface FileRouteTypes {
     | '/review'
     | '/signup'
     | '/study'
+    | '/test'
     | '/verify-email'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -198,6 +208,7 @@ export interface FileRouteTypes {
     | '/review'
     | '/signup'
     | '/study'
+    | '/test'
     | '/verify-email'
   id:
     | '__root__'
@@ -216,6 +227,7 @@ export interface FileRouteTypes {
     | '/review'
     | '/signup'
     | '/study'
+    | '/test'
     | '/verify-email'
   fileRoutesById: FileRoutesById
 }
@@ -235,6 +247,7 @@ export interface RootRouteChildren {
   ReviewRoute: typeof ReviewRoute
   SignupRoute: typeof SignupRoute
   StudyRoute: typeof StudyRoute
+  TestRoute: typeof TestRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
 }
 
@@ -245,6 +258,13 @@ declare module '@tanstack/react-router' {
       path: '/verify-email'
       fullPath: '/verify-email'
       preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/test': {
+      id: '/test'
+      path: '/test'
+      fullPath: '/test'
+      preLoaderRoute: typeof TestRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/study': {
@@ -371,6 +391,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReviewRoute: ReviewRoute,
   SignupRoute: SignupRoute,
   StudyRoute: StudyRoute,
+  TestRoute: TestRoute,
   VerifyEmailRoute: VerifyEmailRoute,
 }
 export const routeTree = rootRouteImport
