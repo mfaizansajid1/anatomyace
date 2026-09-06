@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { ArrowLeft, Bone, BookOpen, ClipboardCheck } from "lucide-react";
+import { ArrowLeft, Bone, BookOpen, ClipboardCheck, Timer } from "lucide-react";
 
 export const Route = createFileRoute("/study")({
   head: () => ({
