@@ -475,6 +475,7 @@ export type Database = {
           created_at: string
           day_number: number
           id: string
+          is_test: boolean
           plan_date: string
           plan_id: string
           study_type: string
@@ -488,6 +489,7 @@ export type Database = {
           created_at?: string
           day_number: number
           id?: string
+          is_test?: boolean
           plan_date: string
           plan_id: string
           study_type?: string
@@ -501,6 +503,7 @@ export type Database = {
           created_at?: string
           day_number?: number
           id?: string
+          is_test?: boolean
           plan_date?: string
           plan_id?: string
           study_type?: string
@@ -636,6 +639,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      test_timer_settings: {
+        Row: {
+          auto_default_minutes_per_question: number
+          id: string
+          max_minutes_per_question: number
+          min_minutes_per_question: number
+          updated_at: string
+        }
+        Insert: {
+          auto_default_minutes_per_question?: number
+          id?: string
+          max_minutes_per_question?: number
+          min_minutes_per_question?: number
+          updated_at?: string
+        }
+        Update: {
+          auto_default_minutes_per_question?: number
+          id?: string
+          max_minutes_per_question?: number
+          min_minutes_per_question?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       topic_performance: {
         Row: {
