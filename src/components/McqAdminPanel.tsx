@@ -207,6 +207,8 @@ export function McqAdminPanel() {
 
       <McqTimerSettingsPanel />
 
+      <TestTimerSettingsPanel />
+
       <McqCsvImport onDone={() => qc.invalidateQueries({ queryKey: ["admin", "mcqs"] })} />
     </div>
   );
