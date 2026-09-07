@@ -640,6 +640,56 @@ export type Database = {
           },
         ]
       }
+      test_results: {
+        Row: {
+          attempt_id: string
+          created_at: string
+          day_number: number | null
+          duration_seconds: number
+          id: string
+          mode: string
+          plan_id: string | null
+          score: number
+          title: string
+          total: number
+          user_id: string
+        }
+        Insert: {
+          attempt_id: string
+          created_at?: string
+          day_number?: number | null
+          duration_seconds?: number
+          id?: string
+          mode: string
+          plan_id?: string | null
+          score?: number
+          title: string
+          total?: number
+          user_id: string
+        }
+        Update: {
+          attempt_id?: string
+          created_at?: string
+          day_number?: number | null
+          duration_seconds?: number
+          id?: string
+          mode?: string
+          plan_id?: string | null
+          score?: number
+          title?: string
+          total?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_results_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "revision_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       test_timer_settings: {
         Row: {
           auto_default_minutes_per_question: number
