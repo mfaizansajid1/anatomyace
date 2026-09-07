@@ -14,7 +14,6 @@ import {
   Bone,
   CheckCircle2,
   Flag,
-  Layers,
   ListChecks,
   Send,
   Timer as TimerIcon,
@@ -30,9 +29,9 @@ export const Route = createFileRoute("/test")({
   head: () => ({
     meta: [
       { title: "Test Mode — AnatomyAce" },
-      { name: "description", content: "Sit a timed, exam-style anatomy test combining flashcards, practical images and clinical MCQs." },
+      { name: "description", content: "Sit a timed, exam-style anatomy test combining practical images and clinical MCQs." },
       { property: "og:title", content: "Test Mode — AnatomyAce" },
-      { property: "og:description", content: "Sit a timed, exam-style anatomy test combining flashcards, practical images and clinical MCQs." },
+      { property: "og:description", content: "Sit a timed, exam-style anatomy test combining practical images and clinical MCQs." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "robots", content: "noindex" },
@@ -44,7 +43,6 @@ export const Route = createFileRoute("/test")({
 /* ---------- Types ---------- */
 
 type Question =
-  | { kind: "flashcard"; id: string; prompt: string; correct: string; explanation: string | null }
   | { kind: "practical"; id: string; prompt: string; imageUrl: string; correct: string; explanation: string | null }
   | {
       kind: "mcq";
@@ -55,13 +53,14 @@ type Question =
       explanation: string | null;
     };
 
+type QuestionKind = Question["kind"];
+
 type AnswerState = {
-  value: string; // mcq option key, practical text, or flashcard "correct"/"incorrect"
+  value: string; // mcq option key or practical free text
   marked: boolean;
 };
 
 const KIND_META = {
-  flashcard: { label: "Flashcards", Icon: Layers },
   practical: { label: "Practical", Icon: Bone },
   mcq: { label: "MCQs", Icon: ListChecks },
 } as const;
@@ -88,26 +87,6 @@ function fmtClock(totalSeconds: number) {
 
 /* ---------- Pool builders ---------- */
 
-async function fetchFlashcardsForCategories(categoryIds: string[], subtopicIds?: string[]) {
-  let q = supabase
-    .from("flashcards")
-    .select("id, question, answer, explanation, subtopic_id, subtopics!inner(category_id)")
-    .eq("is_published", true);
-  if (subtopicIds && subtopicIds.length > 0) q = q.in("subtopic_id", subtopicIds);
-  else q = q.in("subtopics.category_id", categoryIds);
-  const { data, error } = await q;
-  if (error) throw error;
-  return (data ?? []).map(
-    (f: any): Question => ({
-      kind: "flashcard",
-      id: f.id,
-      prompt: f.question,
-      correct: f.answer,
-      explanation: f.explanation ?? null,
-    }),
-  );
-}
-
 async function fetchPracticalForCategories(categoryIds: string[]) {
   if (categoryIds.length === 0) return [];
   const { data, error } = await supabase
@@ -117,7 +96,7 @@ async function fetchPracticalForCategories(categoryIds: string[]) {
     .eq("is_published", true);
   if (error) throw error;
   return (data ?? []).map(
-    (p: any): Question => ({
+    (p): Question => ({
       kind: "practical",
       id: p.id,
       prompt: `Identify this ${p.structure_type ?? "structure"}.`,
@@ -137,7 +116,7 @@ async function fetchMcqsForCategories(categoryIds: string[]) {
     .eq("is_published", true);
   if (error) throw error;
   return (data ?? []).map(
-    (m: any): Question => ({
+    (m): Question => ({
       kind: "mcq",
       id: m.id,
       prompt: m.question,
@@ -153,7 +132,7 @@ async function fetchMcqsForCategories(categoryIds: string[]) {
   );
 }
 
-/** Interleave the three pools evenly up to `count`. */
+/** Interleave the pools evenly up to `count`. */
 function mixPools(pools: Question[][], count: number): Question[] {
   const shuffled = pools.map((p) => shuffle(p));
   const picked: Question[] = [];
@@ -179,7 +158,7 @@ function TestPage() {
   const [timerMode, setTimerMode] = useState<"auto" | "manual">("auto");
   const [manualMinutes, setManualMinutes] = useState<number | null>(null);
   const [building, setBuilding] = useState(false);
-  const [pending, setPending] = useState<{ questions: Question[]; totalSeconds: number } | null>(null);
+  const [pending, setPending] = useState<{ questions: Question[]; totalSeconds: number; title: string } | null>(null);
   const [started, setStarted] = useState(false);
 
   useEffect(() => {
@@ -220,22 +199,33 @@ function TestPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("revision_plan_days")
-        .select("study_type, subtopic_id, category_id, target_card_count")
+        .select("study_type, subtopic_id, category_id, target_card_count, subtopics(category_id)")
         .eq("plan_id", planId!)
         .eq("day_number", dayNumber!);
       if (error) throw error;
-      const rows = data ?? [];
-      const subIds = rows.filter((r) => r.study_type === "flashcard" && r.subtopic_id).map((r) => r.subtopic_id!);
-      const practicalCats = rows.filter((r) => r.study_type === "practical" && r.category_id).map((r) => r.category_id!);
-      const mcqCats = rows.filter((r) => r.study_type === "mcq" && r.category_id).map((r) => r.category_id!);
+      const rows = (data ?? []) as Array<{
+        study_type: string;
+        subtopic_id: string | null;
+        category_id: string | null;
+        target_card_count: number | null;
+        subtopics: { category_id: string } | null;
+      }>;
+
+      // Test Mode only covers Practical + MCQ. Flashcard rows on a test day still
+      // contribute their topic, so the day's content is represented.
+      const cats = new Set<string>();
+      rows.forEach((r) => {
+        if (r.category_id) cats.add(r.category_id);
+        if (r.subtopics?.category_id) cats.add(r.subtopics.category_id);
+      });
+      const catIds = [...cats];
       const total = rows.reduce((sum, r) => sum + (r.target_card_count ?? 10), 0) || 20;
 
-      const [fc, pr, mc] = await Promise.all([
-        subIds.length ? fetchFlashcardsForCategories([], subIds) : Promise.resolve([]),
-        fetchPracticalForCategories(practicalCats),
-        fetchMcqsForCategories(mcqCats),
+      const [pr, mc] = await Promise.all([
+        fetchPracticalForCategories(catIds),
+        fetchMcqsForCategories(catIds),
       ]);
-      const questions = mixPools([fc, pr, mc], total);
+      const questions = mixPools([pr, mc], total);
       return { questions, total };
     },
   });
@@ -244,28 +234,42 @@ function TestPage() {
     if (!isPlannerTest || !plannerQ.data || pending) return;
     const qs = plannerQ.data.questions;
     if (qs.length === 0) return;
-    setPending({ questions: qs, totalSeconds: Math.round(qs.length * autoMinutes * 60) });
-  }, [isPlannerTest, plannerQ.data, pending, autoMinutes]);
+    setPending({
+      questions: qs,
+      totalSeconds: Math.round(qs.length * autoMinutes * 60),
+      title: `Revision Plan — Day ${dayNumber} Test`,
+    });
+  }, [isPlannerTest, plannerQ.data, pending, autoMinutes, dayNumber]);
 
   async function buildTest() {
     if (!sel.categoryId) { toast.error("Pick a chapter and topic first"); return; }
     if (questionCount < 1) { toast.error("Choose at least one question"); return; }
     setBuilding(true);
     try {
-      const [fc, pr, mc] = await Promise.all([
-        fetchFlashcardsForCategories([sel.categoryId]),
+      const [pr, mc] = await Promise.all([
         fetchPracticalForCategories([sel.categoryId]),
         fetchMcqsForCategories([sel.categoryId]),
       ]);
-      const questions = mixPools([fc, pr, mc], questionCount);
+      const questions = mixPools([pr, mc], questionCount);
       if (questions.length === 0) {
-        toast.error("No content available for this topic yet.");
+        toast.error("No practical items or clinical MCQs available for this topic yet.");
         return;
       }
       if (questions.length < questionCount) {
         toast.warning(`Only ${questions.length} questions available for this topic.`);
       }
-      setPending({ questions, totalSeconds: Math.round(questions.length * perQuestionMinutes * 60) });
+      const { data: cat } = await supabase
+        .from("categories")
+        .select("name, topics(name)")
+        .eq("id", sel.categoryId)
+        .maybeSingle();
+      const catName = cat?.name ?? "Topic";
+      const chapterName = (cat as { topics?: { name: string } | null } | null)?.topics?.name;
+      setPending({
+        questions,
+        totalSeconds: Math.round(questions.length * perQuestionMinutes * 60),
+        title: chapterName ? `${chapterName}: ${catName}` : catName,
+      });
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -306,7 +310,7 @@ function TestPage() {
           <div>
             <h1 className="text-2xl font-bold text-foreground">Test Mode</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              One timed, exam-style paper combining flashcards, practical images and clinical MCQs.
+              One timed, exam-style paper combining clinical MCQs and practical images.
             </p>
           </div>
         )}
@@ -315,9 +319,11 @@ function TestPage() {
         {!pending && !started && (
           isPlannerTest ? (
             <div className="card-surface p-6 flex items-center justify-center">
-              {plannerQ.isLoading ? <Spinner /> : (
+              {plannerQ.isLoading ? <Spinner /> : plannerQ.isError ? (
+                <p className="text-sm text-destructive">Couldn&apos;t load this planned test day. Please try again.</p>
+              ) : (
                 <p className="text-sm text-muted-foreground">
-                  No content is available for this planned test day yet.
+                  No practical items or clinical MCQs are available for this planned test day yet.
                 </p>
               )}
             </div>
@@ -397,7 +403,8 @@ function TestPage() {
               Before you begin
             </h2>
             <ul className="space-y-1 text-sm text-foreground">
-              <li><span className="font-semibold">{pending.questions.length}</span> questions</li>
+              <li><span className="font-semibold">{pending.title}</span></li>
+              <li><span className="font-semibold">{pending.questions.length}</span> questions (clinical MCQs and practical images)</li>
               <li><span className="font-semibold">{fmtClock(pending.totalSeconds)}</span> total time allowed</li>
             </ul>
             <p className="rounded-xl bg-muted/40 p-3 text-sm text-muted-foreground">
@@ -417,8 +424,12 @@ function TestPage() {
 
         {pending && started && (
           <TestSession
+            key={pending.title + pending.questions.length}
             questions={pending.questions}
             totalSeconds={pending.totalSeconds}
+            title={pending.title}
+            planId={planId ?? null}
+            dayNumber={dayNumber ?? null}
             onRestart={() => { setStarted(false); setPending(null); }}
           />
         )}
@@ -432,21 +443,29 @@ function TestPage() {
 function TestSession({
   questions,
   totalSeconds,
+  title,
+  planId,
+  dayNumber,
   onRestart,
 }: {
   questions: Question[];
   totalSeconds: number;
+  title: string;
+  planId: string | null;
+  dayNumber: number | null;
   onRestart: () => void;
 }) {
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, AnswerState>>({});
-  const [revealedFlash, setRevealedFlash] = useState<Record<number, boolean>>({});
   const [remaining, setRemaining] = useState(totalSeconds);
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
   const [finished, setFinished] = useState(false);
   const submittedRef = useRef(false);
+  const attemptIdRef = useRef<string>(
+    typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : String(Date.now()),
+  );
 
   const [prevBadges, setPrevBadges] = useState<Set<string>>(new Set());
   const [goalCelebrated, setGoalCelebrated] = useState(false);
@@ -463,36 +482,65 @@ function TestSession({
   const isCorrect = useCallback((q: Question, a?: AnswerState) => {
     if (!a || !a.value) return false;
     if (q.kind === "mcq") return a.value === q.correct;
-    if (q.kind === "practical") return normalize(a.value) === normalize(q.correct);
-    return a.value === "correct";
+    return normalize(a.value) === normalize(q.correct);
   }, []);
 
   const submit = useCallback(async () => {
     if (submittedRef.current) return;
     submittedRef.current = true;
     setSubmitting(true);
+    const timeUsed = Math.max(0, totalSeconds - remaining);
     try {
+      const tally: Record<QuestionKind, { correct: number; total: number }> = {
+        mcq: { correct: 0, total: 0 },
+        practical: { correct: 0, total: 0 },
+      };
+
       for (let i = 0; i < questions.length; i++) {
         const q = questions[i];
         const a = answers[i];
-        if (!a || !a.value) continue;
         const correct = isCorrect(q, a);
+        tally[q.kind].total += 1;
+        if (correct) tally[q.kind].correct += 1;
+        if (!a || !a.value) continue;
         if (q.kind === "mcq") {
           await supabase.rpc("record_mcq_answer", { _mcq_id: q.id, _is_correct: correct });
-        } else if (q.kind === "practical") {
-          await supabase.rpc("record_practical_answer", { _practical_item_id: q.id, _is_correct: correct });
         } else {
-          await supabase.rpc("record_card_review", { _flashcard_id: q.id, _rating: correct ? "good" : "again" });
+          await supabase.rpc("record_practical_answer", { _practical_item_id: q.id, _is_correct: correct });
         }
       }
+
+      const { data: u } = await supabase.auth.getUser();
+      const uid = u.user?.id;
+      if (uid) {
+        const rows = (Object.keys(tally) as QuestionKind[])
+          .filter((kind) => tally[kind].total > 0)
+          .map((kind) => ({
+            user_id: uid,
+            attempt_id: attemptIdRef.current,
+            title,
+            mode: kind,
+            score: tally[kind].correct,
+            total: tally[kind].total,
+            duration_seconds: timeUsed,
+            plan_id: planId,
+            day_number: dayNumber,
+          }));
+        if (rows.length > 0) {
+          // attempt_id + mode is unique, so a repeated submit can't duplicate a result.
+          const { error } = await supabase.from("test_results").upsert(rows, { onConflict: "attempt_id,mode" });
+          if (error) throw error;
+        }
+      }
+
       await checkCelebrations(prevBadges, goalCelebrated, setGoalCelebrated, setPrevBadges);
-    } catch (e) {
+    } catch {
       toast.error("Some answers couldn't be saved, but your results are shown below.");
     } finally {
       setSubmitting(false);
       setFinished(true);
     }
-  }, [answers, questions, isCorrect, prevBadges, goalCelebrated]);
+  }, [answers, questions, isCorrect, prevBadges, goalCelebrated, title, planId, dayNumber, totalSeconds, remaining]);
 
   /* Countdown */
   useEffect(() => {
@@ -565,7 +613,7 @@ function TestSession({
     <div className="space-y-4">
       {/* Timer bar */}
       <div
-        className={`sticky top-0 z-10 flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 backdrop-blur ${
+        className={`sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-3 backdrop-blur ${
           danger ? "border-red-500 bg-red-500/10 animate-pulse" : "border-border bg-card/90"
         }`}
       >
@@ -628,7 +676,19 @@ function TestSession({
         <h2 className="text-base font-semibold text-foreground">{q.prompt}</h2>
 
         {q.kind === "practical" && (
-          <img src={q.imageUrl} alt="Specimen to identify" className="max-h-80 w-full rounded-xl object-contain bg-muted" />
+          <>
+            <img src={q.imageUrl} alt="Specimen to identify" className="max-h-80 w-full rounded-xl object-contain bg-muted" />
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground" htmlFor="practical-answer">Your answer</label>
+              <input
+                id="practical-answer"
+                className="input-field w-full"
+                value={a?.value ?? ""}
+                onChange={(e) => setAnswer(index, e.target.value)}
+                placeholder="Name the structure…"
+              />
+            </div>
+          </>
         )}
 
         {q.kind === "mcq" && (
@@ -648,54 +708,6 @@ function TestSession({
               </li>
             ))}
           </ul>
-        )}
-
-        {q.kind === "practical" && (
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground" htmlFor="practical-answer">Your answer</label>
-            <input
-              id="practical-answer"
-              className="input-field w-full"
-              value={a?.value ?? ""}
-              onChange={(e) => setAnswer(index, e.target.value)}
-              placeholder="Name the structure…"
-            />
-          </div>
-        )}
-
-        {q.kind === "flashcard" && (
-          <div className="space-y-3">
-            {revealedFlash[index] ? (
-              <>
-                <div className="rounded-xl bg-muted/40 p-3 text-sm text-foreground">{q.correct}</div>
-                <p className="text-sm font-medium text-foreground">Did you get it right?</p>
-                <div className="flex gap-2">
-                  <button
-                    style={{ minHeight: 48 }}
-                    onClick={() => setAnswer(index, "correct")}
-                    className={`rounded-xl border px-4 py-2 text-sm transition ${a?.value === "correct" ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}
-                  >
-                    I was correct
-                  </button>
-                  <button
-                    style={{ minHeight: 48 }}
-                    onClick={() => setAnswer(index, "incorrect")}
-                    className={`rounded-xl border px-4 py-2 text-sm transition ${a?.value === "incorrect" ? "border-red-500 bg-red-500/10 text-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}
-                  >
-                    I was incorrect
-                  </button>
-                </div>
-              </>
-            ) : (
-              <button
-                className="btn-outline px-4 py-2 text-sm"
-                style={{ minHeight: 48 }}
-                onClick={() => setRevealedFlash((r) => ({ ...r, [index]: true }))}
-              >
-                Reveal Answer
-              </button>
-            )}
-          </div>
         )}
 
         <div className="flex justify-between gap-2 pt-2">
@@ -770,7 +782,7 @@ function TestResults({
   );
   const score = rows.filter((r) => r.correct).length;
 
-  const byKind = (["flashcard", "practical", "mcq"] as const).map((kind) => {
+  const byKind = (["practical", "mcq"] as const).map((kind) => {
     const subset = rows.filter((r) => r.q.kind === kind);
     return { kind, total: subset.length, correct: subset.filter((r) => r.correct).length };
   });
@@ -816,9 +828,7 @@ function TestResults({
                   {r.a?.value
                     ? r.q.kind === "mcq"
                       ? `${r.a.value.toUpperCase()}. ${r.q.options.find((o) => o.key === r.a!.value)?.text ?? ""}`
-                      : r.q.kind === "flashcard"
-                        ? (r.a.value === "correct" ? "Self-marked correct" : "Self-marked incorrect")
-                        : r.a.value
+                      : r.a.value
                     : "Not answered"}
                 </span>
               </p>
@@ -840,6 +850,7 @@ function TestResults({
         <button className="btn-primary px-4 py-2 text-sm" style={{ minHeight: 48 }} onClick={onRestart}>
           Take another test
         </button>
+        <Link to="/progress" className="btn-outline px-4 py-2 text-sm" style={{ minHeight: 48 }}>View Progress</Link>
         <Link to="/study" className="btn-outline px-4 py-2 text-sm" style={{ minHeight: 48 }}>Study Hub</Link>
       </div>
     </div>
