@@ -50,6 +50,7 @@ type DraftDay = {
   day_number: number;
   plan_date: string;
   items: DraftItem[];
+  is_test?: boolean;
 };
 
 function todayStr() {
@@ -259,7 +260,7 @@ function PlannerPage() {
       if (!plan) return null;
       const { data: days, error: dErr } = await supabase
         .from("revision_plan_days")
-        .select("id, day_number, plan_date, study_type, subtopic_id, category_id, target_card_count, completed")
+        .select("id, day_number, plan_date, study_type, subtopic_id, category_id, target_card_count, completed, is_test")
         .eq("plan_id", plan.id)
         .order("day_number", { ascending: true });
       if (dErr) throw dErr;
