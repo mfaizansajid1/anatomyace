@@ -972,7 +972,12 @@ function PlannerPage() {
 
             <ul className="space-y-3">
               {draft.map((day, dayIdx) => (
-                <li key={dayIdx} className="rounded-xl border border-border bg-card p-4 space-y-4">
+                <li
+                  key={dayIdx}
+                  className={`rounded-xl border bg-card p-4 space-y-4 ${
+                    day.is_test ? "border-primary/50" : "border-border"
+                  }`}
+                >
                   {/* Day header with controls */}
                   <div className="flex items-center justify-between gap-3 pb-3 border-b border-border">
                     <div className="flex items-center gap-3">
@@ -980,6 +985,12 @@ function PlannerPage() {
                       <div>
                         <span className="text-sm font-semibold text-foreground block">
                           Day {day.day_number}
+                          {day.is_test && (
+                            <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-foreground align-middle">
+                              <ClipboardCheck aria-hidden className="h-3 w-3" />
+                              Test Day
+                            </span>
+                          )}
                         </span>
                         <span className="text-xs text-muted-foreground">
                           {prettyDate(day.plan_date)}
@@ -987,6 +998,16 @@ function PlannerPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        className={`${day.is_test ? "btn-primary" : "btn-outline"} mr-2 inline-flex items-center gap-1 !px-2 !py-1 text-xs`}
+                        onClick={() => updateDraftDay(dayIdx, { is_test: !day.is_test })}
+                        aria-pressed={!!day.is_test}
+                        aria-label={`Toggle test mode for day ${day.day_number}`}
+                      >
+                        <ClipboardCheck size={14} />
+                        Test Mode
+                      </button>
                       <div className="flex items-center gap-0.5 mr-2">
                         <button
                           className="h-7 w-7 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"
