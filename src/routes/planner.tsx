@@ -6,7 +6,7 @@ import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
-import { ArrowLeft, Bone, CheckCircle2, ChevronDown, ChevronUp, GripVertical, Layers, ListChecks, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Bone, CheckCircle2, ChevronDown, ChevronUp, ClipboardCheck, GripVertical, Layers, ListChecks, Plus, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/planner")({
   head: () => ({
@@ -50,6 +50,7 @@ type DraftDay = {
   day_number: number;
   plan_date: string;
   items: DraftItem[];
+  is_test?: boolean;
 };
 
 function todayStr() {
@@ -259,7 +260,7 @@ function PlannerPage() {
       if (!plan) return null;
       const { data: days, error: dErr } = await supabase
         .from("revision_plan_days")
-        .select("id, day_number, plan_date, study_type, subtopic_id, category_id, target_card_count, completed")
+        .select("id, day_number, plan_date, study_type, subtopic_id, category_id, target_card_count, completed, is_test")
         .eq("plan_id", plan.id)
         .order("day_number", { ascending: true });
       if (dErr) throw dErr;
@@ -419,6 +420,12 @@ function PlannerPage() {
       });
     }
 
+    // Reserve the final day(s) of an auto plan for testing.
+    const testDayCount = days.length >= 15 ? 2 : 1;
+    days.forEach((d, idx) => {
+      d.is_test = idx >= days.length - testDayCount;
+    });
+
     setDraft(days);
   }
 
@@ -534,6 +541,7 @@ function PlannerPage() {
           subtopic_id: item.study_type === "flashcard" ? item.subtopic_id : null,
           category_id: (item.study_type === "practical" || item.study_type === "mcq") ? item.category_id : null,
           target_card_count: item.target_card_count,
+          is_test: !!day.is_test,
         }))
     );
 
@@ -570,6 +578,7 @@ function PlannerPage() {
           subtopic_id: row.subtopic_id,
           category_id: row.category_id,
           target_card_count: row.target_card_count,
+          is_test: row.is_test,
         })),
       );
       if (dErr) throw dErr;
@@ -756,6 +765,7 @@ function PlannerPage() {
                           day_number: dayNum,
                           plan_date: d.plan_date,
                           items: [],
+                          is_test: !!d.is_test,
                         });
                       }
                       const day = daysMap.get(dayNum)!;
@@ -791,9 +801,21 @@ function PlannerPage() {
                   label = c ? `${c.topicName}: ${c.name}` : "Topic removed";
                 }
 
+                const isTestDay = !!d.is_test;
+
                 let startLink;
                 if (!d.completed) {
-                  if (studyType === "flashcard") {
+                  if (isTestDay) {
+                    startLink = (
+                      <Link
+                        to="/test"
+                        search={{ plan: existing.plan.id, day: d.day_number }}
+                        className="btn-primary shrink-0"
+                      >
+                        Start
+                      </Link>
+                    );
+                  } else if (studyType === "flashcard") {
                     startLink = (
                       <Link
                         to="/review"
@@ -829,14 +851,24 @@ function PlannerPage() {
                 return (
                   <li
                     key={d.id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-border p-3"
+                    className={`flex items-center justify-between gap-3 rounded-xl border p-3 ${
+                      isTestDay ? "border-primary/50 bg-primary/5" : "border-border"
+                    }`}
                   >
                     <div className="min-w-0">
                       <div className="text-sm font-medium text-foreground truncate">
                         Day {d.day_number} — <span className="inline-flex items-center gap-1">{meta.icon} {label}</span>{" "}
                         <span className="text-muted-foreground font-normal">({d.target_card_count} items)</span>
                       </div>
-                      <div className="text-xs text-muted-foreground">{prettyDate(d.plan_date)}</div>
+                      <div className="mt-1 flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">{prettyDate(d.plan_date)}</span>
+                        {isTestDay && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-foreground">
+                            <ClipboardCheck aria-hidden className="h-3 w-3" />
+                            Test Day
+                          </span>
+                        )}
+                      </div>
                     </div>
                     {d.completed ? (
                       <span className="inline-flex items-center gap-1 text-xs font-medium text-primary shrink-0"><CheckCircle2 aria-hidden className="h-4 w-4" />Completed</span>
@@ -940,7 +972,12 @@ function PlannerPage() {
 
             <ul className="space-y-3">
               {draft.map((day, dayIdx) => (
-                <li key={dayIdx} className="rounded-xl border border-border bg-card p-4 space-y-4">
+                <li
+                  key={dayIdx}
+                  className={`rounded-xl border bg-card p-4 space-y-4 ${
+                    day.is_test ? "border-primary/50" : "border-border"
+                  }`}
+                >
                   {/* Day header with controls */}
                   <div className="flex items-center justify-between gap-3 pb-3 border-b border-border">
                     <div className="flex items-center gap-3">
@@ -948,6 +985,12 @@ function PlannerPage() {
                       <div>
                         <span className="text-sm font-semibold text-foreground block">
                           Day {day.day_number}
+                          {day.is_test && (
+                            <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-foreground align-middle">
+                              <ClipboardCheck aria-hidden className="h-3 w-3" />
+                              Test Day
+                            </span>
+                          )}
                         </span>
                         <span className="text-xs text-muted-foreground">
                           {prettyDate(day.plan_date)}
@@ -955,6 +998,16 @@ function PlannerPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        className={`${day.is_test ? "btn-primary" : "btn-outline"} mr-2 inline-flex items-center gap-1 !px-2 !py-1 text-xs`}
+                        onClick={() => updateDraftDay(dayIdx, { is_test: !day.is_test })}
+                        aria-pressed={!!day.is_test}
+                        aria-label={`Toggle test mode for day ${day.day_number}`}
+                      >
+                        <ClipboardCheck size={14} />
+                        Test Mode
+                      </button>
                       <div className="flex items-center gap-0.5 mr-2">
                         <button
                           className="h-7 w-7 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"

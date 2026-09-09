@@ -132,6 +132,22 @@ function ProgressPage() {
     },
   });
 
+  const testsQ = useQuery({
+    queryKey: ["progress-test-results"],
+    queryFn: async () => {
+      const { data: authData } = await supabase.auth.getUser();
+      if (!authData.user) throw new Error("User not logged in");
+      const { data, error } = await supabase
+        .from("test_results")
+        .select("id, title, mode, score, total, duration_seconds, created_at")
+        .eq("user_id", authData.user.id)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   const heatmapDays = useMemo(() => {
     const map = new Map<string, number>();
     (data?.activity ?? []).forEach((a) => map.set(a.study_date, a.cards_studied));
@@ -364,7 +380,69 @@ function ProgressPage() {
               </div>
             </div>
 
-            {/* 5. Study Insights */}
+            {/* 5. Test History */}
+            <div className="card-surface p-5">
+              <h2 className="font-semibold text-foreground">Test History</h2>
+              {testsQ.isLoading ? (
+                <div className="flex justify-center py-6">
+                  <Spinner className="h-5 w-5" />
+                </div>
+              ) : testsQ.isError ? (
+                <p className="mt-3 text-sm text-rose-600 dark:text-rose-400">
+                  Couldn't load your test results. Please refresh the page.
+                </p>
+              ) : (testsQ.data?.length ?? 0) === 0 ? (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  No tests completed yet. Take a test from the Study Hub to see your results here.
+                </p>
+              ) : (
+                <ul className="mt-4 space-y-2">
+                  {testsQ.data!.map((t) => {
+                    const pct = t.total > 0 ? Math.round((t.score / t.total) * 100) : 0;
+                    return (
+                      <li
+                        key={t.id}
+                        className="flex flex-col gap-2 rounded-xl bg-muted/60 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                            {t.mode === "mcq" ? (
+                              <ListChecks aria-hidden className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <Bone aria-hidden className="h-4 w-4 text-muted-foreground" />
+                            )}
+                            <span className="truncate">{t.title}</span>
+                            <span className="shrink-0 rounded-full bg-background px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                              {t.mode === "mcq" ? "MCQ Test" : "Practical Test"}
+                            </span>
+                          </div>
+                          <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                            <Calendar aria-hidden className="h-3.5 w-3.5" />
+                            {new Date(t.created_at).toLocaleString(undefined, {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                              hour: "numeric",
+                              minute: "2-digit",
+                            })}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className="text-sm font-semibold text-foreground">
+                            {t.score} / {t.total}
+                          </span>
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${accColor(pct)}`}>
+                            {pct}%
+                          </span>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+
+            {/* 6. Study Insights */}
             <StudyInsights
               events={data?.insightEvents ?? []}
               activity={data?.activity ?? []}
