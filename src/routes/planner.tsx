@@ -765,6 +765,7 @@ function PlannerPage() {
                           day_number: dayNum,
                           plan_date: d.plan_date,
                           items: [],
+                          is_test: !!d.is_test,
                         });
                       }
                       const day = daysMap.get(dayNum)!;
