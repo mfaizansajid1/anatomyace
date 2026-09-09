@@ -615,17 +615,19 @@ function PracticalBulkImport({
             Your CSV file should have the following columns:
           </p>
           <pre className="text-xs bg-background rounded p-2 overflow-x-auto">
-            structure_type,image_url,correct_answer,explanation
+            chapter,topic,structure_type,image_url,correct_answer,explanation
           </pre>
           <p className="text-xs text-muted-foreground mt-2">
             Example:
           </p>
           <pre className="text-xs bg-background rounded p-2 overflow-x-auto mt-1">
-            Bone,https://example.com/femur.jpg,Femur,The longest bone in the body{"\n"}
-            Muscle,https://example.com/biceps.jpg,Biceps Brachii,Located in the upper arm
+            Lower Limb,Thigh,Bone,https://example.com/femur.jpg,Femur,The longest bone in the body{"\n"}
+            Upper Limb,Arm,Muscle,https://example.com/biceps.jpg,Biceps Brachii,Located in the upper arm
           </pre>
           <p className="text-xs text-muted-foreground mt-2">
-            <strong>Note:</strong> The explanation column is optional. Use double quotes for values containing commas.
+            <strong>Note:</strong> Each row is placed using its own chapter and topic values (they must
+            already exist), not the topic selected above. The explanation column is optional. Use double
+            quotes for values containing commas. Invalid rows are skipped and reported with their row number.
           </p>
         </div>
 
