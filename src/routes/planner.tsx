@@ -801,9 +801,21 @@ function PlannerPage() {
                   label = c ? `${c.topicName}: ${c.name}` : "Topic removed";
                 }
 
+                const isTestDay = !!d.is_test;
+
                 let startLink;
                 if (!d.completed) {
-                  if (studyType === "flashcard") {
+                  if (isTestDay) {
+                    startLink = (
+                      <Link
+                        to="/test"
+                        search={{ plan: existing.plan.id, day: d.day_number }}
+                        className="btn-primary shrink-0"
+                      >
+                        Start
+                      </Link>
+                    );
+                  } else if (studyType === "flashcard") {
                     startLink = (
                       <Link
                         to="/review"
@@ -839,14 +851,24 @@ function PlannerPage() {
                 return (
                   <li
                     key={d.id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-border p-3"
+                    className={`flex items-center justify-between gap-3 rounded-xl border p-3 ${
+                      isTestDay ? "border-primary/50 bg-primary/5" : "border-border"
+                    }`}
                   >
                     <div className="min-w-0">
                       <div className="text-sm font-medium text-foreground truncate">
                         Day {d.day_number} — <span className="inline-flex items-center gap-1">{meta.icon} {label}</span>{" "}
                         <span className="text-muted-foreground font-normal">({d.target_card_count} items)</span>
                       </div>
-                      <div className="text-xs text-muted-foreground">{prettyDate(d.plan_date)}</div>
+                      <div className="mt-1 flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">{prettyDate(d.plan_date)}</span>
+                        {isTestDay && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-foreground">
+                            <ClipboardCheck aria-hidden className="h-3 w-3" />
+                            Test Day
+                          </span>
+                        )}
+                      </div>
                     </div>
                     {d.completed ? (
                       <span className="inline-flex items-center gap-1 text-xs font-medium text-primary shrink-0"><CheckCircle2 aria-hidden className="h-4 w-4" />Completed</span>
