@@ -479,6 +479,21 @@ function PracticalBulkImport({
         throw new Error("CSV must contain a header row and at least one data row.");
       }
 
+      // Build a Chapter → Topic lookup so each row targets its own topic
+      // rather than inheriting whatever is selected on screen.
+      const [{ data: topicRows, error: tErr }, { data: catRows, error: cErr }] = await Promise.all([
+        supabase.from("topics").select("id, name"),
+        supabase.from("categories").select("id, name, topic_id"),
+      ]);
+      if (tErr) throw tErr;
+      if (cErr) throw cErr;
+
+      const norm = (s: string) => s.trim().toLowerCase();
+      const topicByName = new Map((topicRows ?? []).map((t) => [norm(t.name), t.id]));
+      const categoryByPair = new Map(
+        (catRows ?? []).map((c) => [`${c.topic_id}::${norm(c.name)}`, c.id]),
+      );
+
       const itemsToInsert: Array<{
         category_id: string;
         structure_type: string;
@@ -493,29 +508,48 @@ function PracticalBulkImport({
       // Skip header row (index 0)
       for (let i = 1; i < rows.length; i++) {
         const row = rows[i];
-        
-        // Expected columns: structure_type, image_url, correct_answer, explanation (optional)
-        if (row.length < 3) {
+
+        // Expected columns: chapter, topic, structure_type, image_url, correct_answer, explanation (optional)
+        if (row.length < 5) {
           skippedRows.push({
             row: i + 1,
-            reason: `Row has insufficient columns (found ${row.length}, expected at least 3)`,
+            reason: `Row has insufficient columns (found ${row.length}, expected at least 5: chapter, topic, structure_type, image_url, correct_answer)`,
           });
           continue;
         }
 
-        const [structureType, imageUrl, correctAnswer, explanation] = row;
+        const [chapter, topic, structureType, imageUrl, correctAnswer, explanation] = row;
 
-        // Validate required fields
-        if (!structureType || !imageUrl || !correctAnswer) {
+        const missing: string[] = [];
+        if (!chapter) missing.push("chapter");
+        if (!topic) missing.push("topic");
+        if (!structureType) missing.push("structure_type");
+        if (!imageUrl) missing.push("image_url");
+        if (!correctAnswer) missing.push("correct_answer");
+        if (missing.length > 0) {
           skippedRows.push({
             row: i + 1,
-            reason: `Missing required fields (Structure Type: "${structureType || 'empty'}", Image URL: "${imageUrl || 'empty'}", Correct Answer: "${correctAnswer || 'empty'}")`,
+            reason: `Missing required field(s): ${missing.join(", ")}`,
+          });
+          continue;
+        }
+
+        const topicId = topicByName.get(norm(chapter));
+        if (!topicId) {
+          skippedRows.push({ row: i + 1, reason: `Chapter "${chapter}" not found` });
+          continue;
+        }
+        const rowCategoryId = categoryByPair.get(`${topicId}::${norm(topic)}`);
+        if (!rowCategoryId) {
+          skippedRows.push({
+            row: i + 1,
+            reason: `Topic "${topic}" not found under chapter "${chapter}"`,
           });
           continue;
         }
 
         itemsToInsert.push({
-          category_id: categoryId,
+          category_id: rowCategoryId,
           structure_type: structureType,
           image_url: imageUrl,
           correct_answer: correctAnswer,

@@ -132,6 +132,22 @@ function ProgressPage() {
     },
   });
 
+  const testsQ = useQuery({
+    queryKey: ["progress-test-results"],
+    queryFn: async () => {
+      const { data: authData } = await supabase.auth.getUser();
+      if (!authData.user) throw new Error("User not logged in");
+      const { data, error } = await supabase
+        .from("test_results")
+        .select("id, title, mode, score, total, duration_seconds, created_at")
+        .eq("user_id", authData.user.id)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   const heatmapDays = useMemo(() => {
     const map = new Map<string, number>();
     (data?.activity ?? []).forEach((a) => map.set(a.study_date, a.cards_studied));
