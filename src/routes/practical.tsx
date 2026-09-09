@@ -95,7 +95,7 @@ function PracticalPage() {
           </p>
 
           <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
-            Insha’Allah, Practical Mode will be live soon. Stay tuned!
+            Insha’Allah, Practical Mode will be live. Stay tuned!
           </p>
 
           <div className="mt-8">
