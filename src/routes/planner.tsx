@@ -6,7 +6,7 @@ import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
-import { ArrowLeft, Bone, CheckCircle2, ChevronDown, ChevronUp, GripVertical, Layers, ListChecks, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Bone, CheckCircle2, ChevronDown, ChevronUp, ClipboardCheck, GripVertical, Layers, ListChecks, Plus, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/planner")({
   head: () => ({
