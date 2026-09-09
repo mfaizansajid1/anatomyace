@@ -1,4 +1,3 @@
-```tsx
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Clock3, Construction } from "lucide-react";
@@ -109,4 +108,3 @@ function PracticalPage() {
     </main>
   );
 }
-```
