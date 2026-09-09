@@ -541,6 +541,7 @@ function PlannerPage() {
           subtopic_id: item.study_type === "flashcard" ? item.subtopic_id : null,
           category_id: (item.study_type === "practical" || item.study_type === "mcq") ? item.category_id : null,
           target_card_count: item.target_card_count,
+          is_test: !!day.is_test,
         }))
     );
 
@@ -577,6 +578,7 @@ function PlannerPage() {
           subtopic_id: row.subtopic_id,
           category_id: row.category_id,
           target_card_count: row.target_card_count,
+          is_test: row.is_test,
         })),
       );
       if (dErr) throw dErr;
