@@ -420,6 +420,12 @@ function PlannerPage() {
       });
     }
 
+    // Reserve the final day(s) of an auto plan for testing.
+    const testDayCount = days.length >= 15 ? 2 : 1;
+    days.forEach((d, idx) => {
+      d.is_test = idx >= days.length - testDayCount;
+    });
+
     setDraft(days);
   }
 
