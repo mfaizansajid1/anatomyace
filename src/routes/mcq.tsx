@@ -34,6 +34,8 @@ type Mcq = {
   option_d: string;
   correct_option: string;
   explanation: string | null;
+  exam_name: string | null;
+  exam_year: number | null;
 };
 
 const KEYS = ["a", "b", "c", "d"] as const;
@@ -92,7 +94,7 @@ function McqPage() {
     if (!sel.categoryId) { toast.error("Pick a chapter and topic first"); return; }
     const { data, error } = await supabase
       .from("clinical_mcqs")
-      .select("id, question, option_a, option_b, option_c, option_d, correct_option, explanation")
+      .select("id, question, option_a, option_b, option_c, option_d, correct_option, explanation, exam_name, exam_year")
       .eq("category_id", sel.categoryId)
       .eq("is_published", true);
     if (error) { toast.error(error.message); return; }
@@ -315,6 +317,11 @@ function McqSession({
       </div>
 
       <div className="card-surface p-5 space-y-4">
+        {current.exam_name && current.exam_year != null && (
+          <span className="inline-flex items-center rounded-full bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+            Past Paper: {current.exam_name} {current.exam_year}
+          </span>
+        )}
         <h2 className="text-base font-semibold text-foreground">{current.question}</h2>
 
         <ul className="space-y-2">
