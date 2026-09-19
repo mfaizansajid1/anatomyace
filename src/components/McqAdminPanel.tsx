@@ -397,6 +397,10 @@ function McqCsvImport({ onDone }: { onDone: () => void }) {
         const a = get(iA), b = get(iB), c = get(iC), d = get(iD);
         const correct = get(iCorrect).toLowerCase();
         const explanation = get(iExpl);
+        const examName = get(iExamName);
+        const examYearRaw = get(iExamYear);
+        const examYearParsed = Number(examYearRaw);
+        const examYear = examYearRaw && Number.isInteger(examYearParsed) ? examYearParsed : null;
 
         if (!chapterName || !topicName) { failures.push({ row: r + 1, reason: "Missing chapter or topic." }); continue; }
         if (!question) { failures.push({ row: r + 1, reason: "Missing question." }); continue; }
