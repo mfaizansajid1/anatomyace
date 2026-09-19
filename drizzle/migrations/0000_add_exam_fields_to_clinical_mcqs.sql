@@ -1,0 +1,1 @@
+ALTER TABLE public.clinical_mcqs ADD COLUMN exam_name TEXT, ADD COLUMN exam_year INTEGER;

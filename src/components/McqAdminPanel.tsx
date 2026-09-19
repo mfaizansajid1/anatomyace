@@ -18,6 +18,8 @@ type Mcq = {
   correct_option: string;
   explanation: string | null;
   is_published: boolean;
+  exam_name: string | null;
+  exam_year: number | null;
 };
 
 const OPTIONS = ["a", "b", "c", "d"] as const;
@@ -29,6 +31,8 @@ export function McqAdminPanel() {
   const [opts, setOpts] = useState({ a: "", b: "", c: "", d: "" });
   const [correct, setCorrect] = useState<string>("a");
   const [explanation, setExplanation] = useState("");
+  const [examName, setExamName] = useState("");
+  const [examYear, setExamYear] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const listQ = useQuery({
@@ -37,7 +41,7 @@ export function McqAdminPanel() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clinical_mcqs")
-        .select("id, category_id, question, option_a, option_b, option_c, option_d, correct_option, explanation, is_published")
+        .select("id, category_id, question, option_a, option_b, option_c, option_d, correct_option, explanation, is_published, exam_name, exam_year")
         .eq("category_id", sel.categoryId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -51,6 +55,8 @@ export function McqAdminPanel() {
     setOpts({ a: "", b: "", c: "", d: "" });
     setCorrect("a");
     setExplanation("");
+    setExamName("");
+    setExamYear("");
   }
 
   const save = useMutation({
@@ -59,6 +65,11 @@ export function McqAdminPanel() {
       if (!question.trim()) throw new Error("Question is required");
       for (const k of OPTIONS) {
         if (!opts[k].trim()) throw new Error(`Option ${k.toUpperCase()} is required`);
+      }
+      const yearTrim = examYear.trim();
+      const parsedYear = yearTrim ? Number(yearTrim) : null;
+      if (parsedYear !== null && (!Number.isInteger(parsedYear) || parsedYear < 1900 || parsedYear > 2100)) {
+        throw new Error("Exam year must be a whole year like 2023");
       }
       const payload = {
         category_id: sel.categoryId,
@@ -69,6 +80,8 @@ export function McqAdminPanel() {
         option_d: opts.d.trim(),
         correct_option: correct,
         explanation: explanation.trim() || null,
+        exam_name: examName.trim() || null,
+        exam_year: parsedYear,
       };
       if (editingId) {
         const { error } = await supabase.from("clinical_mcqs").update(payload).eq("id", editingId);
@@ -105,6 +118,8 @@ export function McqAdminPanel() {
     setOpts({ a: m.option_a, b: m.option_b, c: m.option_c, d: m.option_d });
     setCorrect(m.correct_option);
     setExplanation(m.explanation ?? "");
+    setExamName(m.exam_name ?? "");
+    setExamYear(m.exam_year != null ? String(m.exam_year) : "");
   }
 
   return (
@@ -172,6 +187,32 @@ export function McqAdminPanel() {
           />
         </div>
 
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground" htmlFor="mcq-exam-name">Exam Name (optional)</label>
+            <input
+              id="mcq-exam-name"
+              className="input-field w-full"
+              placeholder='e.g., "NUMS", "MDCAT"'
+              value={examName}
+              onChange={(e) => setExamName(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground" htmlFor="mcq-exam-year">Exam Year (optional)</label>
+            <input
+              id="mcq-exam-year"
+              type="number"
+              min={1900}
+              max={2100}
+              className="input-field w-full"
+              placeholder="e.g., 2023"
+              value={examYear}
+              onChange={(e) => setExamYear(e.target.value)}
+            />
+          </div>
+        </div>
+
         <div className="flex flex-wrap gap-2">
           <button className="btn-primary px-3 py-2 text-sm" disabled={save.isPending || !sel.categoryId} onClick={() => save.mutate()}>
             {save.isPending ? "Saving…" : editingId ? "Save changes" : "Add MCQ"}
@@ -194,8 +235,13 @@ export function McqAdminPanel() {
               <li key={m.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border p-2">
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium">{m.question}</div>
-                  <div className="truncate text-xs text-muted-foreground">
-                    Correct: {m.correct_option.toUpperCase()}
+                  <div className="flex items-center gap-2 truncate text-xs text-muted-foreground">
+                    <span>Correct: {m.correct_option.toUpperCase()}</span>
+                    {m.exam_name && m.exam_year != null && (
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                        {m.exam_name} {m.exam_year}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <button className="inline-flex items-center gap-1 text-xs text-primary hover:underline" onClick={() => startEdit(m)}><Pencil aria-hidden className="h-3.5 w-3.5" />Edit</button>
@@ -317,6 +363,8 @@ function McqCsvImport({ onDone }: { onDone: () => void }) {
       const iD = col("option_d");
       const iCorrect = col("correct_option");
       const iExpl = col("explanation");
+      const iExamName = col("exam_name");
+      const iExamYear = col("exam_year");
       if ([iChapter, iTopic, iQuestion, iA, iB, iC, iD, iCorrect].some((i) => i < 0)) {
         throw new Error("CSV header must include: chapter, topic, question, option_a, option_b, option_c, option_d, correct_option, explanation");
       }
@@ -338,7 +386,7 @@ function McqCsvImport({ onDone }: { onDone: () => void }) {
       });
 
       const failures: { row: number; reason: string }[] = [];
-      const inserts: Record<string, string | null>[] = [];
+      const inserts: Record<string, string | number | null>[] = [];
 
       for (let r = 1; r < rows.length; r++) {
         const row = rows[r];
@@ -349,6 +397,10 @@ function McqCsvImport({ onDone }: { onDone: () => void }) {
         const a = get(iA), b = get(iB), c = get(iC), d = get(iD);
         const correct = get(iCorrect).toLowerCase();
         const explanation = get(iExpl);
+        const examName = get(iExamName);
+        const examYearRaw = get(iExamYear);
+        const examYearParsed = Number(examYearRaw);
+        const examYear = examYearRaw && Number.isInteger(examYearParsed) ? examYearParsed : null;
 
         if (!chapterName || !topicName) { failures.push({ row: r + 1, reason: "Missing chapter or topic." }); continue; }
         if (!question) { failures.push({ row: r + 1, reason: "Missing question." }); continue; }
@@ -375,6 +427,8 @@ function McqCsvImport({ onDone }: { onDone: () => void }) {
           option_d: d,
           correct_option: correct,
           explanation: explanation || null,
+          exam_name: examName || null,
+          exam_year: examYear,
         });
       }
 
@@ -400,7 +454,8 @@ function McqCsvImport({ onDone }: { onDone: () => void }) {
     <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
       <h2 className="text-sm font-semibold">Bulk CSV import</h2>
       <p className="text-xs text-muted-foreground">
-        Columns, in order: <code>chapter, topic, question, option_a, option_b, option_c, option_d, correct_option, explanation</code>.
+        Columns, in order: <code>chapter, topic, question, option_a, option_b, option_c, option_d, correct_option, explanation, exam_name, exam_year</code>.
+        The final <code>exam_name</code> and <code>exam_year</code> columns are optional — leave them blank for non-past-paper questions.
         Rows match on the exact chapter + topic pair, so the same topic name may repeat under different chapters.
       </p>
       <input
