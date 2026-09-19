@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1789831941010,
+      "tag": "0000_add_exam_fields_to_clinical_mcqs",
+      "breakpoints": true
+    }
+  ]
+}

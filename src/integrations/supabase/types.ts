@@ -130,6 +130,8 @@ export type Database = {
           category_id: string
           correct_option: string
           created_at: string
+          exam_name: string | null
+          exam_year: number | null
           explanation: string | null
           id: string
           is_published: boolean
@@ -144,6 +146,8 @@ export type Database = {
           category_id: string
           correct_option: string
           created_at?: string
+          exam_name?: string | null
+          exam_year?: number | null
           explanation?: string | null
           id?: string
           is_published?: boolean
@@ -158,6 +162,8 @@ export type Database = {
           category_id?: string
           correct_option?: string
           created_at?: string
+          exam_name?: string | null
+          exam_year?: number | null
           explanation?: string | null
           id?: string
           is_published?: boolean
