@@ -187,6 +187,32 @@ export function McqAdminPanel() {
           />
         </div>
 
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground" htmlFor="mcq-exam-name">Exam Name (optional)</label>
+            <input
+              id="mcq-exam-name"
+              className="input-field w-full"
+              placeholder='e.g., "NUMS", "MDCAT"'
+              value={examName}
+              onChange={(e) => setExamName(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground" htmlFor="mcq-exam-year">Exam Year (optional)</label>
+            <input
+              id="mcq-exam-year"
+              type="number"
+              min={1900}
+              max={2100}
+              className="input-field w-full"
+              placeholder="e.g., 2023"
+              value={examYear}
+              onChange={(e) => setExamYear(e.target.value)}
+            />
+          </div>
+        </div>
+
         <div className="flex flex-wrap gap-2">
           <button className="btn-primary px-3 py-2 text-sm" disabled={save.isPending || !sel.categoryId} onClick={() => save.mutate()}>
             {save.isPending ? "Saving…" : editingId ? "Save changes" : "Add MCQ"}
@@ -209,8 +235,13 @@ export function McqAdminPanel() {
               <li key={m.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border p-2">
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium">{m.question}</div>
-                  <div className="truncate text-xs text-muted-foreground">
-                    Correct: {m.correct_option.toUpperCase()}
+                  <div className="flex items-center gap-2 truncate text-xs text-muted-foreground">
+                    <span>Correct: {m.correct_option.toUpperCase()}</span>
+                    {m.exam_name && m.exam_year != null && (
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                        {m.exam_name} {m.exam_year}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <button className="inline-flex items-center gap-1 text-xs text-primary hover:underline" onClick={() => startEdit(m)}><Pencil aria-hidden className="h-3.5 w-3.5" />Edit</button>
