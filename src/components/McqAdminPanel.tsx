@@ -18,6 +18,8 @@ type Mcq = {
   correct_option: string;
   explanation: string | null;
   is_published: boolean;
+  exam_name: string | null;
+  exam_year: number | null;
 };
 
 const OPTIONS = ["a", "b", "c", "d"] as const;
@@ -29,6 +31,8 @@ export function McqAdminPanel() {
   const [opts, setOpts] = useState({ a: "", b: "", c: "", d: "" });
   const [correct, setCorrect] = useState<string>("a");
   const [explanation, setExplanation] = useState("");
+  const [examName, setExamName] = useState("");
+  const [examYear, setExamYear] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const listQ = useQuery({
@@ -37,7 +41,7 @@ export function McqAdminPanel() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clinical_mcqs")
-        .select("id, category_id, question, option_a, option_b, option_c, option_d, correct_option, explanation, is_published")
+        .select("id, category_id, question, option_a, option_b, option_c, option_d, correct_option, explanation, is_published, exam_name, exam_year")
         .eq("category_id", sel.categoryId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -51,6 +55,8 @@ export function McqAdminPanel() {
     setOpts({ a: "", b: "", c: "", d: "" });
     setCorrect("a");
     setExplanation("");
+    setExamName("");
+    setExamYear("");
   }
 
   const save = useMutation({
@@ -59,6 +65,11 @@ export function McqAdminPanel() {
       if (!question.trim()) throw new Error("Question is required");
       for (const k of OPTIONS) {
         if (!opts[k].trim()) throw new Error(`Option ${k.toUpperCase()} is required`);
+      }
+      const yearTrim = examYear.trim();
+      const parsedYear = yearTrim ? Number(yearTrim) : null;
+      if (parsedYear !== null && (!Number.isInteger(parsedYear) || parsedYear < 1900 || parsedYear > 2100)) {
+        throw new Error("Exam year must be a whole year like 2023");
       }
       const payload = {
         category_id: sel.categoryId,
@@ -69,6 +80,8 @@ export function McqAdminPanel() {
         option_d: opts.d.trim(),
         correct_option: correct,
         explanation: explanation.trim() || null,
+        exam_name: examName.trim() || null,
+        exam_year: parsedYear,
       };
       if (editingId) {
         const { error } = await supabase.from("clinical_mcqs").update(payload).eq("id", editingId);
@@ -105,6 +118,8 @@ export function McqAdminPanel() {
     setOpts({ a: m.option_a, b: m.option_b, c: m.option_c, d: m.option_d });
     setCorrect(m.correct_option);
     setExplanation(m.explanation ?? "");
+    setExamName(m.exam_name ?? "");
+    setExamYear(m.exam_year != null ? String(m.exam_year) : "");
   }
 
   return (
