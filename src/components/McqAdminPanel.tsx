@@ -386,7 +386,7 @@ function McqCsvImport({ onDone }: { onDone: () => void }) {
       });
 
       const failures: { row: number; reason: string }[] = [];
-      const inserts: Record<string, string | null>[] = [];
+      const inserts: Record<string, string | number | null>[] = [];
 
       for (let r = 1; r < rows.length; r++) {
         const row = rows[r];
