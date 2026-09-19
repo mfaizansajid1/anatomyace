@@ -1,7 +1,4 @@
 export function friendlyAuthError(err: unknown): string {
-  if (typeof navigator !== "undefined" && !navigator.onLine) {
-    return "No internet connection. Please try again.";
-  }
   const msg = (err instanceof Error ? err.message : String(err ?? "")).toLowerCase();
   if (!msg) return "Something went wrong. Please try again.";
   if (msg.includes("already registered") || msg.includes("already been registered") || msg.includes("user already")) {
@@ -19,8 +16,11 @@ export function friendlyAuthError(err: unknown): string {
   if (msg.includes("network") || msg.includes("failed to fetch")) {
     return "No internet connection. Please try again.";
   }
-  if (msg.includes("rate")) {
+    if (msg.includes("rate")) {
     return "Too many attempts. Please wait a moment and try again.";
+  }
+  if (typeof navigator !== "undefined" && !navigator.onLine) {
+    return "No internet connection. Please try again.";
   }
   return "Something went wrong. Please try again.";
 }
