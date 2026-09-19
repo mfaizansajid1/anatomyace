@@ -427,6 +427,8 @@ function McqCsvImport({ onDone }: { onDone: () => void }) {
           option_d: d,
           correct_option: correct,
           explanation: explanation || null,
+          exam_name: examName || null,
+          exam_year: examYear,
         });
       }
 
@@ -452,7 +454,8 @@ function McqCsvImport({ onDone }: { onDone: () => void }) {
     <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
       <h2 className="text-sm font-semibold">Bulk CSV import</h2>
       <p className="text-xs text-muted-foreground">
-        Columns, in order: <code>chapter, topic, question, option_a, option_b, option_c, option_d, correct_option, explanation</code>.
+        Columns, in order: <code>chapter, topic, question, option_a, option_b, option_c, option_d, correct_option, explanation, exam_name, exam_year</code>.
+        The final <code>exam_name</code> and <code>exam_year</code> columns are optional — leave them blank for non-past-paper questions.
         Rows match on the exact chapter + topic pair, so the same topic name may repeat under different chapters.
       </p>
       <input
