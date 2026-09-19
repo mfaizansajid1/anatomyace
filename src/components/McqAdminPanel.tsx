@@ -363,6 +363,8 @@ function McqCsvImport({ onDone }: { onDone: () => void }) {
       const iD = col("option_d");
       const iCorrect = col("correct_option");
       const iExpl = col("explanation");
+      const iExamName = col("exam_name");
+      const iExamYear = col("exam_year");
       if ([iChapter, iTopic, iQuestion, iA, iB, iC, iD, iCorrect].some((i) => i < 0)) {
         throw new Error("CSV header must include: chapter, topic, question, option_a, option_b, option_c, option_d, correct_option, explanation");
       }
