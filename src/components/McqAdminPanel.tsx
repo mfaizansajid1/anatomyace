@@ -529,9 +529,9 @@ function McqCsvImport({ onDone }: { onDone: () => void }) {
     <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
       <h2 className="text-sm font-semibold">Bulk CSV import</h2>
       <p className="text-xs text-muted-foreground">
-        Columns, in order: <code>chapter, topic, question, option_a, option_b, option_c, option_d, correct_option, explanation, exam_name, exam_year</code>.
-        The final <code>exam_name</code> and <code>exam_year</code> columns are optional — leave them blank for non-past-paper questions.
-        Rows match on the exact chapter + topic pair, so the same topic name may repeat under different chapters.
+        Columns, in order: <code>chapter, topic, subtopic, question, option_a, option_b, option_c, option_d, correct_option, explanation, exam_name, exam_year</code>.
+        The <code>subtopic</code>, <code>exam_name</code> and <code>exam_year</code> columns are optional — leave <code>subtopic</code> blank to file the question at the topic level.
+        Rows match on the exact chapter + topic (+ subtopic) combination, so the same topic name may repeat under different chapters.
       </p>
       <input
         ref={fileRef}
