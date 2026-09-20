@@ -8,6 +8,13 @@
       "when": 1789831941010,
       "tag": "0000_add_exam_fields_to_clinical_mcqs",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789889899227,
+      "tag": "0001_add_subtopic_to_clinical_mcqs",
+      "breakpoints": true
     }
   ]
 }
