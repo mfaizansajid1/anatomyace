@@ -10,6 +10,7 @@ import { TestTimerSettingsPanel } from "@/components/TestTimerSettingsPanel";
 type Mcq = {
   id: string;
   category_id: string;
+  subtopic_id: string | null;
   question: string;
   option_a: string;
   option_b: string;
@@ -27,6 +28,7 @@ const OPTIONS = ["a", "b", "c", "d"] as const;
 export function McqAdminPanel() {
   const qc = useQueryClient();
   const [sel, setSel] = useState<ChapterTopicSelection>({ topicId: "", categoryId: "" });
+  const [subtopicId, setSubtopicId] = useState("");
   const [question, setQuestion] = useState("");
   const [opts, setOpts] = useState({ a: "", b: "", c: "", d: "" });
   const [correct, setCorrect] = useState<string>("a");
@@ -35,13 +37,44 @@ export function McqAdminPanel() {
   const [examYear, setExamYear] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  const subtopicsQ = useQuery({
+    enabled: !!sel.categoryId,
+    queryKey: ["admin", "mcq-subtopics", sel.categoryId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("subtopics")
+        .select("id, name")
+        .eq("category_id", sel.categoryId)
+        .order("display_order", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const pathQ = useQuery({
+    enabled: !!sel.categoryId,
+    queryKey: ["admin", "mcq-path", sel.categoryId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("name, topics(name)")
+        .eq("id", sel.categoryId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const subtopicNames = new Map((subtopicsQ.data ?? []).map((s) => [s.id, s.name]));
+  const basePath = pathQ.data ? `${pathQ.data.topics?.name ?? ""} → ${pathQ.data.name}` : "";
+
   const listQ = useQuery({
     enabled: !!sel.categoryId,
     queryKey: ["admin", "mcqs", sel.categoryId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clinical_mcqs")
-        .select("id, category_id, question, option_a, option_b, option_c, option_d, correct_option, explanation, is_published, exam_name, exam_year")
+        .select("id, category_id, subtopic_id, question, option_a, option_b, option_c, option_d, correct_option, explanation, is_published, exam_name, exam_year")
         .eq("category_id", sel.categoryId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -51,6 +84,7 @@ export function McqAdminPanel() {
 
   function clearForm() {
     setEditingId(null);
+    setSubtopicId("");
     setQuestion("");
     setOpts({ a: "", b: "", c: "", d: "" });
     setCorrect("a");
@@ -73,6 +107,7 @@ export function McqAdminPanel() {
       }
       const payload = {
         category_id: sel.categoryId,
+        subtopic_id: subtopicId || null,
         question: question.trim(),
         option_a: opts.a.trim(),
         option_b: opts.b.trim(),
@@ -114,6 +149,7 @@ export function McqAdminPanel() {
 
   function startEdit(m: Mcq) {
     setEditingId(m.id);
+    setSubtopicId(m.subtopic_id ?? "");
     setQuestion(m.question);
     setOpts({ a: m.option_a, b: m.option_b, c: m.option_c, d: m.option_d });
     setCorrect(m.correct_option);
@@ -129,6 +165,21 @@ export function McqAdminPanel() {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <ChapterTopicPicker idPrefix="mcq" value={sel} onChange={(v) => { setSel(v); clearForm(); }} />
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground" htmlFor="mcq-subtopic">Subtopic (optional)</label>
+            <select
+              id="mcq-subtopic"
+              className="input-field w-full"
+              value={subtopicId}
+              disabled={!sel.categoryId || subtopicsQ.isLoading}
+              onChange={(e) => setSubtopicId(e.target.value)}
+            >
+              <option value="">— No specific subtopic —</option>
+              {(subtopicsQ.data ?? []).map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="space-y-1">
@@ -235,6 +286,9 @@ export function McqAdminPanel() {
               <li key={m.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border p-2">
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium">{m.question}</div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    {basePath}{m.subtopic_id && subtopicNames.get(m.subtopic_id) ? ` → ${subtopicNames.get(m.subtopic_id)}` : ""}
+                  </div>
                   <div className="flex items-center gap-2 truncate text-xs text-muted-foreground">
                     <span>Correct: {m.correct_option.toUpperCase()}</span>
                     {m.exam_name && m.exam_year != null && (
@@ -356,6 +410,7 @@ function McqCsvImport({ onDone }: { onDone: () => void }) {
       const col = (n: string) => header.indexOf(n);
       const iChapter = col("chapter");
       const iTopic = col("topic");
+      const iSubtopic = col("subtopic");
       const iQuestion = col("question");
       const iA = col("option_a");
       const iB = col("option_b");
@@ -373,6 +428,8 @@ function McqCsvImport({ onDone }: { onDone: () => void }) {
       if (tErr) throw tErr;
       const { data: topics, error: cErr } = await supabase.from("categories").select("id, name, topic_id");
       if (cErr) throw cErr;
+      const { data: subtopics, error: sErr } = await supabase.from("subtopics").select("id, name, category_id");
+      if (sErr) throw sErr;
 
       const chapterIdsByName = new Map<string, string[]>();
       (chapters ?? []).forEach((t) => {
@@ -384,6 +441,12 @@ function McqCsvImport({ onDone }: { onDone: () => void }) {
         const key = `${c.topic_id}::${c.name.trim().toLowerCase()}`;
         topicByPair.set(key, [...(topicByPair.get(key) ?? []), c.id]);
       });
+      const subtopicByPair = new Map<string, string[]>();
+      (subtopics ?? []).forEach((s) => {
+        const key = `${s.category_id}::${s.name.trim().toLowerCase()}`;
+        subtopicByPair.set(key, [...(subtopicByPair.get(key) ?? []), s.id]);
+      });
+
 
       const failures: { row: number; reason: string }[] = [];
       const inserts: Record<string, string | number | null>[] = [];
@@ -393,6 +456,7 @@ function McqCsvImport({ onDone }: { onDone: () => void }) {
         const get = (i: number) => (i >= 0 ? (row[i] ?? "").trim() : "");
         const chapterName = get(iChapter);
         const topicName = get(iTopic);
+        const subtopicName = get(iSubtopic);
         const question = get(iQuestion);
         const a = get(iA), b = get(iB), c = get(iC), d = get(iD);
         const correct = get(iCorrect).toLowerCase();
@@ -418,8 +482,19 @@ function McqCsvImport({ onDone }: { onDone: () => void }) {
           continue;
         }
 
+        let subtopicId: string | null = null;
+        if (subtopicName) {
+          const subMatches = matches.flatMap((catId) => subtopicByPair.get(`${catId}::${subtopicName.toLowerCase()}`) ?? []);
+          if (subMatches.length === 0) {
+            failures.push({ row: r + 1, reason: `No subtopic "${subtopicName}" found under "${chapterName} → ${topicName}".` });
+            continue;
+          }
+          subtopicId = subMatches[0];
+        }
+
         inserts.push({
           category_id: matches[0],
+          subtopic_id: subtopicId,
           question,
           option_a: a,
           option_b: b,
@@ -454,9 +529,9 @@ function McqCsvImport({ onDone }: { onDone: () => void }) {
     <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
       <h2 className="text-sm font-semibold">Bulk CSV import</h2>
       <p className="text-xs text-muted-foreground">
-        Columns, in order: <code>chapter, topic, question, option_a, option_b, option_c, option_d, correct_option, explanation, exam_name, exam_year</code>.
-        The final <code>exam_name</code> and <code>exam_year</code> columns are optional — leave them blank for non-past-paper questions.
-        Rows match on the exact chapter + topic pair, so the same topic name may repeat under different chapters.
+        Columns, in order: <code>chapter, topic, subtopic, question, option_a, option_b, option_c, option_d, correct_option, explanation, exam_name, exam_year</code>.
+        The <code>subtopic</code>, <code>exam_name</code> and <code>exam_year</code> columns are optional — leave <code>subtopic</code> blank to file the question at the topic level.
+        Rows match on the exact chapter + topic (+ subtopic) combination, so the same topic name may repeat under different chapters.
       </p>
       <input
         ref={fileRef}

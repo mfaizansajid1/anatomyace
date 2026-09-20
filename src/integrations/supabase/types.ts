@@ -140,6 +140,7 @@ export type Database = {
           option_c: string
           option_d: string
           question: string
+          subtopic_id: string | null
           updated_at: string
         }
         Insert: {
@@ -156,6 +157,7 @@ export type Database = {
           option_c: string
           option_d: string
           question: string
+          subtopic_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -172,6 +174,7 @@ export type Database = {
           option_c?: string
           option_d?: string
           question?: string
+          subtopic_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -180,6 +183,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_mcqs_subtopic_id_fkey"
+            columns: ["subtopic_id"]
+            isOneToOne: false
+            referencedRelation: "subtopics"
             referencedColumns: ["id"]
           },
         ]

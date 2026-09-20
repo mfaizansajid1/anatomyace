@@ -1,0 +1,2 @@
+ALTER TABLE public.clinical_mcqs ADD COLUMN subtopic_id uuid REFERENCES public.subtopics(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS clinical_mcqs_subtopic_id_idx ON public.clinical_mcqs(subtopic_id);
