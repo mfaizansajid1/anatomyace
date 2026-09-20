@@ -456,6 +456,7 @@ function McqCsvImport({ onDone }: { onDone: () => void }) {
         const get = (i: number) => (i >= 0 ? (row[i] ?? "").trim() : "");
         const chapterName = get(iChapter);
         const topicName = get(iTopic);
+        const subtopicName = get(iSubtopic);
         const question = get(iQuestion);
         const a = get(iA), b = get(iB), c = get(iC), d = get(iD);
         const correct = get(iCorrect).toLowerCase();
@@ -481,8 +482,19 @@ function McqCsvImport({ onDone }: { onDone: () => void }) {
           continue;
         }
 
+        let subtopicId: string | null = null;
+        if (subtopicName) {
+          const subMatches = matches.flatMap((catId) => subtopicByPair.get(`${catId}::${subtopicName.toLowerCase()}`) ?? []);
+          if (subMatches.length === 0) {
+            failures.push({ row: r + 1, reason: `No subtopic "${subtopicName}" found under "${chapterName} → ${topicName}".` });
+            continue;
+          }
+          subtopicId = subMatches[0];
+        }
+
         inserts.push({
           category_id: matches[0],
+          subtopic_id: subtopicId,
           question,
           option_a: a,
           option_b: b,
