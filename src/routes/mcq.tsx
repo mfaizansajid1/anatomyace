@@ -178,8 +178,27 @@ function McqPage() {
         ) : (
           <div className="card-surface p-5 space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
-              <ChapterTopicPicker idPrefix="mcqs" value={sel} onChange={setSel} />
+              <ChapterTopicPicker idPrefix="mcqs" value={sel} onChange={(v) => { setSel(v); setSubtopicFilter(""); }} />
             </div>
+
+            {sel.categoryId && (narrowQ.data?.subtopics.length ?? 0) > 0 && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground" htmlFor="mcqs-subtopic">
+                  Subtopic (optional) — narrow down further
+                </label>
+                <select
+                  id="mcqs-subtopic"
+                  className="input-field w-full"
+                  value={subtopicFilter}
+                  onChange={(e) => setSubtopicFilter(e.target.value)}
+                >
+                  <option value="">All of {narrowQ.data?.topicName}</option>
+                  {narrowQ.data?.subtopics.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <fieldset className="space-y-2">
               <legend className="text-sm font-medium text-foreground">Timer mode</legend>
