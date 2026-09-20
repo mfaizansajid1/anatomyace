@@ -46,6 +46,7 @@ function McqPage() {
   const [ready, setReady] = useState(false);
 
   const [sel, setSel] = useState<ChapterTopicSelection>({ topicId: "", categoryId: "" });
+  const [subtopicFilter, setSubtopicFilter] = useState("");
   const [mode, setMode] = useState<"auto" | "manual">("auto");
   const [manualSeconds, setManualSeconds] = useState<number | null>(null);
   const [session, setSession] = useState<{ items: Mcq[]; seconds: number } | null>(null);
