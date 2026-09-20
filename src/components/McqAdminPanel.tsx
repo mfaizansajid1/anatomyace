@@ -107,6 +107,7 @@ export function McqAdminPanel() {
       }
       const payload = {
         category_id: sel.categoryId,
+        subtopic_id: subtopicId || null,
         question: question.trim(),
         option_a: opts.a.trim(),
         option_b: opts.b.trim(),
@@ -148,6 +149,7 @@ export function McqAdminPanel() {
 
   function startEdit(m: Mcq) {
     setEditingId(m.id);
+    setSubtopicId(m.subtopic_id ?? "");
     setQuestion(m.question);
     setOpts({ a: m.option_a, b: m.option_b, c: m.option_c, d: m.option_d });
     setCorrect(m.correct_option);
@@ -163,6 +165,21 @@ export function McqAdminPanel() {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <ChapterTopicPicker idPrefix="mcq" value={sel} onChange={(v) => { setSel(v); clearForm(); }} />
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground" htmlFor="mcq-subtopic">Subtopic (optional)</label>
+            <select
+              id="mcq-subtopic"
+              className="input-field w-full"
+              value={subtopicId}
+              disabled={!sel.categoryId || subtopicsQ.isLoading}
+              onChange={(e) => setSubtopicId(e.target.value)}
+            >
+              <option value="">— No specific subtopic —</option>
+              {(subtopicsQ.data ?? []).map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="space-y-1">
