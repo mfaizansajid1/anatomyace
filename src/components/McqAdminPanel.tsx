@@ -10,6 +10,7 @@ import { TestTimerSettingsPanel } from "@/components/TestTimerSettingsPanel";
 type Mcq = {
   id: string;
   category_id: string;
+  subtopic_id: string | null;
   question: string;
   option_a: string;
   option_b: string;
@@ -27,6 +28,7 @@ const OPTIONS = ["a", "b", "c", "d"] as const;
 export function McqAdminPanel() {
   const qc = useQueryClient();
   const [sel, setSel] = useState<ChapterTopicSelection>({ topicId: "", categoryId: "" });
+  const [subtopicId, setSubtopicId] = useState("");
   const [question, setQuestion] = useState("");
   const [opts, setOpts] = useState({ a: "", b: "", c: "", d: "" });
   const [correct, setCorrect] = useState<string>("a");
@@ -35,13 +37,44 @@ export function McqAdminPanel() {
   const [examYear, setExamYear] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  const subtopicsQ = useQuery({
+    enabled: !!sel.categoryId,
+    queryKey: ["admin", "mcq-subtopics", sel.categoryId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("subtopics")
+        .select("id, name")
+        .eq("category_id", sel.categoryId)
+        .order("display_order", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const pathQ = useQuery({
+    enabled: !!sel.categoryId,
+    queryKey: ["admin", "mcq-path", sel.categoryId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("name, topics(name)")
+        .eq("id", sel.categoryId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const subtopicNames = new Map((subtopicsQ.data ?? []).map((s) => [s.id, s.name]));
+  const basePath = pathQ.data ? `${pathQ.data.topics?.name ?? ""} → ${pathQ.data.name}` : "";
+
   const listQ = useQuery({
     enabled: !!sel.categoryId,
     queryKey: ["admin", "mcqs", sel.categoryId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clinical_mcqs")
-        .select("id, category_id, question, option_a, option_b, option_c, option_d, correct_option, explanation, is_published, exam_name, exam_year")
+        .select("id, category_id, subtopic_id, question, option_a, option_b, option_c, option_d, correct_option, explanation, is_published, exam_name, exam_year")
         .eq("category_id", sel.categoryId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -51,6 +84,7 @@ export function McqAdminPanel() {
 
   function clearForm() {
     setEditingId(null);
+    setSubtopicId("");
     setQuestion("");
     setOpts({ a: "", b: "", c: "", d: "" });
     setCorrect("a");
