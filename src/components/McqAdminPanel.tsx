@@ -286,6 +286,9 @@ export function McqAdminPanel() {
               <li key={m.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-border p-2">
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium">{m.question}</div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    {basePath}{m.subtopic_id && subtopicNames.get(m.subtopic_id) ? ` → ${subtopicNames.get(m.subtopic_id)}` : ""}
+                  </div>
                   <div className="flex items-center gap-2 truncate text-xs text-muted-foreground">
                     <span>Correct: {m.correct_option.toUpperCase()}</span>
                     {m.exam_name && m.exam_year != null && (
