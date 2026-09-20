@@ -410,6 +410,7 @@ function McqCsvImport({ onDone }: { onDone: () => void }) {
       const col = (n: string) => header.indexOf(n);
       const iChapter = col("chapter");
       const iTopic = col("topic");
+      const iSubtopic = col("subtopic");
       const iQuestion = col("question");
       const iA = col("option_a");
       const iB = col("option_b");
@@ -427,6 +428,8 @@ function McqCsvImport({ onDone }: { onDone: () => void }) {
       if (tErr) throw tErr;
       const { data: topics, error: cErr } = await supabase.from("categories").select("id, name, topic_id");
       if (cErr) throw cErr;
+      const { data: subtopics, error: sErr } = await supabase.from("subtopics").select("id, name, category_id");
+      if (sErr) throw sErr;
 
       const chapterIdsByName = new Map<string, string[]>();
       (chapters ?? []).forEach((t) => {
@@ -438,6 +441,12 @@ function McqCsvImport({ onDone }: { onDone: () => void }) {
         const key = `${c.topic_id}::${c.name.trim().toLowerCase()}`;
         topicByPair.set(key, [...(topicByPair.get(key) ?? []), c.id]);
       });
+      const subtopicByPair = new Map<string, string[]>();
+      (subtopics ?? []).forEach((s) => {
+        const key = `${s.category_id}::${s.name.trim().toLowerCase()}`;
+        subtopicByPair.set(key, [...(subtopicByPair.get(key) ?? []), s.id]);
+      });
+
 
       const failures: { row: number; reason: string }[] = [];
       const inserts: Record<string, string | number | null>[] = [];
