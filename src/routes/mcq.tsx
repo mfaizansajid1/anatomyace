@@ -91,13 +91,41 @@ function McqPage() {
   const settings = settingsQ.data ?? { min_seconds: 10, max_seconds: 60, auto_default_seconds: 30 };
   const manualValue = manualSeconds ?? settings.auto_default_seconds;
 
+  const narrowQ = useQuery({
+    enabled: !!sel.categoryId,
+    queryKey: ["mcq-subtopic-options", sel.categoryId],
+    queryFn: async () => {
+      const [{ data: rows, error }, { data: cat, error: cErr }] = await Promise.all([
+        supabase
+          .from("clinical_mcqs")
+          .select("subtopic_id, subtopics(name)")
+          .eq("category_id", sel.categoryId)
+          .eq("is_published", true)
+          .not("subtopic_id", "is", null),
+        supabase.from("categories").select("name").eq("id", sel.categoryId).maybeSingle(),
+      ]);
+      if (error) throw error;
+      if (cErr) throw cErr;
+      const byId = new Map<string, string>();
+      (rows ?? []).forEach((r) => {
+        if (r.subtopic_id && r.subtopics?.name) byId.set(r.subtopic_id, r.subtopics.name);
+      });
+      return {
+        topicName: cat?.name ?? "this topic",
+        subtopics: [...byId.entries()].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)),
+      };
+    },
+  });
+
   async function startSession() {
     if (!sel.categoryId) { toast.error("Pick a chapter and topic first"); return; }
-    const { data, error } = await supabase
+    let query = supabase
       .from("clinical_mcqs")
       .select("id, question, option_a, option_b, option_c, option_d, correct_option, explanation, exam_name, exam_year")
       .eq("category_id", sel.categoryId)
       .eq("is_published", true);
+    if (subtopicFilter) query = query.eq("subtopic_id", subtopicFilter);
+    const { data, error } = await query;
     if (error) { toast.error(error.message); return; }
     const items = (data ?? []) as Mcq[];
     if (items.length === 0) { toast.error("No MCQs available for this topic yet."); return; }
