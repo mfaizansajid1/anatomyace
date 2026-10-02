@@ -27,7 +27,8 @@ type Subtopic = { id: string; topic_id: string; category_id: string; name: strin
 type Flashcard = {
   id: string;
   topic_id: string;
-  subtopic_id: string;
+  category_id: string | null;
+  subtopic_id: string | null;
   question: string;
   answer: string;
   difficulty: "Easy" | "Medium" | "Hard";
@@ -144,14 +145,14 @@ function AdminShell() {
   });
 
   const flashcardsQ = useQuery({
-    enabled: !!selectedSubtopic,
-    queryKey: ["admin", "flashcards", selectedSubtopic],
+    enabled: !!selectedCategory,
+    queryKey: ["admin", "flashcards", selectedCategory, selectedSubtopic],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("flashcards")
-        .select("id,topic_id,subtopic_id,question,answer,difficulty,is_published")
-        .eq("subtopic_id", selectedSubtopic!)
-        .order("created_at", { ascending: false });
+        .select("id,topic_id,category_id,subtopic_id,question,answer,difficulty,is_published");
+      q = selectedSubtopic ? q.eq("subtopic_id", selectedSubtopic) : q.eq("category_id", selectedCategory!);
+      const { data, error } = await q.order("created_at", { ascending: false });
       if (error) throw error;
       return data as Flashcard[];
     },
@@ -240,11 +241,17 @@ function AdminShell() {
                     onChanged={() => invalidate("subtopics")}
                   />
                 )}
-                {selectedSubtopic && selectedCategory && (
+                {selectedCategory && (
                   <FlashcardPanel
                     topicId={selectedTopic}
                     categoryId={selectedCategory}
                     subtopicId={selectedSubtopic}
+                    subtopicNames={new Map((subtopicsQ.data ?? []).map((s) => [s.id, s.name]))}
+                    title={
+                      selectedSubtopic
+                        ? `${currentCategory?.name ?? ""} → ${subtopicsQ.data?.find((s) => s.id === selectedSubtopic)?.name ?? ""}`
+                        : `All of ${currentCategory?.name ?? "topic"}`
+                    }
                     topics={topicsQ.data ?? []}
                     flashcards={flashcardsQ.data ?? []}
                     loading={flashcardsQ.isLoading}
@@ -629,11 +636,13 @@ function diffBadge(d: string) {
 }
 
 function FlashcardPanel({
-  topicId, categoryId, subtopicId, topics, flashcards, loading, onChanged,
+  topicId, categoryId, subtopicId, topics, flashcards, loading, onChanged, subtopicNames, title,
 }: {
   topicId: string;
   categoryId: string;
-  subtopicId: string;
+  subtopicId: string | null;
+  subtopicNames: Map<string, string>;
+  title: string;
   topics: Topic[];
   flashcards: Flashcard[];
   loading: boolean;
@@ -665,7 +674,7 @@ function FlashcardPanel({
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-base font-semibold">Flashcards</h3>
+        <h3 className="text-base font-semibold">Flashcards <span className="text-sm font-normal text-muted-foreground">· {title}</span></h3>
         <button className="btn-primary px-3 py-1.5 text-sm" onClick={() => setCreating(true)}>
           + Add flashcard
         </button>
@@ -681,6 +690,7 @@ function FlashcardPanel({
             <thead className="text-left text-xs uppercase text-muted-foreground">
               <tr>
                 <th className="py-2 pr-3">Question</th>
+                <th className="py-2 pr-3">Subtopic</th>
                 <th className="py-2 pr-3">Difficulty</th>
                 <th className="py-2 pr-3">Published</th>
                 <th className="py-2"></th>
@@ -690,6 +700,9 @@ function FlashcardPanel({
               {flashcards.map((fc) => (
                 <tr key={fc.id} className="border-t border-border">
                   <td className="max-w-md py-2 pr-3 truncate">{fc.question}</td>
+                  <td className="py-2 pr-3 text-xs text-muted-foreground">
+                    {fc.subtopic_id ? (subtopicNames.get(fc.subtopic_id) ?? "—") : "Whole topic"}
+                  </td>
                   <td className="py-2 pr-3">
                     <span className={`rounded-full px-2 py-0.5 text-xs ${diffBadge(fc.difficulty)}`}>{fc.difficulty}</span>
                   </td>
@@ -728,7 +741,7 @@ function FlashcardForm({
   topics, initial, onClose, onSaved,
 }: {
   topics: Topic[];
-  initial: Partial<Flashcard> & { topic_id: string; category_id?: string; subtopic_id: string };
+  initial: Partial<Flashcard> & { topic_id: string; category_id?: string | null; subtopic_id: string | null };
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -737,7 +750,7 @@ function FlashcardForm({
   const [difficulty, setDifficulty] = useState<"Easy" | "Medium" | "Hard">(initial.difficulty ?? "Medium");
   const [topicId, setTopicId] = useState(initial.topic_id);
   const [categoryId, setCategoryId] = useState(initial.category_id ?? "");
-  const [subtopicId, setSubtopicId] = useState(initial.subtopic_id);
+  const [subtopicId, setSubtopicId] = useState(initial.subtopic_id ?? "");
 
   const categoriesQ = useQuery({
     enabled: !!topicId,
@@ -754,7 +767,7 @@ function FlashcardForm({
     if (categoryId || !initial.subtopic_id) return;
     (async () => {
       try {
-        const { data } = await supabase.from("subtopics").select("category_id").eq("id", initial.subtopic_id).maybeSingle();
+        const { data } = await supabase.from("subtopics").select("category_id").eq("id", initial.subtopic_id!).maybeSingle();
         if (data?.category_id) setCategoryId(data.category_id);
       } catch (err) {
         // Safe silence
@@ -781,9 +794,9 @@ function FlashcardForm({
   }, [categoriesQ.data, categoryId]);
 
   useEffect(() => {
-    const list = subtopicsQ.data ?? [];
-    if (list.length && !list.some((s) => s.id === subtopicId)) {
-      setSubtopicId(list[0].id);
+    const list = subtopicsQ.data;
+    if (list && subtopicId && !list.some((s) => s.id === subtopicId)) {
+      setSubtopicId("");
     }
   }, [subtopicsQ.data, subtopicId]);
 
@@ -791,10 +804,11 @@ function FlashcardForm({
     mutationFn: async () => {
       if (!question.trim()) throw new Error("Question is required");
       if (!answer.trim()) throw new Error("Answer is required");
-      if (!topicId || !categoryId || !subtopicId) throw new Error("Topic, category, and subtopic required");
+      if (!topicId || !categoryId) throw new Error("Chapter and topic are required");
       const payload = {
         topic_id: topicId,
-        subtopic_id: subtopicId,
+        category_id: categoryId,
+        subtopic_id: subtopicId || null,
         question: question.trim(),
         answer: answer.trim(),
         difficulty,
@@ -830,8 +844,9 @@ function FlashcardForm({
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs text-muted-foreground">Subtopic</label>
-              <select className="w-full rounded-lg border border-border bg-background p-1.5 text-sm" value={subtopicId} onChange={(e) => setSubtopicId(e.target.value)}>
+              <label className="mb-1 block text-xs text-muted-foreground">Subtopic (optional)</label>
+              <select className="w-full rounded-lg border border-border bg-background p-1.5 text-sm" value={subtopicId} onChange={(e) => setSubtopicId(e.target.value)} disabled={!categoryId}>
+                <option value="">— No specific subtopic —</option>
                 {(subtopicsQ.data ?? []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
@@ -980,7 +995,8 @@ function CsvImportPanel({ onDone }: { onDone: () => void }) {
 
       const flashcardsToInsert: Array<{
         topic_id: string;
-        subtopic_id: string;
+        category_id: string;
+        subtopic_id: string | null;
         question: string;
         answer: string;
         difficulty: "Easy" | "Medium" | "Hard";
@@ -992,27 +1008,27 @@ function CsvImportPanel({ onDone }: { onDone: () => void }) {
       // Row 0 is header, start at Row 1
       for (let i = 1; i < rows.length; i++) {
         const row = rows[i];
-        if (row.length < 7) {
+        if (row.length < 6) {
           skippedRows.push({
             row: i + 1,
-            reason: `Row has insufficient columns (found ${row.length}, expected at least 7)`,
+            reason: `Row has insufficient columns (found ${row.length}, expected at least 6)`,
           });
           continue;
         }
 
-        // Sequence: Question [0], Answer [1], [Blank] [2], Difficulty [3], Topic [4], Category [5], Subtopic [6]
+        // Sequence: Question [0], Answer [1], [Blank] [2], Difficulty [3], Topic [4], Category [5], Subtopic [6, optional]
         const rowQuestion = row[0];
         const rowAnswer = row[1];
         const rawDiff = row[3];
         const rowTopic = row[4];
         const rowCategory = row[5];
-        const rowSubtopic = row[6];
+        const rowSubtopic = (row[6] ?? "").trim();
 
-        // Validate required fields
-        if (!rowQuestion || !rowAnswer || !rowTopic || !rowCategory || !rowSubtopic) {
+        // Validate required fields (subtopic is optional)
+        if (!rowQuestion || !rowAnswer || !rowTopic || !rowCategory) {
           skippedRows.push({
             row: i + 1,
-            reason: `Missing required fields (Question: "${rowQuestion || 'empty'}", Answer: "${rowAnswer || 'empty'}", Topic: "${rowTopic || 'empty'}", Category: "${rowCategory || 'empty'}", Subtopic: "${rowSubtopic || 'empty'}")`,
+            reason: `Missing required fields (Question: "${rowQuestion || 'empty'}", Answer: "${rowAnswer || 'empty'}", Topic: "${rowTopic || 'empty'}", Category: "${rowCategory || 'empty'}")`,
           });
           continue;
         }
@@ -1050,24 +1066,27 @@ function CsvImportPanel({ onDone }: { onDone: () => void }) {
           continue;
         }
 
-        // Step 3: Find Subtopic by BOTH category_id AND subtopic name (hierarchical resolution)
-        const categorySubtopics = subtopicsByCategory.get(categoryMatch.id) || [];
-        const subtopicMatch = categorySubtopics.find(
-          (s) => s.name.trim().toLowerCase() === rowSubtopic.trim().toLowerCase()
-        );
-
-        if (!subtopicMatch) {
-          skippedRows.push({
-            row: i + 1,
-            reason: `Subtopic "${rowSubtopic}" does not exist under Category "${categoryMatch.name}" (Topic: "${topicMatch.name}")`,
-          });
-          continue;
+        // Step 3 (optional): Find Subtopic by BOTH category_id AND subtopic name
+        let subtopicMatch: { id: string } | undefined;
+        if (rowSubtopic) {
+          const categorySubtopics = subtopicsByCategory.get(categoryMatch.id) || [];
+          subtopicMatch = categorySubtopics.find(
+            (s) => s.name.trim().toLowerCase() === rowSubtopic.trim().toLowerCase()
+          );
+          if (!subtopicMatch) {
+            skippedRows.push({
+              row: i + 1,
+              reason: `Subtopic "${rowSubtopic}" does not exist under Category "${categoryMatch.name}" (Topic: "${topicMatch.name}")`,
+            });
+            continue;
+          }
         }
 
         // Step 4: Add flashcard with resolved IDs
         flashcardsToInsert.push({
           topic_id: topicMatch.id,
-          subtopic_id: subtopicMatch.id,
+          category_id: categoryMatch.id,
+          subtopic_id: subtopicMatch?.id ?? null,
           question: rowQuestion,
           answer: rowAnswer,
           difficulty: rowDiff,
