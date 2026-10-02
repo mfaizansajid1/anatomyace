@@ -197,6 +197,7 @@ export type Database = {
       flashcards: {
         Row: {
           answer: string
+          category_id: string | null
           clinical_correlation: string | null
           created_at: string
           difficulty: string
@@ -208,13 +209,14 @@ export type Database = {
           mnemonic: string | null
           question: string
           reference: string | null
-          subtopic_id: string
+          subtopic_id: string | null
           tags: string[] | null
           topic_id: string
           updated_at: string
         }
         Insert: {
           answer: string
+          category_id?: string | null
           clinical_correlation?: string | null
           created_at?: string
           difficulty?: string
@@ -226,13 +228,14 @@ export type Database = {
           mnemonic?: string | null
           question: string
           reference?: string | null
-          subtopic_id: string
+          subtopic_id?: string | null
           tags?: string[] | null
           topic_id: string
           updated_at?: string
         }
         Update: {
           answer?: string
+          category_id?: string | null
           clinical_correlation?: string | null
           created_at?: string
           difficulty?: string
@@ -244,12 +247,19 @@ export type Database = {
           mnemonic?: string | null
           question?: string
           reference?: string | null
-          subtopic_id?: string
+          subtopic_id?: string | null
           tags?: string[] | null
           topic_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "flashcards_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "flashcards_subtopic_id_fkey"
             columns: ["subtopic_id"]

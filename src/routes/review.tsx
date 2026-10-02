@@ -133,17 +133,18 @@ function StudyPage() {
   const qc = useQueryClient();
 
   const cardsQ = useQuery({
-    queryKey: ["study", "cards", subtopicId, examMode],
-    enabled: signedIn && started && !!subtopicId,
+    queryKey: ["study", "cards", categoryId, subtopicId, examMode],
+    enabled: signedIn && started && (!!subtopicId || !!categoryId),
     queryFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       const uid = u.user?.id;
 
-      const { data: cards, error } = await supabase
+      let cardQuery = supabase
         .from("flashcards")
         .select("id, question, answer, difficulty, clinical_correlation, mnemonic, high_yield_point, image_url, reference")
-        .eq("subtopic_id", subtopicId)
         .eq("is_published", true);
+      cardQuery = subtopicId ? cardQuery.eq("subtopic_id", subtopicId) : cardQuery.eq("category_id", categoryId);
+      const { data: cards, error } = await cardQuery;
       if (error) throw error;
 
       const cardIds = (cards ?? []).map((c) => c.id);
@@ -192,7 +193,7 @@ function StudyPage() {
   const progressPct = total > 0 ? Math.min(100, Math.round((reviewed / total) * 100)) : 0;
 
   function begin() {
-    if (!topicId || !categoryId || !subtopicId) return;
+    if (!topicId || !categoryId) return;
     setIndex(0);
     setReviewed(0);
     setShowAnswer(false);
@@ -271,7 +272,7 @@ function StudyPage() {
           <div className="card-surface p-6 space-y-5">
             <div>
               <h1 className="text-2xl font-bold text-foreground">Start a study session</h1>
-              <p className="text-sm text-muted-foreground mt-1"> Pick a chapter, topic, and subtopic to begin.</p>
+              <p className="text-sm text-muted-foreground mt-1"> Pick a chapter and topic to begin. Subtopic is optional.</p>
             </div>
 
             <div className="space-y-2">
@@ -309,22 +310,24 @@ function StudyPage() {
               </select>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Subtopic</label>
-              <select
-                className="input-field w-full"
-                value={subtopicId}
-                onChange={(e) => setSubtopicId(e.target.value)}
-                disabled={!categoryId || subtopicsQ.isLoading}
-              >
-                <option value="">
-                  {categoryId ? (subtopicsQ.isLoading ? "Loading…" : "Select a subtopic…") : "Pick a topic first"}
-                </option>
-                {subtopicsQ.data?.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-            </div>
+            {categoryId && (subtopicsQ.data?.length ?? 0) > 0 && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Subtopic (optional) — narrow down further</label>
+                <select
+                  className="input-field w-full"
+                  value={subtopicId}
+                  onChange={(e) => setSubtopicId(e.target.value)}
+                  disabled={subtopicsQ.isLoading}
+                >
+                  <option value="">
+                    All of {categoriesQ.data?.find((c) => c.id === categoryId)?.name ?? "this topic"}
+                  </option>
+                  {subtopicsQ.data?.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <label className="flex items-center gap-2 text-sm text-foreground">
               <input
@@ -339,7 +342,7 @@ function StudyPage() {
               Again: see again in 10 min · Hard: 1 day · Good: 3 days · Easy: 7 days
             </p>
 
-            <button className="btn-primary w-full" onClick={begin} disabled={!topicId || !categoryId || !subtopicId}>
+            <button className="btn-primary w-full" onClick={begin} disabled={!topicId || !categoryId}>
               Start studying
             </button>
           </div>
