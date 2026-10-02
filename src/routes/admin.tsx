@@ -237,7 +237,7 @@ function AdminShell() {
                     subtopics={subtopicsQ.data ?? []}
                     loading={subtopicsQ.isLoading}
                     selectedId={selectedSubtopic}
-                    onSelect={setSelectedSubtopic}
+                    onSelect={(id) => setSelectedSubtopic((prev) => (prev === id ? null : id))}
                     onChanged={() => invalidate("subtopics")}
                   />
                 )}
