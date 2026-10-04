@@ -9,6 +9,7 @@ import { Achievements } from "@/components/Achievements";
 import { ExamCountdownCard } from "@/components/ExamCountdownCard";
 import { DailyFactCard } from "@/components/DailyFactCard";
 import { ReminderBanner } from "@/components/ReminderBanner";
+import { DueCardsCard, RecentTestCard, TodayPlanCard } from "@/components/DashboardWidgets";
 import { 
   Target, 
   Trophy, 
@@ -729,8 +730,146 @@ function Dashboard() {
               </div>
             </div>
 
+            <div className="mt-6 grid gap-6 lg:grid-cols-3">
+              <div className="lg:col-span-2 min-w-0">
+                <TodayPlanCard userId={user!.id} />
+                <div className="mt-6 grid gap-6 md:grid-cols-2">
+                  <DueCardsCard userId={user!.id} />
+                  <RecentTestCard userId={user!.id} />
+                </div>
+            {/* WEAK & STRONG SUBTOPICS SIDE BY SIDE */}
+            <div className="mt-6 grid gap-6 md:grid-cols-2">
+              {/* Weak Subtopics */}
+              <div className="card-surface p-5 transition-colors duration-200">
+                <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-rose-500 dark:text-rose-400" />
+                  Weak Subtopics
+                </h2>
+                {weakGroups.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No weak spots — nice work!</p>
+                ) : (
+                  <div className="space-y-4">
+                    {weakGroups.map((g) => (
+                      <div key={g.topic_name}>
+                        <h3 className="text-sm font-semibold text-foreground mb-2">{g.topic_name}</h3>
+                        <div className="space-y-2">
+                          {g.items.slice(0, 3).map((s) => (
+                            <div key={s.subtopic_id} className="flex items-center gap-3">
+                              <span className="text-sm text-foreground flex-1">
+                                {s.subtopic_name}
+                                <span className="text-muted-foreground text-xs ml-1">({s.category_name})</span>
+                              </span>
+                              <div className="w-16 bg-muted rounded-full h-2">
+                                <div 
+                                  className="bg-rose-500 rounded-full h-2"
+                                  style={{ width: `${s.accuracy}%` }}
+                                />
+                              </div>
+                              <span className="text-xs font-semibold text-rose-600 dark:text-rose-400 w-10 text-right">{s.accuracy}%</span>
+                              <Link to="/review" search={{ subtopic: s.subtopic_id }} className="text-xs font-semibold text-primary hover:underline" aria-label={`Revise ${s.subtopic_name}`}>Revise</Link>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              {/* Strong Subtopics */}
+              <div className="card-surface p-5 transition-colors duration-200">
+                <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <Award className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  Strong Subtopics
+                </h2>
+                {strongGroups.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Keep studying to build your strong areas!</p>
+                ) : (
+                  <div className="space-y-4">
+                    {strongGroups.map((g) => (
+                      <div key={g.topic_name}>
+                        <h3 className="text-sm font-semibold text-foreground mb-2">{g.topic_name}</h3>
+                        <div className="space-y-2">
+                          {g.items.slice(0, 3).map((s) => (
+                            <div key={s.subtopic_id} className="flex items-center gap-3">
+                              <span className="text-sm text-foreground flex-1">
+                                {s.subtopic_name}
+                                <span className="text-muted-foreground text-xs ml-1">({s.category_name})</span>
+                              </span>
+                              <div className="w-24 bg-muted rounded-full h-2">
+                                <div 
+                                  className="bg-emerald-500 rounded-full h-2"
+                                  style={{ width: `${s.accuracy}%` }}
+                                />
+                              </div>
+                              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 w-10 text-right">{s.accuracy}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* WEEKLY PROGRESS */}
+            <div className="mt-6 card-surface p-5 transition-colors duration-200">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="font-semibold text-foreground">Weekly Progress</h2>
+                <span className="text-xs text-muted-foreground">Last 7 days</span>
+              </div>
+              
+              <div className="flex items-end justify-between gap-3 sm:gap-4">
+                {weekly.map((w) => {
+                  const pct = (w.count / weeklyMax) * 100;
+                  const isToday = w.date === new Date().toISOString().slice(0, 10);
+                  
+                  return (
+                    <div key={w.date} className="flex-1 flex flex-col items-center gap-2">
+                      {/* Number label */}
+                      <span className={`text-xs font-semibold ${w.count > 0 ? 'text-foreground' : 'text-muted-foreground'}`}>
+                        {w.count}
+                      </span>
+                      
+                      {/* Bar container */}
+                      <div className="w-full h-36 sm:h-40 md:h-44 relative flex items-end justify-center">
+                        {/* Fill bar */}
+                        <div
+                          className={`relative w-3/4 max-w-[48px] rounded-t-lg transition-all duration-300 ${
+                            isToday ? 'bg-primary' : 'bg-primary/70'
+                          }`}
+                          style={{ 
+                            height: w.count > 0 ? `${Math.max(pct, 4)}%` : '0%',
+                            minHeight: w.count > 0 ? '4px' : '0'
+                          }}
+                          aria-label={`${w.count} items on ${w.date}`}
+                        />
+                      </div>
+                      
+                      {/* Day label */}
+                      <span className={`text-xs font-medium pb-1 ${
+                        isToday 
+                          ? 'text-primary font-bold border-b-2 border-primary' 
+                          : 'text-muted-foreground'
+                      }`}>
+                        {w.label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+              </div>
+              <aside className="space-y-6 min-w-0">
+                <ExamCountdownCard
+                  settings={{ exam_name: stats.exam_name ?? null, exam_date: stats.exam_date ?? null }}
+                  pending={updateExam.isPending}
+                  onSave={(s) => updateExam.mutate(s)}
+                />
             {/* COMPACT METRICS GRID */}
-            <div className="mt-6 grid gap-4 grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 grid-cols-2">
               <div className="card-surface p-4 transition-colors duration-200 hover:shadow-md">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
@@ -786,146 +925,16 @@ function Dashboard() {
               </div>
             </div>
 
-            {/* WEAK & STRONG SUBTOPICS SIDE BY SIDE */}
-            <div className="mt-6 grid gap-6 lg:grid-cols-2">
-              {/* Weak Subtopics */}
-              <div className="card-surface p-5 transition-colors duration-200">
-                <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-rose-500 dark:text-rose-400" />
-                  Weak Subtopics
-                </h2>
-                {weakGroups.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No weak spots — nice work!</p>
-                ) : (
-                  <div className="space-y-4">
-                    {weakGroups.map((g) => (
-                      <div key={g.topic_name}>
-                        <h3 className="text-sm font-semibold text-foreground mb-2">{g.topic_name}</h3>
-                        <div className="space-y-2">
-                          {g.items.slice(0, 3).map((s) => (
-                            <div key={s.subtopic_id} className="flex items-center gap-3">
-                              <span className="text-sm text-foreground flex-1">
-                                {s.subtopic_name}
-                                <span className="text-muted-foreground text-xs ml-1">({s.category_name})</span>
-                              </span>
-                              <div className="w-24 bg-muted rounded-full h-2">
-                                <div 
-                                  className="bg-rose-500 rounded-full h-2"
-                                  style={{ width: `${s.accuracy}%` }}
-                                />
-                              </div>
-                              <span className="text-xs font-semibold text-rose-600 dark:text-rose-400 w-10 text-right">{s.accuracy}%</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              
-              {/* Strong Subtopics */}
-              <div className="card-surface p-5 transition-colors duration-200">
-                <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <Award className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                  Strong Subtopics
-                </h2>
-                {strongGroups.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Keep studying to build your strong areas!</p>
-                ) : (
-                  <div className="space-y-4">
-                    {strongGroups.map((g) => (
-                      <div key={g.topic_name}>
-                        <h3 className="text-sm font-semibold text-foreground mb-2">{g.topic_name}</h3>
-                        <div className="space-y-2">
-                          {g.items.slice(0, 3).map((s) => (
-                            <div key={s.subtopic_id} className="flex items-center gap-3">
-                              <span className="text-sm text-foreground flex-1">
-                                {s.subtopic_name}
-                                <span className="text-muted-foreground text-xs ml-1">({s.category_name})</span>
-                              </span>
-                              <div className="w-24 bg-muted rounded-full h-2">
-                                <div 
-                                  className="bg-emerald-500 rounded-full h-2"
-                                  style={{ width: `${s.accuracy}%` }}
-                                />
-                              </div>
-                              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 w-10 text-right">{s.accuracy}%</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* EXAM COUNTDOWN & DAILY FACT */}
-            <div className="mt-6 grid gap-6 lg:grid-cols-2">
-              <ExamCountdownCard
-                settings={{ exam_name: stats.exam_name ?? null, exam_date: stats.exam_date ?? null }}
-                pending={updateExam.isPending}
-                onSave={(s) => updateExam.mutate(s)}
-              />
-              <DailyFactCard />
-            </div>
-
-            {/* WEEKLY PROGRESS */}
-            <div className="mt-6 card-surface p-5 transition-colors duration-200">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="font-semibold text-foreground">Weekly Progress</h2>
-                <span className="text-xs text-muted-foreground">Last 7 days</span>
-              </div>
-              
-              <div className="flex items-end justify-between gap-3 sm:gap-4">
-                {weekly.map((w) => {
-                  const pct = (w.count / weeklyMax) * 100;
-                  const isToday = w.date === new Date().toISOString().slice(0, 10);
-                  
-                  return (
-                    <div key={w.date} className="flex-1 flex flex-col items-center gap-2">
-                      {/* Number label */}
-                      <span className={`text-xs font-semibold ${w.count > 0 ? 'text-foreground' : 'text-muted-foreground'}`}>
-                        {w.count}
-                      </span>
-                      
-                      {/* Bar container */}
-                      <div className="w-full h-36 sm:h-40 md:h-44 relative flex items-end justify-center">
-                        {/* Fill bar */}
-                        <div
-                          className={`relative w-3/4 max-w-[48px] rounded-t-lg transition-all duration-300 ${
-                            isToday ? 'bg-primary' : 'bg-primary/70'
-                          }`}
-                          style={{ 
-                            height: w.count > 0 ? `${Math.max(pct, 4)}%` : '0%',
-                            minHeight: w.count > 0 ? '4px' : '0'
-                          }}
-                          aria-label={`${w.count} items on ${w.date}`}
-                        />
-                      </div>
-                      
-                      {/* Day label */}
-                      <span className={`text-xs font-medium pb-1 ${
-                        isToday 
-                          ? 'text-primary font-bold border-b-2 border-primary' 
-                          : 'text-muted-foreground'
-                      }`}>
-                        {w.label}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
+                <DailyFactCard />
             {/* ACHIEVEMENTS */}
-            <div className="mt-6 card-surface p-5 transition-colors duration-200">
+            <div className="card-surface p-5 transition-colors duration-200">
               <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
                 <Trophy className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                 Achievements
               </h2>
               <Achievements earned={data.earnedBadges} />
+            </div>
+              </aside>
             </div>
           </>
         )}
