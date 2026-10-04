@@ -26,6 +26,7 @@ import {
   Settings,
   Layers,
   ClipboardCheck,
+  CheckCircle2,
 } from "lucide-react";
 
 function MetricCard({ icon, value, label, sub }: { icon: ReactNode; value: ReactNode; label: string; sub?: ReactNode }) {
