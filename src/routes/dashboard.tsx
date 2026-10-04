@@ -9,13 +9,13 @@ import { Achievements } from "@/components/Achievements";
 import { ExamCountdownCard } from "@/components/ExamCountdownCard";
 import { DailyFactCard } from "@/components/DailyFactCard";
 import { ReminderBanner } from "@/components/ReminderBanner";
-import { DueCardsCard, RecentTestCard, TodayPlanCard } from "@/components/DashboardWidgets";
+import { RecentTestCard, TodayPlanCard } from "@/components/DashboardWidgets";
+import type { ReactNode } from "react";
 import { 
   Target, 
   Trophy, 
   BookOpen, 
   Bone, 
-  CheckCircle2, 
   Flame, 
   TrendingUp, 
   Award,
@@ -23,8 +23,37 @@ import {
   ChevronRight,
   Menu,
   X,
-  Settings
+  Settings,
+  Layers,
+  ClipboardCheck,
 } from "lucide-react";
+
+function MetricCard({ icon, value, label, sub }: { icon: ReactNode; value: ReactNode; label: string; sub?: ReactNode }) {
+  return (
+    <div className="card-surface p-4 sm:p-5">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <span className="p-1.5 rounded-lg bg-primary/10">{icon}</span>
+        {label}
+      </div>
+      <p className="mt-3 text-3xl font-bold text-foreground">{value}</p>
+      {sub && <p className="mt-1 text-xs text-muted-foreground">{sub}</p>}
+    </div>
+  );
+}
+
+function GoalBar({ label, value, goal }: { label: string; value: number; goal: number }) {
+  return (
+    <div>
+      <div className="flex justify-between mb-1.5">
+        <span className="text-sm font-medium text-foreground">{label}</span>
+        <span className="text-sm text-muted-foreground">{value}/{goal}</span>
+      </div>
+      <div className="w-full bg-muted rounded-full h-2.5">
+        <div className="bg-primary rounded-full h-2.5 transition-all" style={{ width: `${Math.min(100, (value / Math.max(1, goal)) * 100)}%` }} />
+      </div>
+    </div>
+  );
+}
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -444,6 +473,29 @@ function Dashboard() {
   
   const weeklyMax = Math.max(1, ...weekly.map((w) => w.count));
 
+  const weakList = useMemo(() => weakGroups.flatMap((g) => g.items).sort((a, b) => a.accuracy - b.accuracy).slice(0, 5), [weakGroups]);
+  const strongList = useMemo(() => strongGroups.flatMap((g) => g.items).sort((a, b) => b.accuracy - a.accuracy).slice(0, 5), [strongGroups]);
+
+  const dueQ = useQuery({
+    enabled: !!user,
+    queryKey: ["dash", "due", user?.id],
+    queryFn: async () => {
+      const { count, error } = await supabase.from("card_reviews").select("id", { count: "exact", head: true })
+        .eq("user_id", user!.id).lte("next_review_date", new Date().toISOString());
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+  const testsQ = useQuery({
+    enabled: !!user,
+    queryKey: ["dash", "tests-count", user?.id],
+    queryFn: async () => {
+      const { count, error } = await supabase.from("test_results").select("id", { count: "exact", head: true }).eq("user_id", user!.id);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
   if (!authChecked) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-background">
@@ -645,296 +697,136 @@ function Dashboard() {
 
         {stats && data && (
           <>
-            {/* HERO SECTION - Today's Study Progress */}
-            <div className="mt-6 card-surface p-6 sm:p-8 transition-colors duration-200">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-foreground">Today's Study Progress</h2>
-                <button
-                  onClick={() => setGoalOpen(true)}
-                  className="text-sm text-primary hover:text-primary/80 transition flex items-center gap-1"
-                  aria-label="Edit today's goals"
-                >
-                  <Settings className="w-4 h-4" />
-                  Edit goals
-                </button>
-              </div>
-              
-              <div className="flex flex-col lg:flex-row gap-8 items-center">
-                {/* Circular Progress */}
-                <div className="relative flex-shrink-0">
-                  <ProgressRing value={totalToday} max={totalGoal} size={140} stroke={12} />
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-3xl font-bold text-foreground">{totalToday}</span>
-                    <span className="text-sm text-muted-foreground">of {totalGoal}</span>
-                  </div>
-                </div>
-                
-                {/* Category Progress */}
-                <div className="flex-1 w-full space-y-4">
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm font-medium text-foreground">Flashcards</span>
-                      <span className="text-sm text-muted-foreground">{todayFlashcards}/{stats.flashcards_daily_goal}</span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2.5">
-                      <div 
-                        className="bg-primary rounded-full h-2.5 transition-all duration-300"
-                        style={{ width: `${Math.min(100, (todayFlashcards / Math.max(1, stats.flashcards_daily_goal)) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm font-medium text-foreground">Practical</span>
-                      <span className="text-sm text-muted-foreground">{todayPractical}/{stats.practical_daily_goal}</span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2.5">
-                      <div 
-                        className="bg-primary rounded-full h-2.5 transition-all duration-300"
-                        style={{ width: `${Math.min(100, (todayPractical / Math.max(1, stats.practical_daily_goal)) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm font-medium text-foreground">MCQs</span>
-                      <span className="text-sm text-muted-foreground">{todayMcq}/{stats.mcq_daily_goal}</span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2.5">
-                      <div 
-                        className="bg-primary rounded-full h-2.5 transition-all duration-300"
-                        style={{ width: `${Math.min(100, (todayMcq / Math.max(1, stats.mcq_daily_goal)) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Primary CTA */}
-              <div className="mt-6 flex justify-center">
-                <Link to="/study" className="btn-primary inline-flex items-center gap-2 text-base">
-                  {stats.last_topic_studied ? (
-                    <>
-                      <span>Continue Studying</span>
-                      <ChevronRight className="w-5 h-5" />
-                    </>
-                  ) : (
-                    <>
-                      <span>Start Studying</span>
-                      <ChevronRight className="w-5 h-5" />
-                    </>
-                  )}
-                </Link>
-              </div>
+            {/* TOP METRIC STRIP */}
+            <div className="mt-6 grid gap-4 grid-cols-2 lg:grid-cols-4">
+              <MetricCard icon={<Flame className="w-5 h-5 text-primary" />} value={stats.current_streak} label="Day Streak" sub={`Longest: ${stats.longest_streak} days`} />
+              <MetricCard icon={<Layers className="w-5 h-5 text-primary" />} value={dueQ.data ?? "–"} label="Cards Due Today" sub={<Link to="/review" search={{ subtopic: undefined }} className="text-primary hover:underline">Review now</Link>} />
+              <MetricCard icon={<Target className="w-5 h-5 text-primary" />} value={`${totalGoal > 0 ? Math.min(100, Math.round((totalToday / totalGoal) * 100)) : 0}%`} label="Today's Goal" sub={`${totalToday} of ${totalGoal} done`} />
+              <MetricCard icon={<ClipboardCheck className="w-5 h-5 text-primary" />} value={testsQ.data ?? "–"} label="Tests Completed" sub={<Link to="/progress" className="text-primary hover:underline">View history</Link>} />
             </div>
 
-            <div className="mt-6 grid gap-6 lg:grid-cols-3">
-              <div className="lg:col-span-2 min-w-0">
+            {/* TODAY'S ACTIONS (60%) + EXAM READINESS (40%) */}
+            <div className="mt-6 grid gap-6 lg:grid-cols-5">
+              <div className="lg:col-span-3 space-y-6 min-w-0">
+                <div className="card-surface p-6">
+                  <div className="flex items-center justify-between mb-5">
+                    <h2 className="font-semibold text-foreground">Today's Study Progress</h2>
+                    <button onClick={() => setGoalOpen(true)} className="text-sm text-primary hover:text-primary/80 transition flex items-center gap-1" aria-label="Edit today's goals">
+                      <Settings className="w-4 h-4" /> Edit goals
+                    </button>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-6 items-center">
+                    <div className="relative flex-shrink-0">
+                      <ProgressRing value={totalToday} max={totalGoal} size={128} stroke={11} />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-3xl font-bold text-foreground">{totalToday}</span>
+                        <span className="text-xs text-muted-foreground">of {totalGoal}</span>
+                      </div>
+                    </div>
+                    <div className="flex-1 w-full space-y-4">
+                      <GoalBar label="Flashcards" value={todayFlashcards} goal={stats.flashcards_daily_goal} />
+                      <GoalBar label="Practical" value={todayPractical} goal={stats.practical_daily_goal} />
+                      <GoalBar label="MCQs" value={todayMcq} goal={stats.mcq_daily_goal} />
+                    </div>
+                  </div>
+                  <Link to="/study" className="btn-primary mt-6 w-full sm:w-auto">
+                    {stats.last_topic_studied ? "Continue Studying" : "Start Studying"} <ChevronRight className="w-5 h-5" />
+                  </Link>
+                </div>
                 <TodayPlanCard userId={user!.id} />
-                <div className="mt-6 grid gap-6 md:grid-cols-2">
-                  <DueCardsCard userId={user!.id} />
-                  <RecentTestCard userId={user!.id} />
-                </div>
-            {/* WEAK & STRONG SUBTOPICS SIDE BY SIDE */}
-            <div className="mt-6 grid gap-6 md:grid-cols-2">
-              {/* Weak Subtopics */}
-              <div className="card-surface p-5 transition-colors duration-200">
-                <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-rose-500 dark:text-rose-400" />
-                  Weak Subtopics
-                </h2>
-                {weakGroups.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No weak spots — nice work!</p>
-                ) : (
-                  <div className="space-y-4">
-                    {weakGroups.map((g) => (
-                      <div key={g.topic_name}>
-                        <h3 className="text-sm font-semibold text-foreground mb-2">{g.topic_name}</h3>
-                        <div className="space-y-2">
-                          {g.items.slice(0, 3).map((s) => (
-                            <div key={s.subtopic_id} className="flex items-center gap-3">
-                              <span className="text-sm text-foreground flex-1">
-                                {s.subtopic_name}
-                                <span className="text-muted-foreground text-xs ml-1">({s.category_name})</span>
-                              </span>
-                              <div className="w-16 bg-muted rounded-full h-2">
-                                <div 
-                                  className="bg-rose-500 rounded-full h-2"
-                                  style={{ width: `${s.accuracy}%` }}
-                                />
-                              </div>
-                              <span className="text-xs font-semibold text-rose-600 dark:text-rose-400 w-10 text-right">{s.accuracy}%</span>
-                              <Link to="/review" search={{ subtopic: s.subtopic_id }} className="text-xs font-semibold text-primary hover:underline" aria-label={`Revise ${s.subtopic_name}`}>Revise</Link>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
-              
-              {/* Strong Subtopics */}
-              <div className="card-surface p-5 transition-colors duration-200">
-                <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <Award className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                  Strong Subtopics
-                </h2>
-                {strongGroups.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Keep studying to build your strong areas!</p>
-                ) : (
-                  <div className="space-y-4">
-                    {strongGroups.map((g) => (
-                      <div key={g.topic_name}>
-                        <h3 className="text-sm font-semibold text-foreground mb-2">{g.topic_name}</h3>
-                        <div className="space-y-2">
-                          {g.items.slice(0, 3).map((s) => (
-                            <div key={s.subtopic_id} className="flex items-center gap-3">
-                              <span className="text-sm text-foreground flex-1">
-                                {s.subtopic_name}
-                                <span className="text-muted-foreground text-xs ml-1">({s.category_name})</span>
-                              </span>
-                              <div className="w-24 bg-muted rounded-full h-2">
-                                <div 
-                                  className="bg-emerald-500 rounded-full h-2"
-                                  style={{ width: `${s.accuracy}%` }}
-                                />
-                              </div>
-                              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 w-10 text-right">{s.accuracy}%</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* WEEKLY PROGRESS */}
-            <div className="mt-6 card-surface p-5 transition-colors duration-200">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="font-semibold text-foreground">Weekly Progress</h2>
-                <span className="text-xs text-muted-foreground">Last 7 days</span>
-              </div>
-              
-              <div className="flex items-end justify-between gap-3 sm:gap-4">
-                {weekly.map((w) => {
-                  const pct = (w.count / weeklyMax) * 100;
-                  const isToday = w.date === new Date().toISOString().slice(0, 10);
-                  
-                  return (
-                    <div key={w.date} className="flex-1 flex flex-col items-center gap-2">
-                      {/* Number label */}
-                      <span className={`text-xs font-semibold ${w.count > 0 ? 'text-foreground' : 'text-muted-foreground'}`}>
-                        {w.count}
-                      </span>
-                      
-                      {/* Bar container */}
-                      <div className="w-full h-36 sm:h-40 md:h-44 relative flex items-end justify-center">
-                        {/* Fill bar */}
-                        <div
-                          className={`relative w-3/4 max-w-[48px] rounded-t-lg transition-all duration-300 ${
-                            isToday ? 'bg-primary' : 'bg-primary/70'
-                          }`}
-                          style={{ 
-                            height: w.count > 0 ? `${Math.max(pct, 4)}%` : '0%',
-                            minHeight: w.count > 0 ? '4px' : '0'
-                          }}
-                          aria-label={`${w.count} items on ${w.date}`}
-                        />
-                      </div>
-                      
-                      {/* Day label */}
-                      <span className={`text-xs font-medium pb-1 ${
-                        isToday 
-                          ? 'text-primary font-bold border-b-2 border-primary' 
-                          : 'text-muted-foreground'
-                      }`}>
-                        {w.label}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-              </div>
-              <aside className="space-y-6 min-w-0">
+              <div className="lg:col-span-2 space-y-6 min-w-0">
                 <ExamCountdownCard
                   settings={{ exam_name: stats.exam_name ?? null, exam_date: stats.exam_date ?? null }}
                   pending={updateExam.isPending}
                   onSave={(s) => updateExam.mutate(s)}
                 />
-            {/* COMPACT METRICS GRID */}
-            <div className="grid gap-4 grid-cols-2">
-              <div className="card-surface p-4 transition-colors duration-200 hover:shadow-md">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-                    <Flame className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-foreground">{stats.current_streak}</p>
-                    <p className="text-xs text-muted-foreground">Day Streak</p>
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">Longest: {stats.longest_streak} days</p>
+                <RecentTestCard userId={user!.id} />
               </div>
-              
-              <div className="card-surface p-4 transition-colors duration-200 hover:shadow-md">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <BookOpen className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-foreground">{stats.cards_studied_total}</p>
-                    <p className="text-xs text-muted-foreground">Flashcards Studied</p>
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">{stats.cards_studied_this_week} this week</p>
+            </div>
+
+            {/* NEEDS ATTENTION + STUDY HABIT + FACT */}
+            <div className="mt-6 grid gap-6 lg:grid-cols-5">
+              <div className="lg:col-span-3 card-surface p-5 min-w-0">
+                <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-destructive" /> Needs Attention
+                </h2>
+                {weakList.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No weak spots yet — keep reviewing and they'll show up here.</p>
+                ) : (
+                  <ul className="space-y-3">
+                    {weakList.map((s) => (
+                      <li key={s.subtopic_id} className="flex items-center gap-3 rounded-xl bg-muted/40 px-3 py-2.5">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">{s.subtopic_name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{s.topic_name} · {s.category_name}</p>
+                        </div>
+                        <div className="hidden sm:block w-20 bg-muted rounded-full h-2">
+                          <div className="bg-destructive rounded-full h-2" style={{ width: `${s.accuracy}%` }} />
+                        </div>
+                        <span className="text-xs font-semibold text-destructive w-10 text-right">{s.accuracy}%</span>
+                        <Link to="/review" search={{ subtopic: s.subtopic_id }} className="btn-outline text-sm" style={{ minHeight: 36, padding: "0 0.9rem" }} aria-label={`Revise ${s.subtopic_name}`}>Revise</Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
-              
-              <div className="card-surface p-4 transition-colors duration-200 hover:shadow-md">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <Bone className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-foreground">
-                      {data.topics.filter(t => t.sources.includes('practical')).reduce((sum, t) => sum + t.reviews, 0)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Practical Completed</p>
-                  </div>
+              <div className="lg:col-span-2 card-surface p-5 min-w-0">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-semibold text-foreground">Study Habit</h2>
+                  <span className="text-xs text-muted-foreground">Last 7 days</span>
                 </div>
-              </div>
-              
-              <div className="card-surface p-4 transition-colors duration-200 hover:shadow-md">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-                    <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-foreground">
-                      {data.topics.filter(t => t.sources.includes('mcq')).reduce((sum, t) => sum + t.reviews, 0)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">MCQs Completed</p>
-                  </div>
+                <div className="flex items-end justify-between gap-2">
+                  {weekly.map((w) => {
+                    const pct = (w.count / weeklyMax) * 100;
+                    const isToday = w.date === todayStr;
+                    return (
+                      <div key={w.date} className="flex-1 flex flex-col items-center gap-1.5">
+                        <span className={`text-xs font-semibold ${w.count > 0 ? "text-foreground" : "text-muted-foreground"}`}>{w.count}</span>
+                        <div className="w-full h-32 flex items-end justify-center">
+                          <div
+                            className={`w-3/4 max-w-[36px] rounded-t-lg transition-all ${isToday ? "bg-primary" : "bg-primary/60"}`}
+                            style={{ height: w.count > 0 ? `${Math.max(pct, 4)}%` : "0%" }}
+                            aria-label={`${w.count} items on ${w.date}`}
+                          />
+                        </div>
+                        <span className={`text-xs ${isToday ? "text-primary font-bold" : "text-muted-foreground"}`}>{w.label}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
 
-                <DailyFactCard />
-            {/* ACHIEVEMENTS */}
-            <div className="card-surface p-5 transition-colors duration-200">
-              <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                Achievements
-              </h2>
-              <Achievements earned={data.earnedBadges} />
-            </div>
-              </aside>
+            {/* BOTTOM SHELF */}
+            <div className="mt-6 grid gap-6 lg:grid-cols-3">
+              <div className="card-surface p-5 min-w-0">
+                <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <Award className="w-5 h-5 text-primary" /> Strong Subtopics
+                </h2>
+                {strongList.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Keep studying to build your strong areas!</p>
+                ) : (
+                  <ul className="space-y-2.5">
+                    {strongList.map((s) => (
+                      <li key={s.subtopic_id} className="flex items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-foreground truncate">{s.subtopic_name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{s.topic_name}</p>
+                        </div>
+                        <span className="text-xs font-semibold text-primary">{s.accuracy}%</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <DailyFactCard />
+              <div className="card-surface p-5 min-w-0">
+                <h2 className="font-semibold text-foreground flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-primary" /> Badges & Trophies
+                </h2>
+                <Achievements earned={data.earnedBadges} />
+              </div>
             </div>
           </>
         )}
