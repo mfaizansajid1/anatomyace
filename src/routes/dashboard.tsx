@@ -787,9 +787,9 @@ function Dashboard() {
                           <p className="text-xs text-muted-foreground truncate">{s.topic_name}</p>
                         </div>
                         <div className="hidden sm:block w-20 bg-muted rounded-full h-2">
-                          <div className="bg-primary rounded-full h-2" style={{ width: `${s.accuracy}%` }} />
+                          <div className="bg-success rounded-full h-2" style={{ width: `${s.accuracy}%` }} />
                         </div>
-                        <span className="text-xs font-semibold text-primary w-10 text-right">{s.accuracy}%</span>
+                        <span className="text-xs font-semibold text-success w-10 text-right">{s.accuracy}%</span>
                       </li>
                     ))}
                   </ul>
