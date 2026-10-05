@@ -126,8 +126,15 @@ type SessionUser = {
   photo: string | null 
 };
 
+/** Current hour in Pakistan Standard Time (UTC+5), so greetings match the student's local day. */
+function pktHour() {
+  return Number(
+    new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Karachi", hour: "numeric", hour12: false }).format(new Date())
+  );
+}
+
 function greeting() {
-  const h = new Date().getHours();
+  const h = pktHour();
   if (h < 3) return "Good night";
   if (h < 12) return "Good morning";
   if (h < 14) return "Good noon";
