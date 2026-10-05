@@ -832,6 +832,7 @@ function Dashboard() {
                 </h2>
                 <Achievements earned={data.earnedBadges} />
               </div>
+            </div>
           </>
         )}
       </section>
