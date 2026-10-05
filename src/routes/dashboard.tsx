@@ -786,7 +786,10 @@ function Dashboard() {
                           <p className="text-sm text-foreground truncate">{s.subtopic_name}</p>
                           <p className="text-xs text-muted-foreground truncate">{s.topic_name}</p>
                         </div>
-                        <span className="text-xs font-semibold text-primary">{s.accuracy}%</span>
+                        <div className="hidden sm:block w-20 bg-muted rounded-full h-2">
+                          <div className="bg-primary rounded-full h-2" style={{ width: `${s.accuracy}%` }} />
+                        </div>
+                        <span className="text-xs font-semibold text-primary w-10 text-right">{s.accuracy}%</span>
                       </li>
                     ))}
                   </ul>
@@ -795,7 +798,7 @@ function Dashboard() {
             </div>
 
             {/* STUDY HABIT + FACT */}
-            <div className="mt-6 grid gap-6 lg:grid-cols-5 items-start">
+            <div className="mt-6 grid gap-6 lg:grid-cols-5 items-stretch">
               <div className="lg:col-span-3 card-surface p-5 min-w-0">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="font-semibold text-foreground">Study Habit</h2>
@@ -821,7 +824,7 @@ function Dashboard() {
                   })}
                 </div>
               </div>
-              <div className="lg:col-span-2 min-w-0"><DailyFactCard /></div>
+              <div className="lg:col-span-2 min-w-0 flex [&>*]:flex-1"><DailyFactCard /></div>
             </div>
 
             {/* BADGES */}
