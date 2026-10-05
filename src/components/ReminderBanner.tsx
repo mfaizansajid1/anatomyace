@@ -25,7 +25,10 @@ export function pickReminder({
   lastStudyDate,
   cardsDue,
 }: Props): { id: string; message: string } | null {
-  const hour = new Date().getHours();
+  // Hour in Pakistan Standard Time (UTC+5) — same clock the dashboard greeting uses.
+  const hour = Number(
+    new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Karachi", hour: "numeric", hour12: false }).format(new Date())
+  );
 
   if (currentStreak > 0 && cardsStudiedToday === 0 && hour >= 20) {
     return { id: "streak-risk", message: `Don't lose your ${currentStreak}-day streak — study today!` };
