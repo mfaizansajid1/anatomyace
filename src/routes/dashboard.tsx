@@ -746,9 +746,9 @@ function Dashboard() {
               </div>
             </div>
 
-            {/* NEEDS ATTENTION + STUDY HABIT + FACT */}
-            <div className="mt-6 grid gap-6 lg:grid-cols-5">
-              <div className="lg:col-span-3 card-surface p-5 min-w-0">
+            {/* TOPIC MASTERY */}
+            <div className="mt-6 grid gap-6 md:grid-cols-2 items-start">
+              <div className="card-surface p-5 min-w-0">
                 <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-destructive" /> Needs Attention
                 </h2>
@@ -772,7 +772,31 @@ function Dashboard() {
                   </ul>
                 )}
               </div>
-              <div className="lg:col-span-2 card-surface p-5 min-w-0">
+              <div className="card-surface p-5 min-w-0">
+                <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <Award className="w-5 h-5 text-primary" /> Strong Subtopics
+                </h2>
+                {strongList.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Keep studying to build your strong areas!</p>
+                ) : (
+                  <ul className="space-y-2.5">
+                    {strongList.map((s) => (
+                      <li key={s.subtopic_id} className="flex items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-foreground truncate">{s.subtopic_name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{s.topic_name}</p>
+                        </div>
+                        <span className="text-xs font-semibold text-primary">{s.accuracy}%</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            {/* STUDY HABIT + FACT */}
+            <div className="mt-6 grid gap-6 lg:grid-cols-5 items-start">
+              <div className="lg:col-span-3 card-surface p-5 min-w-0">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="font-semibold text-foreground">Study Habit</h2>
                   <span className="text-xs text-muted-foreground">Last 7 days</span>
@@ -797,38 +821,17 @@ function Dashboard() {
                   })}
                 </div>
               </div>
+              <div className="lg:col-span-2 min-w-0"><DailyFactCard /></div>
             </div>
 
-            {/* BOTTOM SHELF */}
-            <div className="mt-6 grid gap-6 lg:grid-cols-3">
-              <div className="card-surface p-5 min-w-0">
-                <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <Award className="w-5 h-5 text-primary" /> Strong Subtopics
-                </h2>
-                {strongList.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Keep studying to build your strong areas!</p>
-                ) : (
-                  <ul className="space-y-2.5">
-                    {strongList.map((s) => (
-                      <li key={s.subtopic_id} className="flex items-center gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-foreground truncate">{s.subtopic_name}</p>
-                          <p className="text-xs text-muted-foreground truncate">{s.topic_name}</p>
-                        </div>
-                        <span className="text-xs font-semibold text-primary">{s.accuracy}%</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <DailyFactCard />
+            {/* BADGES */}
+            <div className="mt-6">
               <div className="card-surface p-5 min-w-0">
                 <h2 className="font-semibold text-foreground flex items-center gap-2">
                   <Trophy className="w-5 h-5 text-primary" /> Badges & Trophies
                 </h2>
                 <Achievements earned={data.earnedBadges} />
               </div>
-            </div>
           </>
         )}
       </section>
