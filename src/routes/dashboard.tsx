@@ -7,6 +7,8 @@ import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Achievements } from "@/components/Achievements";
 import { getMedicalTitle } from "@/lib/levels";
+import { WeeklyRecapBanner } from "@/components/WeeklyRecapBanner";
+import { MilestoneShareModal, type Milestone } from "@/components/MilestoneShareModal";
 import { ExamCountdownCard } from "@/components/ExamCountdownCard";
 import { DailyFactCard } from "@/components/DailyFactCard";
 import { ReminderBanner } from "@/components/ReminderBanner";
@@ -394,6 +396,7 @@ function Dashboard() {
   const stats = data?.stats;
   const photo = data?.profile?.profile_photo_url ?? user?.photo ?? null;
   const displayName = data?.profile?.full_name ?? user?.fullName ?? null;
+  const [milestone, setMilestone] = useState<Milestone | null>(null);
 
   const { weakGroups, strongGroups } = useMemo(() => {
     const subs = data?.subtopics ?? [];
@@ -670,14 +673,20 @@ function Dashboard() {
             <p className="mt-1 text-muted-foreground">Here's your study snapshot for today.</p>
           </div>
           {data?.xp && (
-            <div className="flex items-center gap-2 bg-primary/10 text-primary rounded-full px-4 py-2 border border-primary/20">
+            <button
+              type="button"
+              title="Share your level"
+              onClick={() => setMilestone({ headline: `reached Level ${data.xp.level}`, detail: getMedicalTitle(data.xp.level) })}
+              className="flex items-center gap-2 bg-primary/10 text-primary rounded-full px-4 py-2 border border-primary/20 hover:bg-primary/15">
               <Zap className="w-5 h-5" />
               <span className="font-semibold">Level {data.xp.level} · {getMedicalTitle(data.xp.level)}</span>
               <span className="text-muted-foreground">|</span>
               <span className="font-medium">{data.xp.total_xp} XP</span>
-            </div>
+            </button>
           )}
         </div>
+
+        {user?.id && <WeeklyRecapBanner userId={user.id} />}
 
         {stats && (
           <ReminderBanner
@@ -841,12 +850,22 @@ function Dashboard() {
                 <h2 className="font-semibold text-foreground flex items-center gap-2">
                   <Trophy className="w-5 h-5 text-primary" /> Badges & Trophies
                 </h2>
-                <Achievements earned={data.earnedBadges} />
+                <Achievements
+                  earned={data.earnedBadges}
+                  onShare={(b) => setMilestone({ headline: `unlocked the ${b.label} badge`, detail: b.description })}
+                />
+                <p className="mt-3 text-xs text-muted-foreground">Tap an unlocked badge or your level to create a shareable card.</p>
               </div>
             </div>
           </>
         )}
       </section>
+      <MilestoneShareModal
+        milestone={milestone}
+        name={displayName ?? ""}
+        stats={{ cards: stats?.cards_studied_total ?? 0, streak: stats?.current_streak ?? 0, xp: data?.xp?.total_xp ?? 0 }}
+        onClose={() => setMilestone(null)}
+      />
 
       {goalOpen && stats && (
         <GoalDialog
