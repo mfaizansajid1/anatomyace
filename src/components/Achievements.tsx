@@ -7,7 +7,7 @@ type Badge = {
   Icon: LucideIcon;
 };
 
-const BADGES: Badge[] = [
+export const BADGES: Badge[] = [
   { id: "first_session", label: "First Steps", description: "Complete your first study session", Icon: Target },
   { id: "streak_7", label: "7-Day Streak", description: "Study 7 days in a row", Icon: Flame },
   { id: "century_100", label: "Century Club", description: "Study 100 cards total", Icon: Medal },
@@ -20,21 +20,24 @@ const BADGES: Badge[] = [
   { id: "comeback_kid", label: "Comeback Kid", description: "Return after a 7+ day break", Icon: RotateCcw },
 ];
 
-export function Achievements({ earned }: { earned: Set<string> }) {
+export function Achievements({ earned, onShare }: { earned: Set<string>; onShare?: (badge: Badge) => void }) {
   return (
     <div className="mt-4 grid grid-cols-2 sm:grid-cols-5 gap-3">
       {BADGES.map((badge) => {
         const isEarned = earned.has(badge.id);
         const Icon = isEarned ? badge.Icon : Lock;
         return (
-          <div
+          <button
+            type="button"
+            disabled={!isEarned || !onShare}
+            onClick={() => onShare?.(badge)}
             key={badge.id}
             className={`rounded-xl border p-3 text-center transition-colors ${
               isEarned
-                ? "border-primary/40 bg-primary/5"
+                ? "border-primary/40 bg-primary/5 hover:bg-primary/10 cursor-pointer"
                 : "border-border bg-muted/30 opacity-60"
             }`}
-            title={badge.description}
+            title={isEarned ? `${badge.description} — tap to share` : badge.description}
           >
             <Icon
               aria-hidden
@@ -46,7 +49,7 @@ export function Achievements({ earned }: { earned: Set<string> }) {
             <div className="mt-0.5 text-[11px] text-muted-foreground">
               {badge.description}
             </div>
-          </div>
+          </button>
         );
       })}
     </div>
