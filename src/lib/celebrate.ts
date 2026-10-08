@@ -6,6 +6,12 @@ const badgeNames: Record<string, string> = {
   streak_7: "7-Day Streak",
   century_100: "Century Club",
   perfectionist_10: "Perfectionist",
+  anatomist: "Anatomist",
+  sharp_shooter: "Sharp Shooter",
+  all_rounder: "All-Rounder",
+  exam_ready: "Exam Ready",
+  ace: "Ace",
+  comeback_kid: "Comeback Kid — welcome back",
 };
 
 export async function checkCelebrations(

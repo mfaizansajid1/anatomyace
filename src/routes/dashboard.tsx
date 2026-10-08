@@ -6,6 +6,7 @@ import { Logo } from "@/components/Logo";
 import { Spinner } from "@/components/Spinner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Achievements } from "@/components/Achievements";
+import { getMedicalTitle } from "@/lib/levels";
 import { ExamCountdownCard } from "@/components/ExamCountdownCard";
 import { DailyFactCard } from "@/components/DailyFactCard";
 import { ReminderBanner } from "@/components/ReminderBanner";
@@ -671,7 +672,7 @@ function Dashboard() {
           {data?.xp && (
             <div className="flex items-center gap-2 bg-primary/10 text-primary rounded-full px-4 py-2 border border-primary/20">
               <Zap className="w-5 h-5" />
-              <span className="font-semibold">Level {data.xp.level}</span>
+              <span className="font-semibold">Level {data.xp.level} · {getMedicalTitle(data.xp.level)}</span>
               <span className="text-muted-foreground">|</span>
               <span className="font-medium">{data.xp.total_xp} XP</span>
             </div>
